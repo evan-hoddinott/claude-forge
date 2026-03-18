@@ -15,6 +15,20 @@ if (isWSL || process.env.ELECTRON_DISABLE_GPU) {
   app.disableHardwareAcceleration();
 }
 
+// Resolve icon path — works in both dev and packaged (ASAR) mode
+function getIconPath(): string | undefined {
+  if (app.isPackaged) {
+    const iconPath = path.join(process.resourcesPath, 'icon.png');
+    try {
+      require('node:fs').accessSync(iconPath);
+      return iconPath;
+    } catch {
+      return undefined;
+    }
+  }
+  return path.join(__dirname, '../../assets/icons/icon.png');
+}
+
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -23,7 +37,7 @@ const createWindow = () => {
     minHeight: 600,
     frame: false,
     backgroundColor: '#0a0a0f',
-    icon: path.join(__dirname, '../../assets/icons/icon.png'),
+    icon: getIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
@@ -44,6 +58,11 @@ const createWindow = () => {
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
     );
   }
+
+  // Log renderer load failures for debugging
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    console.error(`Renderer failed to load: ${errorCode} ${errorDescription}`);
+  });
 
   // Initialize auto-updater in production builds
   if (!MAIN_WINDOW_VITE_DEV_SERVER_URL) {

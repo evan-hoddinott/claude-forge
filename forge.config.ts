@@ -22,8 +22,7 @@ const config: ForgeConfig = {
     icon: path.join(iconDir, 'icon'),
     appBundleId: 'com.claudeforge.app',
     appCategoryType: 'public.app-category.developer-tools',
-    // Note: The Vite plugin handles ignore patterns automatically.
-    // Only add custom ignores if files leak into the bundle.
+    extraResource: [path.join(iconDir, 'icon.png')],
   },
   rebuildConfig: {},
   makers: [

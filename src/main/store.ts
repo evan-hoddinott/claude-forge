@@ -14,6 +14,7 @@ let _store: Store<StoreSchema> | null = null;
 function preferenceDefaults(): UserPreferences {
   return {
     defaultProjectDir: path.join(app.getPath('home'), 'Projects'),
+    projectLocationMode: 'wsl',
     githubUsername: '',
     theme: 'dark',
     defaultEditor: 'code',

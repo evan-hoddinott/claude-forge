@@ -6,7 +6,7 @@ import {
   useDragControls,
 } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
-import type { ProjectInput, GitHubRepo } from '../../shared/types';
+import type { ProjectInput, GitHubRepo, EnvironmentInfo, ProjectLocationMode } from '../../shared/types';
 import { useAPI } from '../hooks/useAPI';
 import { useToast } from './Toast';
 
@@ -173,18 +173,73 @@ function StepProgress({ current }: { current: number }) {
 // Step 1 — Basics
 // ---------------------------------------------------------------------------
 
+function LocationModeToggle({
+  mode,
+  onChange,
+  envInfo,
+}: {
+  mode: ProjectLocationMode;
+  onChange: (mode: ProjectLocationMode) => void;
+  envInfo: EnvironmentInfo;
+}) {
+  if (!envInfo.wslAvailable) return null;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.03] w-fit">
+        <button
+          type="button"
+          onClick={() => onChange('wsl')}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            mode === 'wsl'
+              ? 'bg-white/8 text-text-primary'
+              : 'text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          WSL (recommended)
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange('windows')}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            mode === 'windows'
+              ? 'bg-white/8 text-text-primary'
+              : 'text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          Windows
+        </button>
+      </div>
+      <div className="flex items-start gap-1.5 text-xs text-text-muted">
+        <svg className="w-3.5 h-3.5 shrink-0 mt-0.5 text-accent/60" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm-.75 3.5a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0v-4zm.75 7a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+        </svg>
+        <span>
+          WSL is recommended for Claude Code. Projects on the Windows filesystem will be slower for file operations.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function StepBasics({
   data,
   defaultDir,
   errors,
   onChange,
   onBrowse,
+  envInfo,
+  locationMode,
+  onLocationModeChange,
 }: {
   data: WizardData;
   defaultDir: string;
   errors: Record<string, string>;
   onChange: (updates: Partial<WizardData>) => void;
   onBrowse: () => void;
+  envInfo: EnvironmentInfo | null;
+  locationMode: ProjectLocationMode;
+  onLocationModeChange: (mode: ProjectLocationMode) => void;
 }) {
   const nameRef = useRef<HTMLInputElement>(null);
   useEffect(() => nameRef.current?.focus(), []);
@@ -205,6 +260,15 @@ function StepBasics({
       </FormField>
 
       <FormField label="Location">
+        {envInfo && envInfo.wslAvailable && (
+          <div className="mb-2">
+            <LocationModeToggle
+              mode={locationMode}
+              onChange={onLocationModeChange}
+              envInfo={envInfo}
+            />
+          </div>
+        )}
         <div className="flex gap-2">
           <input
             type="text"
@@ -928,15 +992,34 @@ export default function NewProjectWizard({
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [defaultDir, setDefaultDir] = useState('~/Projects');
+  const [envInfo, setEnvInfo] = useState<EnvironmentInfo | null>(null);
+  const [locationMode, setLocationMode] = useState<ProjectLocationMode>('wsl');
 
-  // Fetch default project dir on open
+  // Fetch default project dir and environment info on open
   useEffect(() => {
     if (open) {
       api.preferences.get().then((prefs) => {
         setDefaultDir(prefs.defaultProjectDir);
+        setLocationMode(prefs.projectLocationMode);
+      });
+      api.system.getEnvironment().then((env) => {
+        setEnvInfo(env);
       });
     }
   }, [open, api]);
+
+  // Update defaultDir when location mode changes
+  function handleLocationModeChange(mode: ProjectLocationMode) {
+    setLocationMode(mode);
+    if (envInfo) {
+      const newDir = mode === 'wsl' ? envInfo.wslProjectDir : envInfo.windowsProjectDir;
+      if (newDir) {
+        setDefaultDir(newDir);
+        // Clear custom path so it picks up the new default
+        setData((d) => ({ ...d, path: '' }));
+      }
+    }
+  }
 
   function handleClose() {
     if (creating) return;
@@ -1147,6 +1230,9 @@ export default function NewProjectWizard({
                     errors={errors}
                     onChange={updateData}
                     onBrowse={handleBrowse}
+                    envInfo={envInfo}
+                    locationMode={locationMode}
+                    onLocationModeChange={handleLocationModeChange}
                   />
                 )}
                 {step === 1 && (

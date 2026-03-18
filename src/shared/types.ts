@@ -31,8 +31,11 @@ export interface CreateProjectInput {
   tags: string[];
 }
 
+export type ProjectLocationMode = 'wsl' | 'windows';
+
 export interface UserPreferences {
   defaultProjectDir: string;
+  projectLocationMode: ProjectLocationMode;
   githubUsername: string;
   theme: 'dark' | 'light' | 'system';
   defaultEditor: string;
@@ -41,10 +44,26 @@ export interface UserPreferences {
   customSystemPrompt: string;
 }
 
+export interface EnvironmentInfo {
+  platform: 'wsl' | 'native-linux' | 'native-windows';
+  wslAvailable: boolean;
+  wslDistro: string;
+  wslHomePath: string;
+  defaultProjectDir: string;
+  windowsProjectDir: string;
+  wslProjectDir: string;
+}
+
 export interface GitHubRepo {
   name: string;
   url: string;
   fullName: string;
+}
+
+export interface GhAuthStatus {
+  authenticated: boolean;
+  username: string;
+  ghInstalled: boolean;
 }
 
 export interface ElectronAPI {
@@ -59,6 +78,10 @@ export interface ElectronAPI {
     createRepo: (name: string, isPrivate: boolean, description: string, projectPath: string) => Promise<GitHubRepo>;
     listRepos: () => Promise<GitHubRepo[]>;
     linkRepo: (projectPath: string, repoUrl: string) => Promise<void>;
+    checkAuth: () => Promise<GhAuthStatus>;
+    loginStart: () => Promise<{ code: string } | { error: string }>;
+    logout: () => Promise<void>;
+    repoCount: () => Promise<number>;
   };
   claude: {
     start: (projectId: string) => Promise<void>;
@@ -71,6 +94,7 @@ export interface ElectronAPI {
     checkGhAuth: () => Promise<{ authenticated: boolean; username: string }>;
     checkClaude: () => Promise<{ installed: boolean; version: string }>;
     openExternal: (url: string) => Promise<void>;
+    getEnvironment: () => Promise<EnvironmentInfo>;
   };
   preferences: {
     get: () => Promise<UserPreferences>;

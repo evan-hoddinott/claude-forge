@@ -16,6 +16,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     listRepos: () => ipcRenderer.invoke('github:list-repos'),
     linkRepo: (projectPath: string, repoUrl: string) =>
       ipcRenderer.invoke('github:link-repo', projectPath, repoUrl),
+    checkAuth: () => ipcRenderer.invoke('github:check-auth'),
+    loginStart: () => ipcRenderer.invoke('github:login-start'),
+    logout: () => ipcRenderer.invoke('github:logout'),
+    repoCount: () => ipcRenderer.invoke('github:repo-count'),
   },
   claude: {
     start: (projectId: string) => ipcRenderer.invoke('claude:start', projectId),
@@ -32,6 +36,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     checkClaude: () => ipcRenderer.invoke('system:check-claude'),
     openExternal: (url: string) =>
       ipcRenderer.invoke('system:open-external', url),
+    getEnvironment: () => ipcRenderer.invoke('system:get-environment'),
   },
   preferences: {
     get: () => ipcRenderer.invoke('preferences:get'),

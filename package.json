@@ -11,6 +11,10 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
+    "build:dist": "rm -rf dist && vite build -c vite.main.prod.config.ts && vite build -c vite.preload.prod.config.ts && vite build -c vite.renderer.prod.config.ts",
+    "make:win": "npm run build:dist && electron-builder --win",
+    "make:linux": "npm run build:dist && electron-builder --linux",
+    "make:all": "npm run build:dist && electron-builder --win --linux",
     "lint": "eslint --ext .ts,.tsx .",
     "icons": "node scripts/generate-icons.mjs"
   },
@@ -41,6 +45,7 @@
     "@typescript-eslint/parser": "^5.62.0",
     "autoprefixer": "^10.4.27",
     "electron": "41.0.3",
+    "electron-builder": "^26.8.1",
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
     "png-to-ico": "^3.0.1",

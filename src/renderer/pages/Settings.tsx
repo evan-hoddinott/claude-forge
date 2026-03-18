@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useToast } from '../components/Toast';
-import type { UserPreferences } from '../../shared/types';
+import type { UserPreferences, EnvironmentInfo, ProjectLocationMode } from '../../shared/types';
 
 export default function Settings() {
   const api = useAPI();
@@ -12,6 +12,7 @@ export default function Settings() {
   } = useQuery(() => api.preferences.get());
   const { data: ghAuth } = useQuery(() => api.system.checkGhAuth());
   const { data: claudeCheck } = useQuery(() => api.system.checkClaude());
+  const { data: envInfo } = useQuery(() => api.system.getEnvironment());
 
   if (loading || !prefs) {
     return (
@@ -33,6 +34,12 @@ export default function Settings() {
         <h1 className="text-xl font-bold text-text-primary">Settings</h1>
 
         <GeneralSection prefs={prefs} api={api} refetch={refetch} />
+        <EnvironmentSection
+          prefs={prefs}
+          api={api}
+          refetch={refetch}
+          envInfo={envInfo}
+        />
         <GitHubSection
           prefs={prefs}
           api={api}
@@ -208,6 +215,98 @@ function GeneralSection({
           Common values: code, cursor, codium, subl, vim, nvim
         </FieldHint>
       </div>
+    </SectionCard>
+  );
+}
+
+// --- Environment ---
+
+function EnvironmentSection({
+  prefs,
+  api,
+  refetch,
+  envInfo,
+}: {
+  prefs: UserPreferences;
+  api: API;
+  refetch: () => void;
+  envInfo: EnvironmentInfo | null;
+}) {
+  const platformLabel = envInfo
+    ? envInfo.platform === 'wsl'
+      ? 'WSL'
+      : envInfo.platform === 'native-windows'
+        ? 'Windows'
+        : 'Linux'
+    : 'Detecting...';
+
+  const wslStatusText = envInfo
+    ? envInfo.wslAvailable
+      ? `WSL detected: ${envInfo.wslDistro}`
+      : 'WSL not found'
+    : 'Checking...';
+
+  return (
+    <SectionCard title="Project Location">
+      {/* Detection status */}
+      <div className="flex items-center gap-2 text-sm">
+        <StatusDot ok={envInfo?.wslAvailable ?? false} />
+        <span className="text-text-secondary">{wslStatusText}</span>
+        <span className="text-text-muted">({platformLabel})</span>
+      </div>
+
+      {/* Default project directory */}
+      <div>
+        <FieldLabel>Default project directory</FieldLabel>
+        <p className="text-sm text-text-primary bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 font-mono break-all">
+          {prefs.defaultProjectDir}
+        </p>
+      </div>
+
+      {/* Location mode selector (only shown when WSL is available) */}
+      {envInfo?.wslAvailable && (
+        <div>
+          <FieldLabel>Default location for new projects</FieldLabel>
+          <SegmentedControl
+            value={prefs.projectLocationMode}
+            options={[
+              { value: 'wsl' as ProjectLocationMode, label: 'WSL (recommended)' },
+              { value: 'windows' as ProjectLocationMode, label: 'Windows' },
+            ]}
+            onChange={(v) => {
+              const newDir = v === 'wsl'
+                ? envInfo.wslProjectDir
+                : envInfo.windowsProjectDir;
+              updatePref(api, refetch, {
+                projectLocationMode: v,
+                defaultProjectDir: newDir || prefs.defaultProjectDir,
+              });
+            }}
+          />
+          <FieldHint>
+            WSL is recommended for Claude Code. Projects on the Windows filesystem
+            will be slower for file operations.
+          </FieldHint>
+        </div>
+      )}
+
+      {/* Show both paths when WSL is available */}
+      {envInfo?.wslAvailable && (
+        <div className="space-y-2 text-xs text-text-muted">
+          {envInfo.wslProjectDir && (
+            <div className="flex gap-2">
+              <span className="shrink-0 font-medium">WSL path:</span>
+              <span className="font-mono break-all">{envInfo.wslProjectDir}</span>
+            </div>
+          )}
+          {envInfo.windowsProjectDir && (
+            <div className="flex gap-2">
+              <span className="shrink-0 font-medium">Windows path:</span>
+              <span className="font-mono break-all">{envInfo.windowsProjectDir}</span>
+            </div>
+          )}
+        </div>
+      )}
     </SectionCard>
   );
 }

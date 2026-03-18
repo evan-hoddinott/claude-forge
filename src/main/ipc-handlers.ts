@@ -7,6 +7,7 @@ import * as store from './store';
 import * as projectService from './services/project-service';
 import * as githubService from './services/github-service';
 import * as claudeService from './services/claude-service';
+import * as environmentService from './services/environment-service';
 
 const execFileAsync = promisify(execFile);
 
@@ -118,6 +119,12 @@ export function registerIpcHandlers(): void {
     await shell.openExternal(url);
   });
 
+  // --- Environment ---
+
+  ipcMain.handle('system:get-environment', async () => {
+    return environmentService.detectEnvironment();
+  });
+
   // --- Preferences ---
 
   ipcMain.handle('preferences:get', () => {
@@ -153,6 +160,98 @@ export function registerIpcHandlers(): void {
       return { installed: true, version: (stdout || stderr).trim() };
     } catch {
       return { installed: false, version: '' };
+    }
+  });
+
+  // --- GitHub Connection ---
+
+  ipcMain.handle('github:check-auth', async () => {
+    // Check if gh CLI is installed
+    let ghInstalled = false;
+    try {
+      await execFileAsync('gh', ['--version'], { timeout: 5000 });
+      ghInstalled = true;
+    } catch {
+      return { authenticated: false, username: '', ghInstalled: false };
+    }
+
+    // Check auth status
+    try {
+      const { stdout, stderr } = await execFileAsync('gh', [
+        'auth', 'status', '--hostname', 'github.com',
+      ], { timeout: 10000 });
+      const output = stdout + stderr;
+      const match = output.match(/account (\S+)/);
+      return { authenticated: true, username: match?.[1] ?? '', ghInstalled };
+    } catch {
+      return { authenticated: false, username: '', ghInstalled };
+    }
+  });
+
+  ipcMain.handle('github:login-start', async () => {
+    return new Promise<{ code: string } | { error: string }>((resolve) => {
+      const child = spawn('gh', [
+        'auth', 'login',
+        '--web',
+        '--hostname', 'github.com',
+        '--git-protocol', 'https',
+      ]);
+
+      let output = '';
+      let resolved = false;
+
+      function handleData(data: Buffer) {
+        output += data.toString();
+        // Look for the one-time code: "First copy your one-time code: XXXX-XXXX"
+        const codeMatch = output.match(/one-time code:\s*([A-Z0-9]{4}-[A-Z0-9]{4})/i);
+        if (codeMatch && !resolved) {
+          resolved = true;
+          // Send Enter to proceed (opens browser)
+          child.stdin.write('\n');
+          resolve({ code: codeMatch[1] });
+        }
+      }
+
+      child.stdout.on('data', handleData);
+      child.stderr.on('data', handleData);
+
+      child.on('error', (err) => {
+        if (!resolved) {
+          resolved = true;
+          resolve({ error: err.message });
+        }
+      });
+
+      // Timeout after 15 seconds if we never get a code
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          child.kill();
+          resolve({ error: 'Timed out waiting for device code' });
+        }
+      }, 15000);
+    });
+  });
+
+  ipcMain.handle('github:logout', async () => {
+    try {
+      await execFileAsync('gh', [
+        'auth', 'logout', '--hostname', 'github.com',
+      ], { timeout: 10000, env: { ...process.env, GH_PROMPT_DISABLED: '1' } });
+    } catch {
+      // gh auth logout may fail if not logged in, that's fine
+    }
+  });
+
+  ipcMain.handle('github:repo-count', async () => {
+    try {
+      const { stdout: countOut } = await execFileAsync('gh', [
+        'api', 'user', '--jq', '.public_repos + .total_private_repos',
+      ], { timeout: 10000 });
+      const count = parseInt(countOut.trim(), 10);
+      return isNaN(count) ? 0 : count;
+    } catch {
+      return 0;
     }
   });
 

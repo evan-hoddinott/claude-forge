@@ -1,0 +1,71 @@
+appId: com.claudeforge.app
+productName: Claude Forge
+copyright: Copyright © 2026 evan-hoddinott
+
+directories:
+  output: release
+  buildResources: assets
+
+# Override main entry to point to production Vite output
+extraMetadata:
+  main: dist/build/main.js
+
+files:
+  - dist/**/*
+  - "!dist/**/*.map"
+
+extraResources:
+  - from: assets/icons/icon.png
+    to: icon.png
+
+asar: true
+
+# ── Windows ──────────────────────────────────────────────────
+win:
+  icon: assets/icons/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Claude Forge
+  runAfterFinish: true
+  installerIcon: assets/icons/icon.ico
+  uninstallerIcon: assets/icons/icon.ico
+  uninstallDisplayName: Claude Forge
+  artifactName: Claude-Forge-Setup-${version}.${ext}
+
+# ── Linux ────────────────────────────────────────────────────
+linux:
+  icon: assets/icons
+  category: Development
+  target:
+    - target: deb
+      arch:
+        - x64
+    - target: AppImage
+      arch:
+        - x64
+  desktop:
+    entry:
+      Name: Claude Forge
+      Comment: Desktop app for managing Claude Code projects
+      Categories: Development;Utility;
+
+deb:
+  depends:
+    - libnotify4
+    - libxtst6
+    - libnss3
+  priority: optional
+  artifactName: claude-forge_${version}_${arch}.${ext}
+
+appImage:
+  artifactName: Claude-Forge-${version}.${ext}
