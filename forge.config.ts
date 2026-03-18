@@ -3,28 +3,73 @@ import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
+import { MakerDMG } from '@electron-forge/maker-dmg';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { PublisherGithub } from '@electron-forge/publisher-github';
+import path from 'node:path';
+
+const iconDir = path.resolve(__dirname, 'assets', 'icons');
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    name: 'Claude Forge',
+    executableName: 'claude-forge',
+    // electron-packager resolves platform-specific extensions automatically:
+    //   macOS → icon.icns, Windows → icon.ico, Linux → icon.png
+    icon: path.join(iconDir, 'icon'),
+    appBundleId: 'com.claudeforge.app',
+    appCategoryType: 'public.app-category.developer-tools',
+    // Note: The Vite plugin handles ignore patterns automatically.
+    // Only add custom ignores if files leak into the bundle.
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    // macOS — .dmg installer
+    new MakerDMG({
+      format: 'ULFO',
+      icon: path.join(iconDir, 'icon.png'),
+    }),
+    // macOS — .zip fallback (for auto-updater on macOS)
     new MakerZIP({}, ['darwin']),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    // Windows — Squirrel .exe installer
+    new MakerSquirrel({
+      name: 'ClaudeForge',
+      setupIcon: path.join(iconDir, 'icon.ico'),
+      iconUrl: 'https://raw.githubusercontent.com/evan-hoddinott/claude-forge/master/assets/icons/icon.ico',
+      description: 'Desktop app for managing Claude Code projects',
+    }),
+    // Linux — .deb package
+    new MakerDeb({
+      options: {
+        name: 'claude-forge',
+        productName: 'Claude Forge',
+        genericName: 'Developer Tool',
+        description: 'Desktop app for managing Claude Code projects',
+        categories: ['Development', 'Utility'],
+        icon: path.join(iconDir, 'icon.png'),
+        section: 'devel',
+        maintainer: 'evan-hoddinott',
+      },
+    }),
+    // Linux — .rpm package
+    new MakerRpm({
+      options: {
+        name: 'claude-forge',
+        productName: 'Claude Forge',
+        genericName: 'Developer Tool',
+        description: 'Desktop app for managing Claude Code projects',
+        categories: ['Development', 'Utility'],
+        icon: path.join(iconDir, 'icon.png'),
+      },
+    }),
   ],
   plugins: [
     new VitePlugin({
-      // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
-      // If you are familiar with Vite configuration, it will look really familiar.
       build: [
         {
-          // `entry` is just an alias for `build.lib.entry` in the corresponding file of `config`.
           entry: 'src/main.ts',
           config: 'vite.main.config.ts',
           target: 'main',
@@ -42,8 +87,7 @@ const config: ForgeConfig = {
         },
       ],
     }),
-    // Fuses are used to enable/disable various Electron functionality
-    // at package time, before code signing the application
+    // Fuses harden the Electron binary at package time
     new FusesPlugin({
       version: FuseVersion.V1,
       [FuseV1Options.RunAsNode]: false,
@@ -52,6 +96,16 @@ const config: ForgeConfig = {
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
       [FuseV1Options.OnlyLoadAppFromAsar]: true,
+    }),
+  ],
+  publishers: [
+    new PublisherGithub({
+      repository: {
+        owner: 'evan-hoddinott',
+        name: 'claude-forge',
+      },
+      prerelease: false,
+      draft: true,
     }),
   ],
 };
