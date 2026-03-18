@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Page } from '../App';
-import type { GhAuthStatus } from '../../shared/types';
+import type { GhAuthStatus, ClaudeCodeStatus } from '../../shared/types';
 import { useAPI } from '../hooks/useAPI';
 
 interface SidebarProps {
@@ -324,41 +324,150 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
 }
 
 // ---------------------------------------------------------------------------
+// Spinner helper
+// ---------------------------------------------------------------------------
+
+function Spinner({ size = 'sm' }: { size?: 'sm' | 'xs' }) {
+  const cls = size === 'xs' ? 'w-2.5 h-2.5' : 'w-3 h-3';
+  return (
+    <motion.div
+      animate={{ rotate: 360 }}
+      transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+      className={`${cls} border border-white/10 border-t-accent rounded-full shrink-0`}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Claude Code tab content
 // ---------------------------------------------------------------------------
 
 function ClaudeTab({ collapsed }: { collapsed: boolean }) {
   const api = useAPI();
   const [expanded, setExpanded] = useState(false);
-  const [claudeCheck, setClaudeCheck] = useState<{ installed: boolean; version: string } | null>(null);
+  const [status, setStatus] = useState<ClaudeCodeStatus | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [installLog, setInstallLog] = useState<string[]>([]);
+  const [installError, setInstallError] = useState('');
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
 
-  const checkClaude = useCallback(async () => {
+  const checkStatus = useCallback(async () => {
     setRefreshing(true);
     try {
-      const status = await api.system.checkClaude();
-      setClaudeCheck(status);
+      const s = await api.claude.checkFullStatus();
+      setStatus(s);
     } catch {
-      setClaudeCheck({ installed: false, version: '' });
+      setStatus({
+        nodeInstalled: false,
+        installed: false,
+        version: '',
+        latestVersion: '',
+        updateAvailable: false,
+        authenticated: false,
+      });
     } finally {
       setRefreshing(false);
     }
   }, [api]);
 
+  // Initial check + auto-refresh every 60s
   useEffect(() => {
-    checkClaude();
-    autoRefreshRef.current = setInterval(checkClaude, 60000);
+    checkStatus();
+    autoRefreshRef.current = setInterval(checkStatus, 60000);
     return () => {
       if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+      api.claude.offInstallProgress();
     };
-  }, [checkClaude]);
+  }, [checkStatus, api]);
 
-  const isInstalled = claudeCheck?.installed ?? false;
+  // Auto-scroll install log
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [installLog]);
 
-  function handleInstall() {
+  async function handleInstall() {
+    setInstalling(true);
+    setInstallLog([]);
+    setInstallError('');
+
+    api.claude.onInstallProgress(({ line }) => {
+      setInstallLog(prev => [...prev.slice(-50), line]);
+    });
+
+    const result = await api.claude.install();
+    api.claude.offInstallProgress();
+    setInstalling(false);
+
+    if (result.success) {
+      await checkStatus();
+    } else {
+      setInstallError(result.error || 'Installation failed');
+    }
+  }
+
+  async function handleUpdate() {
+    setUpdating(true);
+    setInstallLog([]);
+    setInstallError('');
+
+    api.claude.onInstallProgress(({ line }) => {
+      setInstallLog(prev => [...prev.slice(-50), line]);
+    });
+
+    const result = await api.claude.update();
+    api.claude.offInstallProgress();
+    setUpdating(false);
+
+    if (result.success) {
+      setInstallLog([]);
+      await checkStatus();
+    } else {
+      setInstallError(result.error || 'Update failed');
+    }
+  }
+
+  async function handleLogin() {
+    await api.claude.login();
+    // Poll for auth completion
+    let attempts = 0;
+    const poll = setInterval(async () => {
+      attempts++;
+      const s = await api.claude.checkFullStatus();
+      if (s.authenticated || attempts > 60) {
+        clearInterval(poll);
+        setStatus(s);
+      }
+    }, 3000);
+  }
+
+  function handleOpenDocs() {
     api.system.openExternal('https://docs.anthropic.com/en/docs/claude-code/overview');
   }
+
+  function handleGetSubscription() {
+    api.system.openExternal('https://claude.ai/pricing');
+  }
+
+  function handleInstallNode() {
+    api.system.openExternal('https://nodejs.org');
+  }
+
+  const isOk = status?.installed && status?.authenticated;
+  const needsAction = status?.installed && !status?.authenticated;
+
+  // Status dot color
+  const dotColor = !status
+    ? 'bg-white/20'
+    : isOk
+      ? 'bg-status-ready'
+      : needsAction
+        ? 'bg-status-in-progress'
+        : status.installed
+          ? 'bg-status-ready'
+          : 'bg-status-error';
 
   return (
     <div>
@@ -379,18 +488,20 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
             <span className="flex-1 text-left text-xs font-medium text-text-secondary truncate">
               Claude Code
             </span>
-            <span
-              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                isInstalled ? 'bg-status-ready' : 'bg-white/20'
-              }`}
+            <motion.span
+              key={dotColor}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`}
             />
           </>
         )}
         {collapsed && (
-          <span
-            className={`absolute left-11 w-1.5 h-1.5 rounded-full ${
-              isInstalled ? 'bg-status-ready' : 'bg-white/20'
-            }`}
+          <motion.span
+            key={dotColor}
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className={`absolute left-11 w-1.5 h-1.5 rounded-full ${dotColor}`}
           />
         )}
       </button>
@@ -405,49 +516,161 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
             transition={{ duration: 0.15 }}
             className="overflow-hidden"
           >
-            <div className="px-3 pb-2 pt-1 space-y-2">
-              {!claudeCheck && (
-                <div className="text-xs text-text-muted py-1">Checking...</div>
+            <div className="px-3 pb-2 pt-1 space-y-2.5">
+              {/* Loading state */}
+              {!status && (
+                <div className="flex items-center gap-2 py-1">
+                  <Spinner />
+                  <span className="text-xs text-text-muted">Checking...</span>
+                </div>
               )}
 
-              {/* Installed */}
-              {claudeCheck?.installed && (
-                <div className="space-y-1.5">
+              {/* ---- Node.js not installed ---- */}
+              {status && !status.nodeInstalled && (
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-status-ready shrink-0" />
-                      <span className="text-xs text-text-primary font-medium">Installed</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-status-error shrink-0" />
+                      <span className="text-xs text-text-primary font-medium">Node.js required</span>
                     </div>
-                    <RefreshButton onClick={checkClaude} spinning={refreshing} />
+                    <RefreshButton onClick={checkStatus} spinning={refreshing} />
                   </div>
-                  {claudeCheck.version && (
-                    <p className="text-[10px] text-text-muted font-mono truncate">
-                      {claudeCheck.version}
-                    </p>
+                  <p className="text-[10px] text-text-muted">
+                    Claude Code requires Node.js to be installed.
+                  </p>
+                  <button
+                    onClick={handleInstallNode}
+                    className="w-full px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/8 border border-white/6 text-xs font-medium text-text-secondary transition-colors"
+                  >
+                    Install Node.js
+                  </button>
+                </div>
+              )}
+
+              {/* ---- Not installed (but Node is available) ---- */}
+              {status && status.nodeInstalled && !status.installed && !installing && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-status-error shrink-0" />
+                      <span className="text-xs text-text-primary font-medium">Not installed</span>
+                    </div>
+                    <RefreshButton onClick={checkStatus} spinning={refreshing} />
+                  </div>
+                  <button
+                    onClick={handleInstall}
+                    className="w-full px-3 py-1.5 rounded-md bg-accent/10 hover:bg-accent/15 border border-accent/20 text-xs font-medium text-accent transition-colors"
+                  >
+                    Install Claude Code
+                  </button>
+                  {installError && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] text-status-error">
+                        {installError.length > 120 ? installError.slice(-120) : installError}
+                      </p>
+                      <button
+                        onClick={handleOpenDocs}
+                        className="text-[10px] text-accent hover:underline"
+                      >
+                        Try manual install
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
 
-              {/* Not installed */}
-              {claudeCheck && !claudeCheck.installed && (
+              {/* ---- Installing / Updating progress ---- */}
+              {(installing || updating) && (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-text-muted">Not installed</p>
-                    <RefreshButton onClick={checkClaude} spinning={refreshing} />
+                  <div className="flex items-center gap-2">
+                    <Spinner />
+                    <span className="text-xs text-text-primary font-medium">
+                      {installing ? 'Installing...' : 'Updating...'}
+                    </span>
                   </div>
-                  <p className="text-[10px] text-text-muted">
-                    Install via{' '}
-                    <code className="bg-white/5 px-1 py-0.5 rounded text-text-secondary">
-                      npm i -g @anthropic-ai/claude-code
-                    </code>
-                  </p>
-                  <button
-                    onClick={handleInstall}
-                    className="w-full px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/8 border border-white/6 text-xs font-medium text-text-secondary transition-colors"
-                  >
-                    View Install Guide
-                  </button>
+                  {installLog.length > 0 && (
+                    <div className="bg-white/[0.03] border border-white/6 rounded-md p-2 max-h-24 overflow-y-auto font-mono text-[9px] text-text-muted leading-relaxed">
+                      {installLog.map((line, i) => (
+                        <div key={i} className="whitespace-pre-wrap break-all">{line}</div>
+                      ))}
+                      <div ref={logEndRef} />
+                    </div>
+                  )}
                 </div>
+              )}
+
+              {/* ---- Installed ---- */}
+              {status?.installed && !installing && !updating && (
+                <>
+                  {/* Installation status */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-status-ready shrink-0" />
+                        <span className="text-xs text-text-primary font-medium">Installed</span>
+                      </div>
+                      <RefreshButton onClick={checkStatus} spinning={refreshing} />
+                    </div>
+                    {status.version && (
+                      <p className="text-[10px] text-text-muted font-mono truncate">
+                        {status.version}
+                      </p>
+                    )}
+                    {status.updateAvailable && status.latestVersion && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-status-in-progress">
+                          Update available: v{status.latestVersion}
+                        </span>
+                        <button
+                          onClick={handleUpdate}
+                          className="px-2 py-0.5 rounded bg-accent/10 hover:bg-accent/15 border border-accent/20 text-[10px] font-medium text-accent transition-colors"
+                        >
+                          Update
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Separator between sections */}
+                  <div className="border-t border-white/6" />
+
+                  {/* Authentication status */}
+                  {status.authenticated ? (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <svg className="w-3 h-3 text-status-ready" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 8 6.5 11.5 13 5" />
+                        </svg>
+                        <span className="text-xs text-text-primary font-medium">Logged in</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <svg className="w-3 h-3 text-status-in-progress" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M8 5v3M8 11h.01" />
+                          <circle cx="8" cy="8" r="6.5" />
+                        </svg>
+                        <span className="text-xs text-text-primary font-medium">Not logged in</span>
+                      </div>
+                      <button
+                        onClick={handleLogin}
+                        className="w-full px-3 py-1.5 rounded-md bg-accent/10 hover:bg-accent/15 border border-accent/20 text-xs font-medium text-accent transition-colors"
+                      >
+                        Log in to Claude
+                      </button>
+                      <p className="text-[10px] text-text-muted">
+                        Requires a Claude Pro or Max subscription
+                      </p>
+                      <button
+                        onClick={handleGetSubscription}
+                        className="text-[10px] text-accent hover:underline"
+                      >
+                        Get a subscription
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </motion.div>

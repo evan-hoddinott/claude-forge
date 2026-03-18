@@ -1,8 +1,10 @@
-import { ipcMain, dialog, shell } from 'electron';
+import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as fs from 'node:fs/promises';
-import type { CreateProjectInput, Project } from '../shared/types';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import type { CreateProjectInput, Project, ClaudeCodeStatus } from '../shared/types';
 import * as store from './store';
 import * as projectService from './services/project-service';
 import * as githubService from './services/github-service';
@@ -161,6 +163,162 @@ export function registerIpcHandlers(): void {
     } catch {
       return { installed: false, version: '' };
     }
+  });
+
+  // --- Claude Code Full Status ---
+
+  ipcMain.handle('claude:check-full-status', async (): Promise<ClaudeCodeStatus> => {
+    const result: ClaudeCodeStatus = {
+      nodeInstalled: false,
+      installed: false,
+      version: '',
+      latestVersion: '',
+      updateAvailable: false,
+      authenticated: false,
+    };
+
+    // Check Node.js
+    try {
+      await execFileAsync('node', ['--version'], { timeout: 5000 });
+      result.nodeInstalled = true;
+    } catch {
+      return result;
+    }
+
+    // Check Claude Code installed + version
+    try {
+      const { stdout, stderr } = await execFileAsync('claude', ['--version'], { timeout: 10000 });
+      const versionOutput = (stdout || stderr).trim();
+      result.installed = true;
+      result.version = versionOutput;
+    } catch {
+      return result;
+    }
+
+    // Check latest version from npm (non-blocking, best-effort)
+    try {
+      const { stdout } = await execFileAsync('npm', ['view', '@anthropic-ai/claude-code', 'version'], { timeout: 10000 });
+      result.latestVersion = stdout.trim();
+      if (result.version && result.latestVersion) {
+        // Extract semver from version string (e.g., "claude-code v1.0.32" → "1.0.32")
+        const installedMatch = result.version.match(/(\d+\.\d+\.\d+)/);
+        const installed = installedMatch ? installedMatch[1] : '';
+        if (installed && installed !== result.latestVersion) {
+          result.updateAvailable = true;
+        }
+      }
+    } catch {
+      // npm check failed, skip update info
+    }
+
+    // Check authentication (look for ~/.claude config files)
+    try {
+      const claudeDir = path.join(os.homedir(), '.claude');
+      await fs.access(claudeDir);
+      // If the .claude directory exists with credentials, user is likely authenticated
+      const files = await fs.readdir(claudeDir);
+      result.authenticated = files.some(f =>
+        f.includes('credentials') || f.includes('auth') || f === '.credentials.json'
+      );
+    } catch {
+      // No .claude dir, not authenticated
+    }
+
+    // Additional auth check: try running claude with a quick command
+    if (!result.authenticated) {
+      try {
+        // Check if there's a settings/config that indicates auth
+        const credPath = path.join(os.homedir(), '.claude.json');
+        await fs.access(credPath);
+        result.authenticated = true;
+      } catch {
+        // Not authenticated
+      }
+    }
+
+    return result;
+  });
+
+  ipcMain.handle('claude:install', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      const child = spawn('npm', ['install', '-g', '@anthropic-ai/claude-code'], {
+        shell: true,
+        env: { ...process.env },
+      });
+
+      let errorOutput = '';
+
+      child.stdout.on('data', (data: Buffer) => {
+        const line = data.toString();
+        win?.webContents.send('claude:install-progress', { line });
+      });
+
+      child.stderr.on('data', (data: Buffer) => {
+        const line = data.toString();
+        errorOutput += line;
+        win?.webContents.send('claude:install-progress', { line });
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({ success: true });
+        } else {
+          resolve({ success: false, error: errorOutput.slice(-500) });
+        }
+      });
+
+      child.on('error', (err) => {
+        resolve({ success: false, error: err.message });
+      });
+    });
+  });
+
+  ipcMain.handle('claude:update', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      const child = spawn('npm', ['install', '-g', '@anthropic-ai/claude-code@latest'], {
+        shell: true,
+        env: { ...process.env },
+      });
+
+      let errorOutput = '';
+
+      child.stdout.on('data', (data: Buffer) => {
+        win?.webContents.send('claude:install-progress', { line: data.toString() });
+      });
+
+      child.stderr.on('data', (data: Buffer) => {
+        const line = data.toString();
+        errorOutput += line;
+        win?.webContents.send('claude:install-progress', { line });
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({ success: true });
+        } else {
+          resolve({ success: false, error: errorOutput.slice(-500) });
+        }
+      });
+
+      child.on('error', (err) => {
+        resolve({ success: false, error: err.message });
+      });
+    });
+  });
+
+  ipcMain.handle('claude:login', async () => {
+    return new Promise<{ success: boolean }>((resolve) => {
+      const child = spawn('claude', [], {
+        shell: true,
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+      // Login spawns a browser-based flow; resolve immediately
+      resolve({ success: true });
+    });
   });
 
   // --- GitHub Connection ---

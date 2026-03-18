@@ -25,6 +25,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     start: (projectId: string) => ipcRenderer.invoke('claude:start', projectId),
     status: (projectId: string) =>
       ipcRenderer.invoke('claude:status', projectId),
+    checkFullStatus: () => ipcRenderer.invoke('claude:check-full-status'),
+    install: () => ipcRenderer.invoke('claude:install'),
+    update: () => ipcRenderer.invoke('claude:update'),
+    login: () => ipcRenderer.invoke('claude:login'),
+    onInstallProgress: (callback: (data: { line: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { line: string }) => callback(data);
+      ipcRenderer.on('claude:install-progress', handler);
+    },
+    offInstallProgress: () => {
+      ipcRenderer.removeAllListeners('claude:install-progress');
+    },
   },
   system: {
     selectDirectory: () => ipcRenderer.invoke('system:select-directory'),

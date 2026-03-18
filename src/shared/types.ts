@@ -66,6 +66,15 @@ export interface GhAuthStatus {
   ghInstalled: boolean;
 }
 
+export interface ClaudeCodeStatus {
+  nodeInstalled: boolean;
+  installed: boolean;
+  version: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  authenticated: boolean;
+}
+
 export interface ElectronAPI {
   projects: {
     list: () => Promise<Project[]>;
@@ -86,6 +95,12 @@ export interface ElectronAPI {
   claude: {
     start: (projectId: string) => Promise<void>;
     status: (projectId: string) => Promise<{ running: boolean; hasHistory: boolean }>;
+    checkFullStatus: () => Promise<ClaudeCodeStatus>;
+    install: () => Promise<{ success: boolean; error?: string }>;
+    update: () => Promise<{ success: boolean; error?: string }>;
+    login: () => Promise<{ success: boolean }>;
+    onInstallProgress: (callback: (data: { line: string }) => void) => void;
+    offInstallProgress: () => void;
   };
   system: {
     selectDirectory: () => Promise<string | null>;
