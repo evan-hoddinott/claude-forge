@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Page } from '../App';
-import type { GhAuthStatus, ClaudeCodeStatus } from '../../shared/types';
+import type { GhAuthStatus, AgentStatus, AgentType } from '../../shared/types';
+import { AGENTS } from '../../shared/types';
 import { useAPI } from '../hooks/useAPI';
 
 interface SidebarProps {
@@ -57,16 +58,35 @@ const GitHubIcon = (
 );
 
 // ---------------------------------------------------------------------------
-// Claude icon (terminal-style)
+// Agent brand icons
 // ---------------------------------------------------------------------------
 
-const ClaudeIcon = (
-  <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1" y="2" width="14" height="12" rx="2" />
-    <polyline points="4 7 6 9 4 11" />
-    <line x1="8" y1="11" x2="12" y2="11" />
-  </svg>
-);
+function AgentIcon({ agentType, className }: { agentType: AgentType; className?: string }) {
+  const cls = className || 'w-4 h-4';
+  switch (agentType) {
+    case 'claude':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="2" width="14" height="12" rx="2" />
+          <polyline points="4 7 6 9 4 11" />
+          <line x1="8" y1="11" x2="12" y2="11" />
+        </svg>
+      );
+    case 'gemini':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C8 4.42 4.42 8 0 8c4.42 0 8 3.58 8 8 0-4.42 3.58-8 8-8-4.42 0-8-3.58-8-8z" />
+        </svg>
+      );
+    case 'codex':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0L14.93 4v8L8 16 1.07 12V4L8 0zm0 1.6L2.47 4.8v6.4L8 14.4l5.53-3.2V4.8L8 1.6z" />
+          <circle cx="8" cy="8" r="2.5" />
+        </svg>
+      );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Refresh icon
@@ -127,7 +147,6 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
     }
   }, [api]);
 
-  // Initial check + auto-refresh every 60s
   useEffect(() => {
     checkAuth();
     autoRefreshRef.current = setInterval(checkAuth, 60000);
@@ -147,7 +166,6 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
     setDeviceCode(result.code);
     setLoginState('polling');
 
-    // Poll for auth completion
     pollRef.current = setInterval(async () => {
       const status = await api.github.checkAuth();
       if (status.authenticated) {
@@ -175,7 +193,6 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
 
   return (
     <div>
-      {/* Tab header */}
       <button
         onClick={() => !collapsed && setExpanded((v) => !v)}
         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -208,7 +225,6 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
         )}
       </button>
 
-      {/* Expanded panel */}
       <AnimatePresence>
         {expanded && !collapsed && (
           <motion.div
@@ -219,12 +235,10 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
             className="overflow-hidden"
           >
             <div className="px-3 pb-2 pt-1 space-y-2">
-              {/* Loading state */}
               {!auth && (
                 <div className="text-xs text-text-muted py-1">Checking...</div>
               )}
 
-              {/* gh CLI not installed */}
               {auth && !auth.ghInstalled && (
                 <div className="space-y-2">
                   <p className="text-xs text-text-muted">GitHub CLI required</p>
@@ -237,7 +251,6 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
                 </div>
               )}
 
-              {/* Connected state */}
               {auth?.ghInstalled && auth.authenticated && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -268,7 +281,6 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
                 </div>
               )}
 
-              {/* Disconnected state (gh installed but not authenticated) */}
               {auth?.ghInstalled && !auth.authenticated && loginState === 'idle' && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -284,19 +296,13 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
                 </div>
               )}
 
-              {/* Waiting for device code */}
               {loginState === 'waiting' && (
                 <div className="flex items-center gap-2 py-1">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                    className="w-3 h-3 border border-white/10 border-t-accent rounded-full shrink-0"
-                  />
+                  <Spinner />
                   <p className="text-xs text-text-muted">Starting login...</p>
                 </div>
               )}
 
-              {/* Show device code */}
               {loginState === 'polling' && deviceCode && (
                 <div className="space-y-2">
                   <p className="text-[10px] text-text-muted">Enter this code in your browser:</p>
@@ -306,11 +312,7 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                      className="w-2.5 h-2.5 border border-white/10 border-t-accent rounded-full shrink-0"
-                    />
+                    <Spinner size="xs" />
                     <p className="text-[10px] text-text-muted">Waiting for authorization...</p>
                   </div>
                 </div>
@@ -339,51 +341,32 @@ function Spinner({ size = 'sm' }: { size?: 'sm' | 'xs' }) {
 }
 
 // ---------------------------------------------------------------------------
-// Claude Code tab content
+// Single agent card (accordion-style)
 // ---------------------------------------------------------------------------
 
-function ClaudeTab({ collapsed }: { collapsed: boolean }) {
+function AgentCard({
+  agentType,
+  collapsed,
+  statuses,
+  onRefresh,
+  refreshing,
+}: {
+  agentType: AgentType;
+  collapsed: boolean;
+  statuses: Record<AgentType, AgentStatus> | null;
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
   const api = useAPI();
+  const config = AGENTS[agentType];
+  const status = statuses?.[agentType] ?? null;
   const [expanded, setExpanded] = useState(false);
-  const [status, setStatus] = useState<ClaudeCodeStatus | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [installLog, setInstallLog] = useState<string[]>([]);
   const [installError, setInstallError] = useState('');
-  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
-  const checkStatus = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const s = await api.claude.checkFullStatus();
-      setStatus(s);
-    } catch {
-      setStatus({
-        nodeInstalled: false,
-        installed: false,
-        version: '',
-        latestVersion: '',
-        updateAvailable: false,
-        authenticated: false,
-      });
-    } finally {
-      setRefreshing(false);
-    }
-  }, [api]);
-
-  // Initial check + auto-refresh every 60s
-  useEffect(() => {
-    checkStatus();
-    autoRefreshRef.current = setInterval(checkStatus, 60000);
-    return () => {
-      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
-      api.claude.offInstallProgress();
-    };
-  }, [checkStatus, api]);
-
-  // Auto-scroll install log
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [installLog]);
@@ -393,16 +376,16 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
     setInstallLog([]);
     setInstallError('');
 
-    api.claude.onInstallProgress(({ line }) => {
+    api.agent.onInstallProgress(({ line }) => {
       setInstallLog(prev => [...prev.slice(-50), line]);
     });
 
-    const result = await api.claude.install();
-    api.claude.offInstallProgress();
+    const result = await api.agent.install(agentType);
+    api.agent.offInstallProgress();
     setInstalling(false);
 
     if (result.success) {
-      await checkStatus();
+      onRefresh();
     } else {
       setInstallError(result.error || 'Installation failed');
     }
@@ -413,42 +396,41 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
     setInstallLog([]);
     setInstallError('');
 
-    api.claude.onInstallProgress(({ line }) => {
+    api.agent.onInstallProgress(({ line }) => {
       setInstallLog(prev => [...prev.slice(-50), line]);
     });
 
-    const result = await api.claude.update();
-    api.claude.offInstallProgress();
+    const result = await api.agent.update(agentType);
+    api.agent.offInstallProgress();
     setUpdating(false);
 
     if (result.success) {
       setInstallLog([]);
-      await checkStatus();
+      onRefresh();
     } else {
       setInstallError(result.error || 'Update failed');
     }
   }
 
   async function handleLogin() {
-    await api.claude.login();
-    // Poll for auth completion
+    await api.agent.login(agentType);
     let attempts = 0;
     const poll = setInterval(async () => {
       attempts++;
-      const s = await api.claude.checkFullStatus();
+      const s = await api.agent.checkFullStatus(agentType);
       if (s.authenticated || attempts > 60) {
         clearInterval(poll);
-        setStatus(s);
+        onRefresh();
       }
     }, 3000);
   }
 
   function handleOpenDocs() {
-    api.system.openExternal('https://docs.anthropic.com/en/docs/claude-code/overview');
+    api.system.openExternal(config.docsUrl);
   }
 
   function handleGetSubscription() {
-    api.system.openExternal('https://claude.ai/pricing');
+    api.system.openExternal(config.subscriptionUrl);
   }
 
   function handleInstallNode() {
@@ -458,7 +440,6 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
   const isOk = status?.installed && status?.authenticated;
   const needsAction = status?.installed && !status?.authenticated;
 
-  // Status dot color
   const dotColor = !status
     ? 'bg-white/20'
     : isOk
@@ -471,23 +452,30 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
 
   return (
     <div>
-      {/* Tab header */}
       <button
         onClick={() => !collapsed && setExpanded((v) => !v)}
-        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+        className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
           expanded && !collapsed
             ? 'bg-white/[0.04]'
             : 'hover:bg-white/[0.03]'
         }`}
       >
-        <span className="shrink-0 w-5 h-5 flex items-center justify-center text-text-muted">
-          {ClaudeIcon}
+        <span
+          className="shrink-0 w-5 h-5 flex items-center justify-center"
+          style={{ color: config.color }}
+        >
+          <AgentIcon agentType={agentType} />
         </span>
         {!collapsed && (
           <>
             <span className="flex-1 text-left text-xs font-medium text-text-secondary truncate">
-              Claude Code
+              {config.displayName}
             </span>
+            {status?.version && (
+              <span className="text-[9px] text-text-muted font-mono mr-1 truncate max-w-[50px]">
+                {status.version.match(/(\d+\.\d+\.\d+)/)?.[1] ?? ''}
+              </span>
+            )}
             <motion.span
               key={dotColor}
               initial={{ scale: 0.5, opacity: 0 }}
@@ -506,7 +494,6 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
         )}
       </button>
 
-      {/* Expanded panel */}
       <AnimatePresence>
         {expanded && !collapsed && (
           <motion.div
@@ -516,8 +503,8 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
             transition={{ duration: 0.15 }}
             className="overflow-hidden"
           >
-            <div className="px-3 pb-2 pt-1 space-y-2.5">
-              {/* Loading state */}
+            <div className="px-3 pb-2 pt-1 space-y-2.5 ml-5 border-l-2" style={{ borderColor: config.color + '30' }}>
+              {/* Loading */}
               {!status && (
                 <div className="flex items-center gap-2 py-1">
                   <Spinner />
@@ -525,7 +512,7 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                 </div>
               )}
 
-              {/* ---- Node.js not installed ---- */}
+              {/* Node.js not installed */}
               {status && !status.nodeInstalled && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -533,11 +520,8 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                       <span className="w-1.5 h-1.5 rounded-full bg-status-error shrink-0" />
                       <span className="text-xs text-text-primary font-medium">Node.js required</span>
                     </div>
-                    <RefreshButton onClick={checkStatus} spinning={refreshing} />
+                    <RefreshButton onClick={onRefresh} spinning={refreshing} />
                   </div>
-                  <p className="text-[10px] text-text-muted">
-                    Claude Code requires Node.js to be installed.
-                  </p>
                   <button
                     onClick={handleInstallNode}
                     className="w-full px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/8 border border-white/6 text-xs font-medium text-text-secondary transition-colors"
@@ -547,7 +531,7 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                 </div>
               )}
 
-              {/* ---- Not installed (but Node is available) ---- */}
+              {/* Not installed */}
               {status && status.nodeInstalled && !status.installed && !installing && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -555,13 +539,18 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                       <span className="w-1.5 h-1.5 rounded-full bg-status-error shrink-0" />
                       <span className="text-xs text-text-primary font-medium">Not installed</span>
                     </div>
-                    <RefreshButton onClick={checkStatus} spinning={refreshing} />
+                    <RefreshButton onClick={onRefresh} spinning={refreshing} />
                   </div>
                   <button
                     onClick={handleInstall}
-                    className="w-full px-3 py-1.5 rounded-md bg-accent/10 hover:bg-accent/15 border border-accent/20 text-xs font-medium text-accent transition-colors"
+                    className="w-full px-3 py-1.5 rounded-md hover:brightness-110 border text-xs font-medium transition-colors"
+                    style={{
+                      backgroundColor: config.color + '18',
+                      borderColor: config.color + '30',
+                      color: config.color,
+                    }}
                   >
-                    Install Claude Code
+                    Install {config.displayName}
                   </button>
                   {installError && (
                     <div className="space-y-1.5">
@@ -570,7 +559,8 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                       </p>
                       <button
                         onClick={handleOpenDocs}
-                        className="text-[10px] text-accent hover:underline"
+                        className="text-[10px] hover:underline"
+                        style={{ color: config.color }}
                       >
                         Try manual install
                       </button>
@@ -579,7 +569,7 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                 </div>
               )}
 
-              {/* ---- Installing / Updating progress ---- */}
+              {/* Installing / Updating */}
               {(installing || updating) && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -599,17 +589,16 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                 </div>
               )}
 
-              {/* ---- Installed ---- */}
+              {/* Installed */}
               {status?.installed && !installing && !updating && (
                 <>
-                  {/* Installation status */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-status-ready shrink-0" />
                         <span className="text-xs text-text-primary font-medium">Installed</span>
                       </div>
-                      <RefreshButton onClick={checkStatus} spinning={refreshing} />
+                      <RefreshButton onClick={onRefresh} spinning={refreshing} />
                     </div>
                     {status.version && (
                       <p className="text-[10px] text-text-muted font-mono truncate">
@@ -623,7 +612,12 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                         </span>
                         <button
                           onClick={handleUpdate}
-                          className="px-2 py-0.5 rounded bg-accent/10 hover:bg-accent/15 border border-accent/20 text-[10px] font-medium text-accent transition-colors"
+                          className="px-2 py-0.5 rounded border text-[10px] font-medium transition-colors"
+                          style={{
+                            backgroundColor: config.color + '18',
+                            borderColor: config.color + '30',
+                            color: config.color,
+                          }}
                         >
                           Update
                         </button>
@@ -631,10 +625,9 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                     )}
                   </div>
 
-                  {/* Separator between sections */}
                   <div className="border-t border-white/6" />
 
-                  {/* Authentication status */}
+                  {/* Auth status */}
                   {status.authenticated ? (
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-1.5">
@@ -655,27 +648,93 @@ function ClaudeTab({ collapsed }: { collapsed: boolean }) {
                       </div>
                       <button
                         onClick={handleLogin}
-                        className="w-full px-3 py-1.5 rounded-md bg-accent/10 hover:bg-accent/15 border border-accent/20 text-xs font-medium text-accent transition-colors"
+                        className="w-full px-3 py-1.5 rounded-md border text-xs font-medium transition-colors"
+                        style={{
+                          backgroundColor: config.color + '18',
+                          borderColor: config.color + '30',
+                          color: config.color,
+                        }}
                       >
-                        Log in to Claude
+                        Log in to {config.displayName}
                       </button>
-                      <p className="text-[10px] text-text-muted">
-                        Requires a Claude Pro or Max subscription
-                      </p>
                       <button
                         onClick={handleGetSubscription}
-                        className="text-[10px] text-accent hover:underline"
+                        className="text-[10px] hover:underline"
+                        style={{ color: config.color }}
                       >
                         Get a subscription
                       </button>
                     </div>
                   )}
+
+                  {/* Docs link */}
+                  <button
+                    onClick={handleOpenDocs}
+                    className="text-[10px] text-text-muted hover:text-text-secondary transition-colors"
+                  >
+                    Documentation
+                  </button>
                 </>
               )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AI Agents section — shows all three agents
+// ---------------------------------------------------------------------------
+
+function AgentsSection({ collapsed }: { collapsed: boolean }) {
+  const api = useAPI();
+  const [statuses, setStatuses] = useState<Record<AgentType, AgentStatus> | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const checkAll = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const result = await api.agent.checkAllStatuses();
+      setStatuses(result);
+    } catch {
+      // failed to check
+    } finally {
+      setRefreshing(false);
+    }
+  }, [api]);
+
+  useEffect(() => {
+    checkAll();
+    autoRefreshRef.current = setInterval(checkAll, 60000);
+    return () => {
+      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+      api.agent.offInstallProgress();
+    };
+  }, [checkAll, api]);
+
+  return (
+    <div className="space-y-0.5">
+      {!collapsed && (
+        <div className="flex items-center justify-between px-3 pt-1 pb-0.5">
+          <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+            AI Agents
+          </span>
+          <RefreshButton onClick={checkAll} spinning={refreshing} />
+        </div>
+      )}
+      {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => (
+        <AgentCard
+          key={agentType}
+          agentType={agentType}
+          collapsed={collapsed}
+          statuses={statuses}
+          onRefresh={checkAll}
+          refreshing={refreshing}
+        />
+      ))}
     </div>
   );
 }
@@ -767,7 +826,14 @@ export default function Sidebar({
       {/* Connection Status Tabs */}
       <div className="px-2 py-2 space-y-0.5 relative">
         <GitHubTab collapsed={collapsed} />
-        <ClaudeTab collapsed={collapsed} />
+      </div>
+
+      {/* Separator */}
+      <div className="mx-3 border-t border-white/6" />
+
+      {/* AI Agents */}
+      <div className="px-2 py-2 relative overflow-y-auto flex-shrink min-h-0">
+        <AgentsSection collapsed={collapsed} />
       </div>
 
       {/* Separator */}

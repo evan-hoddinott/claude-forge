@@ -6,7 +6,8 @@ import {
   useDragControls,
 } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
-import type { ProjectInput, GitHubRepo, EnvironmentInfo, ProjectLocationMode } from '../../shared/types';
+import type { ProjectInput, GitHubRepo, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus } from '../../shared/types';
+import { AGENTS } from '../../shared/types';
 import { useAPI } from '../hooks/useAPI';
 import { useToast } from './Toast';
 
@@ -24,6 +25,8 @@ interface WizardData {
   newRepoPrivate: boolean;
   newRepoDescription: string;
   linkedRepoUrl: string;
+  selectedAgents: AgentType[];
+  launchAgent: AgentType;
 }
 
 const INITIAL_DATA: WizardData = {
@@ -36,6 +39,8 @@ const INITIAL_DATA: WizardData = {
   newRepoPrivate: true,
   newRepoDescription: '',
   linkedRepoUrl: '',
+  selectedAgents: ['claude'],
+  launchAgent: 'claude',
 };
 
 const STEP_LABELS = ['Basics', 'Inputs', 'GitHub', 'Review'];
@@ -871,18 +876,62 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function AgentIconSmall({ agentType }: { agentType: AgentType }) {
+  switch (agentType) {
+    case 'claude':
+      return (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="2" width="14" height="12" rx="2" />
+          <polyline points="4 7 6 9 4 11" />
+          <line x1="8" y1="11" x2="12" y2="11" />
+        </svg>
+      );
+    case 'gemini':
+      return (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C8 4.42 4.42 8 0 8c4.42 0 8 3.58 8 8 0-4.42 3.58-8 8-8-4.42 0-8-3.58-8-8z" />
+        </svg>
+      );
+    case 'codex':
+      return (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0L14.93 4v8L8 16 1.07 12V4L8 0zm0 1.6L2.47 4.8v6.4L8 14.4l5.53-3.2V4.8L8 1.6z" />
+          <circle cx="8" cy="8" r="2.5" />
+        </svg>
+      );
+  }
+}
+
 function StepReview({
   data,
   defaultDir,
   creating,
   createError,
+  agentStatuses,
+  onAgentsChange,
+  onLaunchAgentChange,
 }: {
   data: WizardData;
   defaultDir: string;
   creating: boolean;
   createError: string | null;
+  agentStatuses: Record<AgentType, AgentStatus> | null;
+  onAgentsChange: (agents: AgentType[]) => void;
+  onLaunchAgentChange: (agent: AgentType) => void;
 }) {
   const resolvedPath = data.path || `${defaultDir}/${data.name}`;
+
+  function toggleAgent(agentType: AgentType) {
+    const current = data.selectedAgents;
+    if (current.includes(agentType)) {
+      if (current.length <= 1) return; // must have at least one
+      const next = current.filter((a) => a !== agentType);
+      onAgentsChange(next);
+      if (data.launchAgent === agentType) onLaunchAgentChange(next[0]);
+    } else {
+      onAgentsChange([...current, agentType]);
+    }
+  }
 
   return (
     <div className="p-6 space-y-5">
@@ -947,6 +996,72 @@ function StepReview({
         </div>
       </div>
 
+      {/* AI Agents */}
+      <div>
+        <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
+          AI Agents
+        </h4>
+        <div className="grid grid-cols-3 gap-2">
+          {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => {
+            const config = AGENTS[agentType];
+            const status = agentStatuses?.[agentType];
+            const isInstalled = status?.installed && status?.authenticated;
+            const selected = data.selectedAgents.includes(agentType);
+            return (
+              <button
+                key={agentType}
+                type="button"
+                onClick={() => isInstalled && toggleAgent(agentType)}
+                disabled={!isInstalled}
+                className={`p-3 rounded-lg border transition-all text-left ${
+                  !isInstalled
+                    ? 'opacity-30 cursor-not-allowed border-white/[0.04] bg-white/[0.01]'
+                    : selected
+                      ? 'border-white/20 bg-white/[0.06]'
+                      : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'
+                }`}
+                style={selected && isInstalled ? { borderColor: config.color + '40' } : undefined}
+              >
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span style={{ color: isInstalled ? config.color : undefined }}>
+                    <AgentIconSmall agentType={agentType} />
+                  </span>
+                  <span className="text-xs font-medium text-text-primary">{config.displayName}</span>
+                </div>
+                <span className="text-[10px] text-text-muted">
+                  {!isInstalled ? 'Install first' : config.contextFileName}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {data.selectedAgents.length > 1 && (
+          <div className="mt-2">
+            <span className="text-[10px] text-text-muted mr-2">Launch with:</span>
+            {data.selectedAgents.map((a) => {
+              const config = AGENTS[a];
+              return (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => onLaunchAgentChange(a)}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] mr-1 transition-colors ${
+                    data.launchAgent === a
+                      ? 'bg-white/10 text-text-primary font-medium'
+                      : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  <span style={{ color: config.color }}>
+                    <AgentIconSmall agentType={a} />
+                  </span>
+                  {config.displayName}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {createError && (
         <div className="p-3 rounded-lg bg-status-error/10 border border-status-error/20 text-sm text-status-error">
           {createError}
@@ -994,16 +1109,26 @@ export default function NewProjectWizard({
   const [defaultDir, setDefaultDir] = useState('~/Projects');
   const [envInfo, setEnvInfo] = useState<EnvironmentInfo | null>(null);
   const [locationMode, setLocationMode] = useState<ProjectLocationMode>('wsl');
+  const [agentStatuses, setAgentStatuses] = useState<Record<AgentType, AgentStatus> | null>(null);
 
-  // Fetch default project dir and environment info on open
+  // Fetch default project dir, environment info, and agent statuses on open
   useEffect(() => {
     if (open) {
       api.preferences.get().then((prefs) => {
         setDefaultDir(prefs.defaultProjectDir);
         setLocationMode(prefs.projectLocationMode);
+        // Pre-select default agent
+        setData((d) => ({
+          ...d,
+          selectedAgents: [prefs.defaultAgent || 'claude'],
+          launchAgent: prefs.defaultAgent || 'claude',
+        }));
       });
       api.system.getEnvironment().then((env) => {
         setEnvInfo(env);
+      });
+      api.agent.checkAllStatuses().then((statuses) => {
+        setAgentStatuses(statuses);
       });
     }
   }, [open, api]);
@@ -1078,7 +1203,7 @@ export default function NewProjectWizard({
   }
 
   const handleCreate = useCallback(
-    async (launchClaude: boolean) => {
+    async (launchAgent: boolean) => {
       setCreating(true);
       setCreateError(null);
 
@@ -1089,6 +1214,8 @@ export default function NewProjectWizard({
           path: data.path.trim() || undefined,
           inputs: data.inputs,
           tags: [],
+          preferredAgent: data.launchAgent,
+          agents: data.selectedAgents,
         });
 
         // GitHub (best-effort)
@@ -1122,12 +1249,13 @@ export default function NewProjectWizard({
           toast('GitHub setup failed — you can add it later', 'error');
         }
 
-        if (launchClaude) {
+        if (launchAgent) {
+          const agentConfig = AGENTS[data.launchAgent];
           try {
-            await api.claude.start(project.id);
-            toast('Claude Code launched');
+            await api.agent.start(project.id, data.launchAgent);
+            toast(`${agentConfig.displayName} launched`);
           } catch {
-            toast('Failed to launch Claude Code', 'error');
+            toast(`Failed to launch ${agentConfig.displayName}`, 'error');
           }
         }
 
@@ -1254,6 +1382,9 @@ export default function NewProjectWizard({
                     defaultDir={defaultDir}
                     creating={creating}
                     createError={createError}
+                    agentStatuses={agentStatuses}
+                    onAgentsChange={(agents) => updateData({ selectedAgents: agents })}
+                    onLaunchAgentChange={(agent) => updateData({ launchAgent: agent })}
                   />
                 )}
               </motion.div>
@@ -1293,9 +1424,10 @@ export default function NewProjectWizard({
                   type="button"
                   onClick={() => handleCreate(true)}
                   disabled={creating}
-                  className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-bg text-sm font-semibold transition-all hover:shadow-[0_0_20px_var(--color-accent-glow)] disabled:opacity-40"
+                  className="px-4 py-2 rounded-lg text-bg text-sm font-semibold transition-all disabled:opacity-40"
+                  style={{ backgroundColor: AGENTS[data.launchAgent].color }}
                 >
-                  Create &amp; Launch Claude
+                  Create &amp; Launch {AGENTS[data.launchAgent].displayName}
                 </button>
               </div>
             )}

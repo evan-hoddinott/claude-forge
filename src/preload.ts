@@ -21,20 +21,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
     logout: () => ipcRenderer.invoke('github:logout'),
     repoCount: () => ipcRenderer.invoke('github:repo-count'),
   },
-  claude: {
-    start: (projectId: string) => ipcRenderer.invoke('claude:start', projectId),
+  agent: {
+    start: (projectId: string, agentType: string) =>
+      ipcRenderer.invoke('agent:start', projectId, agentType),
     status: (projectId: string) =>
-      ipcRenderer.invoke('claude:status', projectId),
-    checkFullStatus: () => ipcRenderer.invoke('claude:check-full-status'),
-    install: () => ipcRenderer.invoke('claude:install'),
-    update: () => ipcRenderer.invoke('claude:update'),
-    login: () => ipcRenderer.invoke('claude:login'),
+      ipcRenderer.invoke('agent:status', projectId),
+    checkFullStatus: (agentType: string) =>
+      ipcRenderer.invoke('agent:check-full-status', agentType),
+    checkAllStatuses: () =>
+      ipcRenderer.invoke('agent:check-all-statuses'),
+    install: (agentType: string) =>
+      ipcRenderer.invoke('agent:install', agentType),
+    update: (agentType: string) =>
+      ipcRenderer.invoke('agent:update', agentType),
+    login: (agentType: string) =>
+      ipcRenderer.invoke('agent:login', agentType),
     onInstallProgress: (callback: (data: { line: string }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: { line: string }) => callback(data);
-      ipcRenderer.on('claude:install-progress', handler);
+      ipcRenderer.on('agent:install-progress', handler);
     },
     offInstallProgress: () => {
-      ipcRenderer.removeAllListeners('claude:install-progress');
+      ipcRenderer.removeAllListeners('agent:install-progress');
     },
   },
   system: {
@@ -44,7 +51,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openInEditor: (path: string) =>
       ipcRenderer.invoke('system:open-in-editor', path),
     checkGhAuth: () => ipcRenderer.invoke('system:check-gh-auth'),
-    checkClaude: () => ipcRenderer.invoke('system:check-claude'),
     openExternal: (url: string) =>
       ipcRenderer.invoke('system:open-external', url),
     getEnvironment: () => ipcRenderer.invoke('system:get-environment'),

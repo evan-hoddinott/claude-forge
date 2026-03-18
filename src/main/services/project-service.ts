@@ -3,32 +3,28 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { CreateProjectInput, Project } from '../../shared/types';
 import * as store from '../store';
-import { generateClaudeMD } from './claude-md-generator';
+import { writeContextFiles } from './context-generator';
 
 const execFileAsync = promisify(execFile);
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {
-  // 1. Save to store (generates id, timestamps, resolved path)
   const project = store.createProject(input);
 
-  // 2. Create directory on disk
   await fs.mkdir(project.path, { recursive: true });
 
-  // 3. Initialize git repo
   try {
     await execFileAsync('git', ['init'], { cwd: project.path });
     await execFileAsync('git', ['checkout', '-b', 'main'], {
       cwd: project.path,
     });
   } catch {
-    // git init is best-effort — don't block project creation
+    // git init is best-effort
   }
 
-  // 4. Generate CLAUDE.md from project inputs
   try {
-    await generateClaudeMD(project);
+    await writeContextFiles(project);
   } catch {
-    // CLAUDE.md generation is best-effort
+    // context file generation is best-effort
   }
 
   return project;

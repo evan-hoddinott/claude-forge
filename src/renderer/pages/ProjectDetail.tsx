@@ -2,15 +2,16 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useToast } from '../components/Toast';
-import type { Project, ProjectInput } from '../../shared/types';
+import type { Project, ProjectInput, AgentType } from '../../shared/types';
+import { AGENTS } from '../../shared/types';
 import StatusBadge from '../components/StatusBadge';
 
-type Tab = 'overview' | 'github' | 'claude' | 'settings';
+type Tab = 'overview' | 'github' | 'agents' | 'settings';
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'github', label: 'GitHub' },
-  { id: 'claude', label: 'Claude Code' },
+  { id: 'agents', label: 'AI Agents' },
   { id: 'settings', label: 'Settings' },
 ];
 
@@ -34,7 +35,7 @@ function relativeTime(dateStr: string): string {
   return 'Just now';
 }
 
-function buildClaudeMDPreview(project: Project): string {
+function buildContextPreview(project: Project): string {
   const sections: string[] = [];
   sections.push(`# ${project.name}`);
   if (project.description) {
@@ -59,6 +60,35 @@ function buildClaudeMDPreview(project: Project): string {
     ].join('\n'),
   );
   return sections.join('\n\n');
+}
+
+// --- Agent icon helper ---
+
+function AgentIcon({ agentType, className }: { agentType: AgentType; className?: string }) {
+  const cls = className || 'w-4 h-4';
+  switch (agentType) {
+    case 'claude':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="2" width="14" height="12" rx="2" />
+          <polyline points="4 7 6 9 4 11" />
+          <line x1="8" y1="11" x2="12" y2="11" />
+        </svg>
+      );
+    case 'gemini':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C8 4.42 4.42 8 0 8c4.42 0 8 3.58 8 8 0-4.42 3.58-8 8-8-4.42 0-8-3.58-8-8z" />
+        </svg>
+      );
+    case 'codex':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0L14.93 4v8L8 16 1.07 12V4L8 0zm0 1.6L2.47 4.8v6.4L8 14.4l5.53-3.2V4.8L8 1.6z" />
+          <circle cx="8" cy="8" r="2.5" />
+        </svg>
+      );
+  }
 }
 
 // --- Main Component ---
@@ -183,7 +213,7 @@ export default function ProjectDetail({
             {activeTab === 'github' && (
               <GitHubTab project={project} onUpdate={refetch} />
             )}
-            {activeTab === 'claude' && <ClaudeTab project={project} />}
+            {activeTab === 'agents' && <AgentsTab project={project} />}
             {activeTab === 'settings' && (
               <SettingsTab
                 project={project}
@@ -201,7 +231,8 @@ export default function ProjectDetail({
 // --- Tab: Overview ---
 
 function OverviewTab({ project }: { project: Project }) {
-  const preview = buildClaudeMDPreview(project);
+  const preview = buildContextPreview(project);
+  const contextFiles = (project.agents || ['claude']).map(a => AGENTS[a].contextFileName);
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -256,8 +287,8 @@ function OverviewTab({ project }: { project: Project }) {
         </div>
       )}
 
-      {/* CLAUDE.md preview */}
-      <SectionCard title="CLAUDE.md Preview">
+      {/* Context file preview */}
+      <SectionCard title={`Context Files (${contextFiles.join(', ')})`}>
         <pre className="text-xs text-text-secondary leading-relaxed whitespace-pre-wrap font-mono overflow-x-auto">
           {preview}
         </pre>
@@ -319,7 +350,6 @@ function GitHubTab({
     onUpdate();
   });
 
-  // Linked state
   if (project.githubRepo) {
     return (
       <div className="max-w-2xl">
@@ -360,14 +390,12 @@ function GitHubTab({
     );
   }
 
-  // Unlinked state
   return (
     <div className="max-w-2xl space-y-4">
       <p className="text-sm text-text-muted">
         No repository linked to this project.
       </p>
 
-      {/* Mode toggle */}
       <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.03] w-fit">
         {(['create', 'link'] as const).map((m) => (
           <button
@@ -451,21 +479,16 @@ function GitHubTab({
   );
 }
 
-// --- Tab: Claude Code ---
+// --- Tab: AI Agents ---
 
-function ClaudeTab({ project }: { project: Project }) {
+function AgentsTab({ project }: { project: Project }) {
   const api = useAPI();
-  const { toast } = useToast();
   const { data: status, refetch: refetchStatus } = useQuery(
-    () => api.claude.status(project.id),
+    () => api.agent.status(project.id),
     [project.id],
   );
 
-  const launch = useMutation(async () => {
-    await api.claude.start(project.id);
-    toast('Claude Code launched');
-    setTimeout(refetchStatus, 1000);
-  });
+  const projectAgents = project.agents || [project.preferredAgent || 'claude'];
 
   const quickActions = [
     { label: 'Continue working', desc: 'Pick up where you left off' },
@@ -476,14 +499,64 @@ function ClaudeTab({ project }: { project: Project }) {
 
   return (
     <div className="max-w-2xl space-y-6">
-      {/* Status + Launch */}
-      <SectionCard>
-        <div className="flex items-center justify-between">
+      {projectAgents.map((agentType) => {
+        return (
+          <AgentLaunchCard
+            key={agentType}
+            agentType={agentType}
+            project={project}
+            status={status}
+            quickActions={quickActions}
+            onStatusRefresh={refetchStatus}
+          />
+        );
+      })}
+
+      {/* If no agents configured, show a message */}
+      {projectAgents.length === 0 && (
+        <div className="text-sm text-text-muted">
+          No AI agents configured for this project. Edit project settings to add agents.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgentLaunchCard({
+  agentType,
+  project,
+  status,
+  quickActions,
+  onStatusRefresh,
+}: {
+  agentType: AgentType;
+  project: Project;
+  status: { running: boolean; hasHistory: boolean } | null;
+  quickActions: { label: string; desc: string }[];
+  onStatusRefresh: () => void;
+}) {
+  const api = useAPI();
+  const { toast } = useToast();
+  const config = AGENTS[agentType];
+
+  const launch = useMutation(async () => {
+    await api.agent.start(project.id, agentType);
+    toast(`${config.displayName} launched`);
+    setTimeout(onStatusRefresh, 1000);
+  });
+
+  return (
+    <SectionCard>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span style={{ color: config.color }}>
+            <AgentIcon agentType={agentType} className="w-5 h-5" />
+          </span>
           <div>
-            <h3 className="text-sm font-semibold text-text-primary mb-1">
-              Claude Code
+            <h3 className="text-sm font-semibold text-text-primary">
+              {config.displayName}
             </h3>
-            <div className="flex items-center gap-3 text-xs text-text-muted">
+            <div className="flex items-center gap-3 text-xs text-text-muted mt-0.5">
               <span className="flex items-center gap-1.5">
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${
@@ -500,51 +573,55 @@ function ClaudeTab({ project }: { project: Project }) {
                 </span>
               )}
               {status?.hasHistory && !status.running && (
-                <span className="text-accent/60">Has session history</span>
+                <span style={{ color: config.color + '99' }}>Has session history</span>
               )}
             </div>
           </div>
-          <button
-            onClick={() => launch.mutate()}
-            disabled={launch.loading || status?.running}
-            className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-bg text-sm font-semibold transition-all hover:shadow-[0_0_20px_var(--color-accent-glow)]"
-          >
-            {launch.loading
-              ? 'Launching\u2026'
-              : status?.running
-                ? 'Running'
-                : 'Launch Claude Code'}
-          </button>
         </div>
-        {launch.error && (
-          <p className="mt-3 text-xs text-status-error">{launch.error}</p>
-        )}
-      </SectionCard>
+        <button
+          onClick={() => launch.mutate()}
+          disabled={launch.loading || status?.running}
+          className="px-4 py-2 rounded-lg text-bg text-sm font-semibold transition-all disabled:opacity-50"
+          style={{
+            backgroundColor: config.color,
+          }}
+        >
+          {launch.loading
+            ? 'Launching\u2026'
+            : status?.running
+              ? 'Running'
+              : `Launch ${config.displayName}`}
+        </button>
+      </div>
+      {launch.error && (
+        <p className="mt-3 text-xs text-status-error">{launch.error}</p>
+      )}
 
       {/* Quick actions */}
-      <div>
-        <h3 className="text-xs font-medium text-text-muted mb-3">
-          Quick Actions
-        </h3>
-        <div className="grid grid-cols-2 gap-2">
-          {quickActions.map((action) => (
-            <button
-              key={action.label}
-              onClick={() => launch.mutate()}
-              disabled={launch.loading}
-              className="flex flex-col items-start p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all text-left"
-            >
-              <span className="text-sm font-medium text-text-primary">
-                {action.label}
-              </span>
-              <span className="text-xs text-text-muted mt-0.5">
-                {action.desc}
-              </span>
-            </button>
-          ))}
-        </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {quickActions.map((action) => (
+          <button
+            key={action.label}
+            onClick={() => launch.mutate()}
+            disabled={launch.loading}
+            className="flex flex-col items-start p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/[0.1] transition-all text-left"
+          >
+            <span className="text-sm font-medium text-text-primary">
+              {action.label}
+            </span>
+            <span className="text-xs text-text-muted mt-0.5">
+              {action.desc}
+            </span>
+          </button>
+        ))}
       </div>
-    </div>
+
+      {/* Context file info */}
+      <div className="mt-3 flex items-center gap-2 text-[10px] text-text-muted">
+        <span>Context file:</span>
+        <span className="font-mono bg-white/5 px-1.5 py-0.5 rounded">{config.contextFileName}</span>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -564,16 +641,20 @@ function SettingsTab({
   const [description, setDescription] = useState(project.description);
   const [inputs, setInputs] = useState<ProjectInput[]>(project.inputs);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [agents, setAgents] = useState<AgentType[]>(project.agents || ['claude']);
+  const [preferredAgent, setPreferredAgent] = useState<AgentType>(project.preferredAgent || 'claude');
 
   const hasChanges =
     name !== project.name ||
     description !== project.description ||
-    JSON.stringify(inputs) !== JSON.stringify(project.inputs);
+    JSON.stringify(inputs) !== JSON.stringify(project.inputs) ||
+    JSON.stringify(agents) !== JSON.stringify(project.agents || ['claude']) ||
+    preferredAgent !== (project.preferredAgent || 'claude');
 
   const { toast } = useToast();
 
   const save = useMutation(async () => {
-    await api.projects.update(project.id, { name, description, inputs });
+    await api.projects.update(project.id, { name, description, inputs, agents, preferredAgent });
     toast('Changes saved');
     onUpdate();
   });
@@ -588,6 +669,18 @@ function SettingsTab({
     setInputs((prev) =>
       prev.map((inp, i) => (i === index ? { ...inp, [field]: val } : inp)),
     );
+  }
+
+  function toggleAgent(agentType: AgentType) {
+    setAgents((prev) => {
+      if (prev.includes(agentType)) {
+        const next = prev.filter((a) => a !== agentType);
+        if (next.length === 0) return prev; // must have at least one
+        if (preferredAgent === agentType) setPreferredAgent(next[0]);
+        return next;
+      }
+      return [...prev, agentType];
+    });
   }
 
   return (
@@ -616,6 +709,57 @@ function SettingsTab({
               className="w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/50 transition-colors resize-none"
             />
           </div>
+        </div>
+      </SectionCard>
+
+      {/* AI Agents */}
+      <SectionCard title="AI Agents">
+        <div className="space-y-3">
+          <p className="text-xs text-text-muted">
+            Select which agents to use with this project. Context files will be generated for each.
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => {
+              const config = AGENTS[agentType];
+              const selected = agents.includes(agentType);
+              return (
+                <button
+                  key={agentType}
+                  onClick={() => toggleAgent(agentType)}
+                  className={`p-3 rounded-xl border transition-all text-left ${
+                    selected
+                      ? 'border-white/20 bg-white/[0.06]'
+                      : 'border-white/[0.06] bg-white/[0.02] opacity-50'
+                  }`}
+                  style={selected ? { borderColor: config.color + '40' } : undefined}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span style={{ color: config.color }}>
+                      <AgentIcon agentType={agentType} className="w-4 h-4" />
+                    </span>
+                    <span className="text-xs font-medium text-text-primary">{config.displayName}</span>
+                  </div>
+                  <span className="text-[10px] text-text-muted font-mono">{config.contextFileName}</span>
+                </button>
+              );
+            })}
+          </div>
+          {agents.length > 1 && (
+            <div>
+              <label className="block text-xs font-medium text-text-muted mb-1.5">
+                Preferred agent
+              </label>
+              <select
+                value={preferredAgent}
+                onChange={(e) => setPreferredAgent(e.target.value as AgentType)}
+                className="bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent/50 transition-colors"
+              >
+                {agents.map((a) => (
+                  <option key={a} value={a}>{AGENTS[a].displayName}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </SectionCard>
 

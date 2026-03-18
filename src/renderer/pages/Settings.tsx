@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useToast } from '../components/Toast';
-import type { UserPreferences, EnvironmentInfo, ProjectLocationMode } from '../../shared/types';
+import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus } from '../../shared/types';
+import { AGENTS } from '../../shared/types';
 
 export default function Settings() {
   const api = useAPI();
@@ -11,7 +12,7 @@ export default function Settings() {
     refetch,
   } = useQuery(() => api.preferences.get());
   const { data: ghAuth } = useQuery(() => api.system.checkGhAuth());
-  const { data: claudeCheck } = useQuery(() => api.system.checkClaude());
+  const { data: agentStatuses } = useQuery(() => api.agent.checkAllStatuses());
   const { data: envInfo } = useQuery(() => api.system.getEnvironment());
 
   if (loading || !prefs) {
@@ -46,11 +47,11 @@ export default function Settings() {
           refetch={refetch}
           ghAuth={ghAuth}
         />
-        <ClaudeSection
+        <AgentsSection
           prefs={prefs}
           api={api}
           refetch={refetch}
-          claudeCheck={claudeCheck}
+          agentStatuses={agentStatuses}
         />
         <DataSection api={api} refetch={refetch} />
       </div>
@@ -136,6 +137,33 @@ function StatusDot({ ok }: { ok: boolean }) {
   );
 }
 
+function AgentIcon({ agentType, className }: { agentType: AgentType; className?: string }) {
+  const cls = className || 'w-4 h-4';
+  switch (agentType) {
+    case 'claude':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="1" y="2" width="14" height="12" rx="2" />
+          <polyline points="4 7 6 9 4 11" />
+          <line x1="8" y1="11" x2="12" y2="11" />
+        </svg>
+      );
+    case 'gemini':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C8 4.42 4.42 8 0 8c4.42 0 8 3.58 8 8 0-4.42 3.58-8 8-8-4.42 0-8-3.58-8-8z" />
+        </svg>
+      );
+    case 'codex':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0L14.93 4v8L8 16 1.07 12V4L8 0zm0 1.6L2.47 4.8v6.4L8 14.4l5.53-3.2V4.8L8 1.6z" />
+          <circle cx="8" cy="8" r="2.5" />
+        </svg>
+      );
+  }
+}
+
 const inputClass =
   'w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent/50 transition-colors';
 
@@ -168,7 +196,6 @@ function GeneralSection({
 
   return (
     <SectionCard title="General">
-      {/* Project directory */}
       <div>
         <FieldLabel>Default project directory</FieldLabel>
         <div className="flex gap-2">
@@ -187,7 +214,6 @@ function GeneralSection({
         </div>
       </div>
 
-      {/* Theme */}
       <div>
         <FieldLabel>Theme</FieldLabel>
         <SegmentedControl
@@ -201,7 +227,6 @@ function GeneralSection({
         />
       </div>
 
-      {/* Editor */}
       <div>
         <FieldLabel>Default editor command</FieldLabel>
         <input
@@ -248,14 +273,12 @@ function EnvironmentSection({
 
   return (
     <SectionCard title="Project Location">
-      {/* Detection status */}
       <div className="flex items-center gap-2 text-sm">
         <StatusDot ok={envInfo?.wslAvailable ?? false} />
         <span className="text-text-secondary">{wslStatusText}</span>
         <span className="text-text-muted">({platformLabel})</span>
       </div>
 
-      {/* Default project directory */}
       <div>
         <FieldLabel>Default project directory</FieldLabel>
         <p className="text-sm text-text-primary bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 font-mono break-all">
@@ -263,7 +286,6 @@ function EnvironmentSection({
         </p>
       </div>
 
-      {/* Location mode selector (only shown when WSL is available) */}
       {envInfo?.wslAvailable && (
         <div>
           <FieldLabel>Default location for new projects</FieldLabel>
@@ -284,13 +306,12 @@ function EnvironmentSection({
             }}
           />
           <FieldHint>
-            WSL is recommended for Claude Code. Projects on the Windows filesystem
+            WSL is recommended for AI coding agents. Projects on the Windows filesystem
             will be slower for file operations.
           </FieldHint>
         </div>
       )}
 
-      {/* Show both paths when WSL is available */}
       {envInfo?.wslAvailable && (
         <div className="space-y-2 text-xs text-text-muted">
           {envInfo.wslProjectDir && (
@@ -330,7 +351,6 @@ function GitHubSection({
     setUsername(prefs.githubUsername);
   }, [prefs]);
 
-  // Auto-fill username from gh auth if blank
   useEffect(() => {
     if (ghAuth?.authenticated && ghAuth.username && !prefs.githubUsername) {
       setUsername(ghAuth.username);
@@ -340,7 +360,6 @@ function GitHubSection({
 
   return (
     <SectionCard title="GitHub">
-      {/* Connection status */}
       <div className="flex items-center gap-2 text-sm">
         <StatusDot ok={ghAuth?.authenticated ?? false} />
         {ghAuth?.authenticated ? (
@@ -364,7 +383,6 @@ function GitHubSection({
         )}
       </div>
 
-      {/* Default visibility */}
       <div>
         <FieldLabel>Default visibility for new repos</FieldLabel>
         <SegmentedControl
@@ -379,7 +397,6 @@ function GitHubSection({
         />
       </div>
 
-      {/* Username */}
       <div>
         <FieldLabel>GitHub username</FieldLabel>
         <input
@@ -396,18 +413,18 @@ function GitHubSection({
   );
 }
 
-// --- Claude Code ---
+// --- AI Agents ---
 
-function ClaudeSection({
+function AgentsSection({
   prefs,
   api,
   refetch,
-  claudeCheck,
+  agentStatuses,
 }: {
   prefs: UserPreferences;
   api: API;
   refetch: () => void;
-  claudeCheck: { installed: boolean; version: string } | null;
+  agentStatuses: Record<AgentType, AgentStatus> | null;
 }) {
   const [prompt, setPrompt] = useState(prefs.customSystemPrompt);
 
@@ -416,28 +433,86 @@ function ClaudeSection({
   }, [prefs]);
 
   return (
-    <SectionCard title="Claude Code">
-      {/* Installation status */}
-      <div className="flex items-center gap-2 text-sm">
-        <StatusDot ok={claudeCheck?.installed ?? false} />
-        {claudeCheck?.installed ? (
-          <span className="text-text-secondary">
-            Installed{' '}
-            {claudeCheck.version && (
-              <span className="text-text-muted">({claudeCheck.version})</span>
-            )}
+    <SectionCard title="AI Agents">
+      {/* Agent status overview */}
+      <div className="space-y-2">
+        {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => {
+          const config = AGENTS[agentType];
+          const status = agentStatuses?.[agentType];
+          return (
+            <div key={agentType} className="flex items-center gap-3 text-sm">
+              <span style={{ color: config.color }}>
+                <AgentIcon agentType={agentType} className="w-4 h-4" />
+              </span>
+              <span className="text-text-primary font-medium w-28">{config.displayName}</span>
+              <StatusDot ok={status?.installed ?? false} />
+              {status?.installed ? (
+                <span className="text-text-secondary">
+                  Installed{' '}
+                  {status.version && (
+                    <span className="text-text-muted text-xs">({status.version.match(/(\d+\.\d+\.\d+)/)?.[1] ?? status.version})</span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-text-muted">
+                  Not found — install via{' '}
+                  <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded">
+                    npm i -g {config.npmPackage}
+                  </code>
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Default agent */}
+      <div>
+        <FieldLabel>Default AI agent for new projects</FieldLabel>
+        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.03] w-fit">
+          {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => {
+            const config = AGENTS[agentType];
+            return (
+              <button
+                key={agentType}
+                onClick={() => updatePref(api, refetch, { defaultAgent: agentType })}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  prefs.defaultAgent === agentType
+                    ? 'bg-white/8 text-text-primary'
+                    : 'text-text-muted hover:text-text-secondary'
+                }`}
+              >
+                <span style={{ color: prefs.defaultAgent === agentType ? config.color : undefined }}>
+                  <AgentIcon agentType={agentType} className="w-3 h-3" />
+                </span>
+                {config.displayName}
+              </button>
+            );
+          })}
+        </div>
+        <FieldHint>
+          This agent will be pre-selected when creating new projects.
+        </FieldHint>
+      </div>
+
+      {/* Auto-generate all context files */}
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={prefs.autoGenerateAllContextFiles}
+            onChange={(e) =>
+              updatePref(api, refetch, { autoGenerateAllContextFiles: e.target.checked })
+            }
+            className="rounded border-white/20 bg-white/5 text-accent focus:ring-accent/25"
+          />
+          <span className="text-sm text-text-secondary">
+            Auto-generate context files for all installed agents
           </span>
-        ) : (
-          <span className="text-text-muted">
-            Not found.{' '}
-            <span className="text-text-secondary">
-              Install via{' '}
-              <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded">
-                npm i -g @anthropic-ai/claude-code
-              </code>
-            </span>
-          </span>
-        )}
+        </label>
+        <FieldHint>
+          When enabled, new projects will get context files (CLAUDE.md, GEMINI.md, codex.md) for every installed agent.
+        </FieldHint>
       </div>
 
       {/* Launch mode */}
@@ -455,7 +530,7 @@ function ClaudeSection({
         />
         {prefs.claudeLaunchMode === 'auto' && (
           <FieldHint>
-            Auto mode uses --dangerously-skip-permissions. Claude will execute
+            Auto mode uses --dangerously-skip-permissions. Agents will execute
             without asking for confirmation.
           </FieldHint>
         )}
@@ -471,12 +546,11 @@ function ClaudeSection({
             updatePref(api, refetch, { customSystemPrompt: prompt })
           }
           rows={4}
-          placeholder="Instructions prepended to all new CLAUDE.md files..."
+          placeholder="Instructions prepended to all new context files..."
           className={inputClass + ' resize-none'}
         />
         <FieldHint>
-          This text is prepended to the CLAUDE.md generated for every new
-          project.
+          This text is prepended to the context files generated for every new project.
         </FieldHint>
       </div>
     </SectionCard>
@@ -522,7 +596,6 @@ function DataSection({
 
   return (
     <SectionCard title="Data">
-      {/* Export / Import */}
       <div className="flex items-start gap-3">
         <div>
           <button
@@ -560,7 +633,6 @@ function DataSection({
         </div>
       </div>
 
-      {/* Reset */}
       <div className="pt-4 border-t border-white/[0.06]">
         <h3 className="text-sm font-semibold text-status-error mb-1">
           Danger Zone

@@ -1,5 +1,67 @@
 export type ProjectStatus = 'created' | 'in-progress' | 'ready' | 'error';
 
+export type AgentType = 'claude' | 'gemini' | 'codex';
+
+export interface AgentConfig {
+  type: AgentType;
+  displayName: string;
+  npmPackage: string;
+  command: string;
+  contextFileName: string;
+  authCheckCommand: string;
+  loginCommand: string;
+  versionCommand: string;
+  subscriptionUrl: string;
+  docsUrl: string;
+  iconName: string;
+  color: string;
+}
+
+export const AGENTS: Record<AgentType, AgentConfig> = {
+  claude: {
+    type: 'claude',
+    displayName: 'Claude Code',
+    npmPackage: '@anthropic-ai/claude-code',
+    command: 'claude',
+    contextFileName: 'CLAUDE.md',
+    authCheckCommand: 'claude --version',
+    loginCommand: 'claude',
+    versionCommand: 'claude --version',
+    subscriptionUrl: 'https://claude.ai/pricing',
+    docsUrl: 'https://docs.anthropic.com/en/docs/claude-code/overview',
+    iconName: 'anthropic',
+    color: '#D97706',
+  },
+  gemini: {
+    type: 'gemini',
+    displayName: 'Gemini CLI',
+    npmPackage: '@google/gemini-cli',
+    command: 'gemini',
+    contextFileName: 'GEMINI.md',
+    authCheckCommand: 'gemini --version',
+    loginCommand: 'gemini',
+    versionCommand: 'gemini --version',
+    subscriptionUrl: 'https://aistudio.google.com/apikey',
+    docsUrl: 'https://github.com/google-gemini/gemini-cli',
+    iconName: 'google',
+    color: '#4285F4',
+  },
+  codex: {
+    type: 'codex',
+    displayName: 'OpenAI Codex',
+    npmPackage: '@openai/codex',
+    command: 'codex',
+    contextFileName: 'codex.md',
+    authCheckCommand: 'codex --version',
+    loginCommand: 'codex',
+    versionCommand: 'codex --version',
+    subscriptionUrl: 'https://chatgpt.com',
+    docsUrl: 'https://github.com/openai/codex',
+    iconName: 'openai',
+    color: '#10A37F',
+  },
+};
+
 export interface ProjectInput {
   id: string;
   label: string;
@@ -21,6 +83,8 @@ export interface Project {
   inputs: ProjectInput[];
   tags: string[];
   lastClaudeSession: string | null;
+  preferredAgent: AgentType;
+  agents: AgentType[];
 }
 
 export interface CreateProjectInput {
@@ -29,6 +93,8 @@ export interface CreateProjectInput {
   path?: string;
   inputs: ProjectInput[];
   tags: string[];
+  preferredAgent?: AgentType;
+  agents?: AgentType[];
 }
 
 export type ProjectLocationMode = 'wsl' | 'windows';
@@ -42,6 +108,8 @@ export interface UserPreferences {
   defaultRepoVisibility: 'public' | 'private';
   claudeLaunchMode: 'interactive' | 'auto';
   customSystemPrompt: string;
+  defaultAgent: AgentType;
+  autoGenerateAllContextFiles: boolean;
 }
 
 export interface EnvironmentInfo {
@@ -66,7 +134,7 @@ export interface GhAuthStatus {
   ghInstalled: boolean;
 }
 
-export interface ClaudeCodeStatus {
+export interface AgentStatus {
   nodeInstalled: boolean;
   installed: boolean;
   version: string;
@@ -92,13 +160,14 @@ export interface ElectronAPI {
     logout: () => Promise<void>;
     repoCount: () => Promise<number>;
   };
-  claude: {
-    start: (projectId: string) => Promise<void>;
+  agent: {
+    start: (projectId: string, agentType: AgentType) => Promise<void>;
     status: (projectId: string) => Promise<{ running: boolean; hasHistory: boolean }>;
-    checkFullStatus: () => Promise<ClaudeCodeStatus>;
-    install: () => Promise<{ success: boolean; error?: string }>;
-    update: () => Promise<{ success: boolean; error?: string }>;
-    login: () => Promise<{ success: boolean }>;
+    checkFullStatus: (agentType: AgentType) => Promise<AgentStatus>;
+    checkAllStatuses: () => Promise<Record<AgentType, AgentStatus>>;
+    install: (agentType: AgentType) => Promise<{ success: boolean; error?: string }>;
+    update: (agentType: AgentType) => Promise<{ success: boolean; error?: string }>;
+    login: (agentType: AgentType) => Promise<{ success: boolean }>;
     onInstallProgress: (callback: (data: { line: string }) => void) => void;
     offInstallProgress: () => void;
   };
@@ -107,7 +176,6 @@ export interface ElectronAPI {
     openInTerminal: (path: string) => Promise<void>;
     openInEditor: (path: string) => Promise<void>;
     checkGhAuth: () => Promise<{ authenticated: boolean; username: string }>;
-    checkClaude: () => Promise<{ installed: boolean; version: string }>;
     openExternal: (url: string) => Promise<void>;
     getEnvironment: () => Promise<EnvironmentInfo>;
   };

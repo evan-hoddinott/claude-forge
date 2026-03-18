@@ -21,6 +21,8 @@ function preferenceDefaults(): UserPreferences {
     defaultRepoVisibility: 'private',
     claudeLaunchMode: 'interactive',
     customSystemPrompt: '',
+    defaultAgent: 'claude',
+    autoGenerateAllContextFiles: false,
   };
 }
 
@@ -63,6 +65,8 @@ export function createProject(input: CreateProjectInput): Project {
     inputs: input.inputs,
     tags: input.tags,
     lastClaudeSession: null,
+    preferredAgent: input.preferredAgent || preferences.defaultAgent || 'claude',
+    agents: input.agents || [input.preferredAgent || preferences.defaultAgent || 'claude'],
   };
 
   const projects = store.get('projects');

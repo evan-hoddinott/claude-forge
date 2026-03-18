@@ -4,11 +4,12 @@ import { promisify } from 'node:util';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import type { CreateProjectInput, Project, ClaudeCodeStatus } from '../shared/types';
+import type { CreateProjectInput, Project, AgentType, AgentStatus } from '../shared/types';
+import { AGENTS } from '../shared/types';
 import * as store from './store';
 import * as projectService from './services/project-service';
 import * as githubService from './services/github-service';
-import * as claudeService from './services/claude-service';
+import * as agentService from './services/agent-service';
 import * as environmentService from './services/environment-service';
 
 const execFileAsync = promisify(execFile);
@@ -62,13 +63,14 @@ export function registerIpcHandlers(): void {
     },
   );
 
-  // --- Claude Code ---
+  // --- Agent (unified for Claude, Gemini, Codex) ---
 
-  ipcMain.handle('claude:start', async (_, projectId: string) => {
+  ipcMain.handle('agent:start', async (_, projectId: string, agentType: AgentType) => {
     const project = store.getProjectById(projectId);
     if (!project) throw new Error(`Project not found: ${projectId}`);
 
-    claudeService.startClaudeCode(
+    agentService.startAgent(
+      agentType,
       projectId,
       project.path,
       project.name,
@@ -81,10 +83,241 @@ export function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle('claude:status', async (_, projectId: string) => {
+  ipcMain.handle('agent:status', async (_, projectId: string) => {
     const project = store.getProjectById(projectId);
     if (!project) return { running: false, hasHistory: false };
-    return claudeService.getStatus(projectId, project.path);
+    return agentService.getStatus(projectId, project.path);
+  });
+
+  ipcMain.handle('agent:check-full-status', async (_, agentType: AgentType): Promise<AgentStatus> => {
+    const config = AGENTS[agentType];
+    const result: AgentStatus = {
+      nodeInstalled: false,
+      installed: false,
+      version: '',
+      latestVersion: '',
+      updateAvailable: false,
+      authenticated: false,
+    };
+
+    // Check Node.js
+    try {
+      await execFileAsync('node', ['--version'], { timeout: 5000 });
+      result.nodeInstalled = true;
+    } catch {
+      return result;
+    }
+
+    // Check if CLI is installed + version
+    try {
+      const { stdout, stderr } = await execFileAsync(config.command, ['--version'], { timeout: 10000 });
+      const versionOutput = (stdout || stderr).trim();
+      result.installed = true;
+      result.version = versionOutput;
+    } catch {
+      return result;
+    }
+
+    // Check latest version from npm
+    try {
+      const { stdout } = await execFileAsync('npm', ['view', config.npmPackage, 'version'], { timeout: 10000 });
+      result.latestVersion = stdout.trim();
+      if (result.version && result.latestVersion) {
+        const installedMatch = result.version.match(/(\d+\.\d+\.\d+)/);
+        const installed = installedMatch ? installedMatch[1] : '';
+        if (installed && installed !== result.latestVersion) {
+          result.updateAvailable = true;
+        }
+      }
+    } catch {
+      // npm check failed, skip
+    }
+
+    // Check authentication
+    try {
+      const configDir = path.join(os.homedir(), `.${config.command}`);
+      await fs.access(configDir);
+      const files = await fs.readdir(configDir);
+      result.authenticated = files.some(f =>
+        f.includes('credentials') || f.includes('auth') || f === '.credentials.json'
+      );
+    } catch {
+      // no config dir
+    }
+
+    if (!result.authenticated) {
+      try {
+        const credPath = path.join(os.homedir(), `.${config.command}.json`);
+        await fs.access(credPath);
+        result.authenticated = true;
+      } catch {
+        // not authenticated
+      }
+    }
+
+    return result;
+  });
+
+  ipcMain.handle('agent:check-all-statuses', async () => {
+    const types: AgentType[] = ['claude', 'gemini', 'codex'];
+    const results: Record<string, AgentStatus> = {};
+
+    // Check node once
+    let nodeInstalled = false;
+    try {
+      await execFileAsync('node', ['--version'], { timeout: 5000 });
+      nodeInstalled = true;
+    } catch {
+      // no node
+    }
+
+    for (const agentType of types) {
+      const config = AGENTS[agentType];
+      const status: AgentStatus = {
+        nodeInstalled,
+        installed: false,
+        version: '',
+        latestVersion: '',
+        updateAvailable: false,
+        authenticated: false,
+      };
+
+      if (!nodeInstalled) {
+        results[agentType] = status;
+        continue;
+      }
+
+      try {
+        const { stdout, stderr } = await execFileAsync(config.command, ['--version'], { timeout: 10000 });
+        status.installed = true;
+        status.version = (stdout || stderr).trim();
+      } catch {
+        results[agentType] = status;
+        continue;
+      }
+
+      // npm version check (best effort)
+      try {
+        const { stdout } = await execFileAsync('npm', ['view', config.npmPackage, 'version'], { timeout: 10000 });
+        status.latestVersion = stdout.trim();
+        if (status.version && status.latestVersion) {
+          const m = status.version.match(/(\d+\.\d+\.\d+)/);
+          if (m && m[1] !== status.latestVersion) {
+            status.updateAvailable = true;
+          }
+        }
+      } catch {
+        // skip
+      }
+
+      // Auth check
+      try {
+        const configDir = path.join(os.homedir(), `.${config.command}`);
+        await fs.access(configDir);
+        const files = await fs.readdir(configDir);
+        status.authenticated = files.some(f =>
+          f.includes('credentials') || f.includes('auth') || f === '.credentials.json'
+        );
+      } catch {
+        // no config dir
+      }
+      if (!status.authenticated) {
+        try {
+          await fs.access(path.join(os.homedir(), `.${config.command}.json`));
+          status.authenticated = true;
+        } catch {
+          // not authenticated
+        }
+      }
+
+      results[agentType] = status;
+    }
+
+    return results as Record<AgentType, AgentStatus>;
+  });
+
+  ipcMain.handle('agent:install', async (event, agentType: AgentType) => {
+    const config = AGENTS[agentType];
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      const child = spawn('npm', ['install', '-g', config.npmPackage], {
+        shell: true,
+        env: { ...process.env },
+      });
+
+      let errorOutput = '';
+
+      child.stdout.on('data', (data: Buffer) => {
+        const line = data.toString();
+        win?.webContents.send('agent:install-progress', { line });
+      });
+
+      child.stderr.on('data', (data: Buffer) => {
+        const line = data.toString();
+        errorOutput += line;
+        win?.webContents.send('agent:install-progress', { line });
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({ success: true });
+        } else {
+          resolve({ success: false, error: errorOutput.slice(-500) });
+        }
+      });
+
+      child.on('error', (err) => {
+        resolve({ success: false, error: err.message });
+      });
+    });
+  });
+
+  ipcMain.handle('agent:update', async (event, agentType: AgentType) => {
+    const config = AGENTS[agentType];
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return new Promise<{ success: boolean; error?: string }>((resolve) => {
+      const child = spawn('npm', ['install', '-g', `${config.npmPackage}@latest`], {
+        shell: true,
+        env: { ...process.env },
+      });
+
+      let errorOutput = '';
+
+      child.stdout.on('data', (data: Buffer) => {
+        win?.webContents.send('agent:install-progress', { line: data.toString() });
+      });
+
+      child.stderr.on('data', (data: Buffer) => {
+        const line = data.toString();
+        errorOutput += line;
+        win?.webContents.send('agent:install-progress', { line });
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({ success: true });
+        } else {
+          resolve({ success: false, error: errorOutput.slice(-500) });
+        }
+      });
+
+      child.on('error', (err) => {
+        resolve({ success: false, error: err.message });
+      });
+    });
+  });
+
+  ipcMain.handle('agent:login', async (_, agentType: AgentType) => {
+    const config = AGENTS[agentType];
+    return new Promise<{ success: boolean }>((resolve) => {
+      const child = spawn(config.loginCommand, [], {
+        shell: true,
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+      resolve({ success: true });
+    });
   });
 
   // --- System ---
@@ -156,175 +389,9 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  ipcMain.handle('system:check-claude', async () => {
-    try {
-      const { stdout, stderr } = await execFileAsync('claude', ['--version']);
-      return { installed: true, version: (stdout || stderr).trim() };
-    } catch {
-      return { installed: false, version: '' };
-    }
-  });
-
-  // --- Claude Code Full Status ---
-
-  ipcMain.handle('claude:check-full-status', async (): Promise<ClaudeCodeStatus> => {
-    const result: ClaudeCodeStatus = {
-      nodeInstalled: false,
-      installed: false,
-      version: '',
-      latestVersion: '',
-      updateAvailable: false,
-      authenticated: false,
-    };
-
-    // Check Node.js
-    try {
-      await execFileAsync('node', ['--version'], { timeout: 5000 });
-      result.nodeInstalled = true;
-    } catch {
-      return result;
-    }
-
-    // Check Claude Code installed + version
-    try {
-      const { stdout, stderr } = await execFileAsync('claude', ['--version'], { timeout: 10000 });
-      const versionOutput = (stdout || stderr).trim();
-      result.installed = true;
-      result.version = versionOutput;
-    } catch {
-      return result;
-    }
-
-    // Check latest version from npm (non-blocking, best-effort)
-    try {
-      const { stdout } = await execFileAsync('npm', ['view', '@anthropic-ai/claude-code', 'version'], { timeout: 10000 });
-      result.latestVersion = stdout.trim();
-      if (result.version && result.latestVersion) {
-        // Extract semver from version string (e.g., "claude-code v1.0.32" → "1.0.32")
-        const installedMatch = result.version.match(/(\d+\.\d+\.\d+)/);
-        const installed = installedMatch ? installedMatch[1] : '';
-        if (installed && installed !== result.latestVersion) {
-          result.updateAvailable = true;
-        }
-      }
-    } catch {
-      // npm check failed, skip update info
-    }
-
-    // Check authentication (look for ~/.claude config files)
-    try {
-      const claudeDir = path.join(os.homedir(), '.claude');
-      await fs.access(claudeDir);
-      // If the .claude directory exists with credentials, user is likely authenticated
-      const files = await fs.readdir(claudeDir);
-      result.authenticated = files.some(f =>
-        f.includes('credentials') || f.includes('auth') || f === '.credentials.json'
-      );
-    } catch {
-      // No .claude dir, not authenticated
-    }
-
-    // Additional auth check: try running claude with a quick command
-    if (!result.authenticated) {
-      try {
-        // Check if there's a settings/config that indicates auth
-        const credPath = path.join(os.homedir(), '.claude.json');
-        await fs.access(credPath);
-        result.authenticated = true;
-      } catch {
-        // Not authenticated
-      }
-    }
-
-    return result;
-  });
-
-  ipcMain.handle('claude:install', async (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    return new Promise<{ success: boolean; error?: string }>((resolve) => {
-      const child = spawn('npm', ['install', '-g', '@anthropic-ai/claude-code'], {
-        shell: true,
-        env: { ...process.env },
-      });
-
-      let errorOutput = '';
-
-      child.stdout.on('data', (data: Buffer) => {
-        const line = data.toString();
-        win?.webContents.send('claude:install-progress', { line });
-      });
-
-      child.stderr.on('data', (data: Buffer) => {
-        const line = data.toString();
-        errorOutput += line;
-        win?.webContents.send('claude:install-progress', { line });
-      });
-
-      child.on('close', (code) => {
-        if (code === 0) {
-          resolve({ success: true });
-        } else {
-          resolve({ success: false, error: errorOutput.slice(-500) });
-        }
-      });
-
-      child.on('error', (err) => {
-        resolve({ success: false, error: err.message });
-      });
-    });
-  });
-
-  ipcMain.handle('claude:update', async (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    return new Promise<{ success: boolean; error?: string }>((resolve) => {
-      const child = spawn('npm', ['install', '-g', '@anthropic-ai/claude-code@latest'], {
-        shell: true,
-        env: { ...process.env },
-      });
-
-      let errorOutput = '';
-
-      child.stdout.on('data', (data: Buffer) => {
-        win?.webContents.send('claude:install-progress', { line: data.toString() });
-      });
-
-      child.stderr.on('data', (data: Buffer) => {
-        const line = data.toString();
-        errorOutput += line;
-        win?.webContents.send('claude:install-progress', { line });
-      });
-
-      child.on('close', (code) => {
-        if (code === 0) {
-          resolve({ success: true });
-        } else {
-          resolve({ success: false, error: errorOutput.slice(-500) });
-        }
-      });
-
-      child.on('error', (err) => {
-        resolve({ success: false, error: err.message });
-      });
-    });
-  });
-
-  ipcMain.handle('claude:login', async () => {
-    return new Promise<{ success: boolean }>((resolve) => {
-      const child = spawn('claude', [], {
-        shell: true,
-        detached: true,
-        stdio: 'ignore',
-      });
-      child.unref();
-      // Login spawns a browser-based flow; resolve immediately
-      resolve({ success: true });
-    });
-  });
-
   // --- GitHub Connection ---
 
   ipcMain.handle('github:check-auth', async () => {
-    // Check if gh CLI is installed
     let ghInstalled = false;
     try {
       await execFileAsync('gh', ['--version'], { timeout: 5000 });
@@ -333,7 +400,6 @@ export function registerIpcHandlers(): void {
       return { authenticated: false, username: '', ghInstalled: false };
     }
 
-    // Check auth status
     try {
       const { stdout, stderr } = await execFileAsync('gh', [
         'auth', 'status', '--hostname', 'github.com',
@@ -360,11 +426,9 @@ export function registerIpcHandlers(): void {
 
       function handleData(data: Buffer) {
         output += data.toString();
-        // Look for the one-time code: "First copy your one-time code: XXXX-XXXX"
         const codeMatch = output.match(/one-time code:\s*([A-Z0-9]{4}-[A-Z0-9]{4})/i);
         if (codeMatch && !resolved) {
           resolved = true;
-          // Send Enter to proceed (opens browser)
           child.stdin.write('\n');
           resolve({ code: codeMatch[1] });
         }
@@ -380,7 +444,6 @@ export function registerIpcHandlers(): void {
         }
       });
 
-      // Timeout after 15 seconds if we never get a code
       setTimeout(() => {
         if (!resolved) {
           resolved = true;
@@ -397,7 +460,7 @@ export function registerIpcHandlers(): void {
         'auth', 'logout', '--hostname', 'github.com',
       ], { timeout: 10000, env: { ...process.env, GH_PROMPT_DISABLED: '1' } });
     } catch {
-      // gh auth logout may fail if not logged in, that's fine
+      // may fail if not logged in
     }
   });
 

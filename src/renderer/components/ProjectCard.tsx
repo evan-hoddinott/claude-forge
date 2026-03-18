@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import type { Project } from '../../shared/types';
+import { AGENTS } from '../../shared/types';
 import { useAPI } from '../hooks/useAPI';
 import { useToast } from './Toast';
 import StatusBadge from './StatusBadge';
@@ -54,12 +55,14 @@ export default function ProjectCard({
 
   const handleOpenTerminal = () => api.system.openInTerminal(project.path);
   const handleOpenEditor = () => api.system.openInEditor(project.path);
-  const handleStartClaude = async () => {
+  const agentType = project.preferredAgent || 'claude';
+  const agentConfig = AGENTS[agentType];
+  const handleStartAgent = async () => {
     try {
-      await api.claude.start(project.id);
-      toast('Claude Code launched');
+      await api.agent.start(project.id, agentType);
+      toast(`${agentConfig.displayName} launched`);
     } catch {
-      toast('Failed to launch Claude Code', 'error');
+      toast(`Failed to launch ${agentConfig.displayName}`, 'error');
     }
   };
 
@@ -112,7 +115,7 @@ export default function ProjectCard({
           <ActionButton title="Open in Editor" onClick={handleOpenEditor}>
             <CodeIcon />
           </ActionButton>
-          <ActionButton title="Launch Claude" onClick={handleStartClaude}>
+          <ActionButton title="Launch Agent" onClick={handleStartAgent}>
             <SparkleIcon />
           </ActionButton>
         </div>
@@ -181,7 +184,7 @@ export default function ProjectCard({
           <ActionButton title="Open in Editor" onClick={handleOpenEditor}>
             <CodeIcon />
           </ActionButton>
-          <ActionButton title="Launch Claude" onClick={handleStartClaude}>
+          <ActionButton title="Launch Agent" onClick={handleStartAgent}>
             <SparkleIcon />
           </ActionButton>
         </div>

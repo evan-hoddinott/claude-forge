@@ -1,31 +1,27 @@
 import * as fs from 'node:fs/promises';
 import path from 'node:path';
-import type { Project } from '../../shared/types';
+import type { Project, AgentType } from '../../shared/types';
+import { AGENTS } from '../../shared/types';
 
-export async function generateClaudeMD(project: Project): Promise<void> {
+export function generateContextContent(project: Project, _agentType: AgentType): string {
+  // agentType available for future per-agent customization
   const sections: string[] = [];
 
-  // Header
   sections.push(`# ${project.name}`);
 
-  // Description
   if (project.description) {
     sections.push(`## What This Is\n${project.description}`);
   }
 
-  // Custom inputs — each becomes its own section
   for (const input of project.inputs) {
     if (!input.value.trim()) continue;
-
     sections.push(`## ${input.label}\n${input.value}`);
   }
 
-  // Tags as metadata
   if (project.tags.length > 0) {
     sections.push(`## Tags\n${project.tags.join(', ')}`);
   }
 
-  // Coding standards boilerplate
   sections.push(
     [
       '## Coding Standards',
@@ -37,6 +33,17 @@ export async function generateClaudeMD(project: Project): Promise<void> {
     ].join('\n'),
   );
 
-  const content = sections.join('\n\n') + '\n';
-  await fs.writeFile(path.join(project.path, 'CLAUDE.md'), content, 'utf-8');
+  return sections.join('\n\n') + '\n';
+}
+
+export async function writeContextFile(project: Project, agentType: AgentType): Promise<void> {
+  const config = AGENTS[agentType];
+  const content = generateContextContent(project, agentType);
+  await fs.writeFile(path.join(project.path, config.contextFileName), content, 'utf-8');
+}
+
+export async function writeContextFiles(project: Project): Promise<void> {
+  for (const agentType of project.agents) {
+    await writeContextFile(project, agentType);
+  }
 }
