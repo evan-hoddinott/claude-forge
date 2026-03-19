@@ -54,6 +54,7 @@ export default function Settings() {
           agentStatuses={agentStatuses}
         />
         <FileExplorerSection prefs={prefs} api={api} refetch={refetch} />
+        <SetupSection />
         <DataSection api={api} refetch={refetch} />
       </div>
     </div>
@@ -643,6 +644,31 @@ function FileExplorerSection({
           />
           <span className="text-sm text-text-secondary">Show minimap</span>
         </label>
+      </div>
+    </SectionCard>
+  );
+}
+
+// --- Setup ---
+
+function SetupSection() {
+  const handleRunSetup = () => {
+    // Dispatch a custom event that App.tsx listens for
+    window.dispatchEvent(new CustomEvent('open-setup-assistant'));
+  };
+
+  return (
+    <SectionCard title="Setup">
+      <div>
+        <p className="text-xs text-text-muted mb-3">
+          Re-run the setup assistant to check for required dependencies (Node.js, Git, GitHub CLI).
+        </p>
+        <button
+          onClick={handleRunSetup}
+          className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-text-secondary transition-colors"
+        >
+          Run Setup Assistant
+        </button>
       </div>
     </SectionCard>
   );

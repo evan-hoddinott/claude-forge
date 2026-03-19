@@ -4,7 +4,7 @@ import { promisify } from 'node:util';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import type { CreateProjectInput, Project, AgentType, AgentStatus } from '../shared/types';
+import type { CreateProjectInput, Project, AgentType, AgentStatus, SetupCheckResult, DependencyStatus } from '../shared/types';
 import { AGENTS } from '../shared/types';
 import * as store from './store';
 import * as projectService from './services/project-service';
@@ -35,6 +35,94 @@ function safeError(err: unknown): string {
 }
 
 export function registerIpcHandlers(): void {
+  // --- Setup Assistant ---
+
+  ipcMain.handle('setup:check-dependencies', async (): Promise<SetupCheckResult> => {
+    const deps: DependencyStatus[] = [];
+
+    // Check Node.js
+    try {
+      const { stdout } = await execFileAsync('node', ['--version'], { timeout: 5000 });
+      deps.push({
+        name: 'Node.js',
+        command: 'node',
+        installed: true,
+        version: stdout.trim(),
+        description: 'JavaScript runtime required to run AI coding agents.',
+        installUrl: 'https://nodejs.org/',
+        linuxInstallCommand: 'sudo apt install -y nodejs',
+      });
+    } catch {
+      deps.push({
+        name: 'Node.js',
+        command: 'node',
+        installed: false,
+        version: '',
+        description: 'JavaScript runtime required to run AI coding agents.',
+        installUrl: 'https://nodejs.org/',
+        linuxInstallCommand: 'sudo apt install -y nodejs',
+      });
+    }
+
+    // Check Git
+    try {
+      const { stdout } = await execFileAsync('git', ['--version'], { timeout: 5000 });
+      deps.push({
+        name: 'Git',
+        command: 'git',
+        installed: true,
+        version: stdout.trim(),
+        description: 'Version control system for tracking code changes.',
+        installUrl: 'https://git-scm.com/',
+        linuxInstallCommand: 'sudo apt install -y git',
+      });
+    } catch {
+      deps.push({
+        name: 'Git',
+        command: 'git',
+        installed: false,
+        version: '',
+        description: 'Version control system for tracking code changes.',
+        installUrl: 'https://git-scm.com/',
+        linuxInstallCommand: 'sudo apt install -y git',
+      });
+    }
+
+    // Check GitHub CLI
+    try {
+      const { stdout } = await execFileAsync('gh', ['--version'], { timeout: 5000 });
+      const firstLine = stdout.trim().split('\n')[0];
+      deps.push({
+        name: 'GitHub CLI',
+        command: 'gh',
+        installed: true,
+        version: firstLine,
+        description: 'Command-line tool for GitHub repo management and authentication.',
+        installUrl: 'https://cli.github.com/',
+        linuxInstallCommand: 'sudo apt install -y gh',
+      });
+    } catch {
+      deps.push({
+        name: 'GitHub CLI',
+        command: 'gh',
+        installed: false,
+        version: '',
+        description: 'Command-line tool for GitHub repo management and authentication.',
+        installUrl: 'https://cli.github.com/',
+        linuxInstallCommand: 'sudo apt install -y gh',
+      });
+    }
+
+    // Detect platform
+    const env = await environmentService.detectEnvironment();
+
+    return {
+      dependencies: deps,
+      platform: env.platform,
+      wslAvailable: env.wslAvailable,
+    };
+  });
+
   // --- Projects ---
 
   ipcMain.handle('projects:list', () => {

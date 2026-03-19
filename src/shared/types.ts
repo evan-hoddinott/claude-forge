@@ -116,6 +116,23 @@ export interface UserPreferences {
   fileExplorerShowHidden: boolean;
   fileExplorerWordWrap: boolean;
   fileExplorerMinimap: boolean;
+  setupCompleted: boolean;
+}
+
+export interface DependencyStatus {
+  name: string;
+  command: string;
+  installed: boolean;
+  version: string;
+  description: string;
+  installUrl: string;
+  linuxInstallCommand: string;
+}
+
+export interface SetupCheckResult {
+  dependencies: DependencyStatus[];
+  platform: 'wsl' | 'native-linux' | 'native-windows';
+  wslAvailable: boolean;
 }
 
 // --- File Explorer Types ---
@@ -180,6 +197,9 @@ export interface AgentStatus {
 }
 
 export interface ElectronAPI {
+  setup: {
+    checkDependencies: () => Promise<SetupCheckResult>;
+  };
   projects: {
     list: () => Promise<Project[]>;
     get: (id: string) => Promise<Project | undefined>;

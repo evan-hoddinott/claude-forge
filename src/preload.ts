@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  setup: {
+    checkDependencies: () => ipcRenderer.invoke('setup:check-dependencies'),
+  },
   projects: {
     list: () => ipcRenderer.invoke('projects:list'),
     get: (id: string) => ipcRenderer.invoke('projects:get', id),

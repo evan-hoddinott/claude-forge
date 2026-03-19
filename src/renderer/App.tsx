@@ -5,6 +5,7 @@ import TitleBar from './components/TitleBar';
 import NewProjectWizard from './components/NewProjectWizard';
 import CommandPalette from './components/CommandPalette';
 import ContextMenu from './components/ContextMenu';
+import SetupAssistant from './components/SetupAssistant';
 import Dashboard from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
 import Settings from './pages/Settings';
@@ -29,6 +30,29 @@ export default function App() {
   const [showWizard, setShowWizard] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showSetup, setShowSetup] = useState(false);
+  const [setupChecked, setSetupChecked] = useState(false);
+
+  // Check if setup has been completed on first load
+  useEffect(() => {
+    api.preferences.get().then((prefs) => {
+      if (!prefs.setupCompleted) {
+        setShowSetup(true);
+      }
+      setSetupChecked(true);
+    }).catch(() => {
+      setSetupChecked(true);
+    });
+  }, [api]);
+
+  // Listen for Settings "Run Setup Assistant" button
+  useEffect(() => {
+    function handleOpenSetup() {
+      setShowSetup(true);
+    }
+    window.addEventListener('open-setup-assistant', handleOpenSetup);
+    return () => window.removeEventListener('open-setup-assistant', handleOpenSetup);
+  }, []);
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
@@ -208,6 +232,10 @@ export default function App() {
           onClose={() => setContextMenu(null)}
           onDelete={handleContextMenuDelete}
         />
+      )}
+
+      {showSetup && (
+        <SetupAssistant onComplete={() => setShowSetup(false)} />
       )}
     </div>
   );

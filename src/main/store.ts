@@ -29,6 +29,7 @@ function preferenceDefaults(): UserPreferences {
     fileExplorerShowHidden: false,
     fileExplorerWordWrap: false,
     fileExplorerMinimap: true,
+    setupCompleted: false,
   };
 }
 
