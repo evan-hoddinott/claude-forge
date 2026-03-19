@@ -10,8 +10,8 @@ export function sanitizeProjectName(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) throw new Error('Project name cannot be empty');
   if (trimmed.length > 100) throw new Error('Project name must be 100 characters or fewer');
-  if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
-    throw new Error('Project name may only contain letters, numbers, hyphens, and underscores');
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(trimmed)) {
+    throw new Error('Project name may only contain letters, numbers, hyphens, dots, and underscores, and must start with a letter or number');
   }
   return trimmed;
 }

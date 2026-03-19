@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs/promises';
+import * as fsSync from 'node:fs';
 import path from 'node:path';
 import type { AgentType, ProjectInput } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
@@ -60,24 +61,17 @@ export function startAgent(
   const processKey = `${projectId}:${agentType}`;
   if (activeProcesses.has(processKey)) return;
 
-  const prompt = buildInitialPrompt(projectName, inputs, agentType);
+  // Ensure the project directory exists before launching
+  fsSync.mkdirSync(projectPath, { recursive: true });
+
   const config = AGENTS[agentType];
-  const agentArgs = buildLaunchArgs(agentType, prompt);
+  // Launch agent in interactive mode — the context file (CLAUDE.md etc.) provides all context
+  const agentCmd = config.command;
 
   let child: ChildProcess;
 
   if (process.platform === 'darwin') {
-    // On macOS, use osascript to open Terminal.
-    // We must build a shell command string for osascript, but we carefully
-    // escape all user-provided values.
     const escapedPath = shellEscape(projectPath);
-    const escapedPrompt = shellEscape(prompt);
-    let agentCmd: string;
-    if (agentType === 'codex') {
-      agentCmd = `${config.command} '${escapedPrompt}'`;
-    } else {
-      agentCmd = `${config.command} -p '${escapedPrompt}'`;
-    }
     const launchCmd = `cd '${escapedPath}' && ${agentCmd}`;
     const script = `tell application "Terminal" to do script "${launchCmd.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
@@ -87,16 +81,6 @@ export function startAgent(
       { detached: true, stdio: 'ignore' },
     );
   } else if (process.platform === 'win32') {
-    // On Windows, spawn cmd to open a new window.
-    // Use /k with the agent command as separate args.
-    const escapedPath = shellEscape(projectPath);
-    const escapedPrompt = shellEscape(prompt);
-    let agentCmd: string;
-    if (agentType === 'codex') {
-      agentCmd = `${config.command} '${escapedPrompt}'`;
-    } else {
-      agentCmd = `${config.command} -p '${escapedPrompt}'`;
-    }
     const launchCmd = `cd /d "${projectPath}" && ${agentCmd}`;
 
     child = spawn('cmd', ['/c', 'start', 'cmd', '/k', launchCmd], {
@@ -107,32 +91,22 @@ export function startAgent(
     const isWSL = process.env.WSL_DISTRO_NAME || process.env.WSLENV;
 
     if (isWSL) {
-      // WSL: launch in Windows Terminal
+      // WSL: launch in Windows Terminal with wt.exe, fallback to cmd.exe
       const escapedPath = shellEscape(projectPath);
-      const escapedPrompt = shellEscape(prompt);
-      let agentCmd: string;
-      if (agentType === 'codex') {
-        agentCmd = `${config.command} '${escapedPrompt}'`;
-      } else {
-        agentCmd = `${config.command} -p '${escapedPrompt}'`;
-      }
-      const launchCmd = `cd '${escapedPath}' && ${agentCmd}`;
+      const innerCmd = `cd '${escapedPath}' && ${agentCmd}`;
+
+      // Try wt.exe first, fall back to cmd.exe
+      const wtCmd = `wt.exe -d "$(wslpath -w '${escapedPath}')" wsl.exe bash -c '${shellEscape(innerCmd)}'`;
+      const fallbackCmd = `cmd.exe /c start bash -c "${innerCmd.replace(/"/g, '\\"')}"`;
 
       child = spawn(
         'bash',
-        ['-c', `wt.exe -d '${escapedPath}' bash -c '${shellEscape(launchCmd)}'`],
+        ['-c', `${wtCmd} 2>/dev/null || ${fallbackCmd}`],
         { detached: true, stdio: 'ignore' },
       );
     } else {
       // Linux: use x-terminal-emulator
       const escapedPath = shellEscape(projectPath);
-      const escapedPrompt = shellEscape(prompt);
-      let agentCmd: string;
-      if (agentType === 'codex') {
-        agentCmd = `${config.command} '${escapedPrompt}'`;
-      } else {
-        agentCmd = `${config.command} -p '${escapedPrompt}'`;
-      }
       const launchCmd = `cd '${escapedPath}' && ${agentCmd}`;
 
       child = spawn(

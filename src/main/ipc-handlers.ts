@@ -1,4 +1,4 @@
-import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
+import { ipcMain, dialog, BrowserWindow } from 'electron';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as fs from 'node:fs/promises';
@@ -20,6 +20,7 @@ import {
   sanitizeErrorMessage,
   validatePath,
 } from './utils/sanitize';
+import { openUrl } from './utils/open-url';
 
 const execFileAsync = promisify(execFile);
 
@@ -534,7 +535,7 @@ export function registerIpcHandlers(): void {
     try {
       await execFileAsync('code', [validPath]);
     } catch {
-      await shell.openPath(validPath);
+      openUrl(`file://${validPath}`);
     }
   });
 
@@ -543,7 +544,7 @@ export function registerIpcHandlers(): void {
     if (!isValidUrl(validUrl)) {
       throw new Error('Invalid URL: only http and https URLs are allowed');
     }
-    await shell.openExternal(validUrl);
+    openUrl(validUrl);
   });
 
   // --- Environment ---

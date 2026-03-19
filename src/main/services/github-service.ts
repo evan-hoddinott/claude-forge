@@ -24,21 +24,24 @@ export async function createRepo(
     'create',
     name,
     visibility,
-    '--source',
-    '.',
-    '--remote',
-    'origin',
+    '--source', '.',
+    '--remote', 'origin',
     '--push',
-    '--json',
-    'url,nameWithOwner,name',
   ];
 
   if (safeDescription) {
     args.push('--description', safeDescription);
   }
 
-  const { stdout } = await execFileAsync('gh', args, { cwd: projectPath });
-  const result = JSON.parse(stdout);
+  await execFileAsync('gh', args, { cwd: projectPath });
+
+  // gh repo create doesn't support --json; get repo info separately
+  const { stdout: viewOut } = await execFileAsync(
+    'gh',
+    ['repo', 'view', '--json', 'url,nameWithOwner,name'],
+    { cwd: projectPath },
+  );
+  const result = JSON.parse(viewOut);
 
   return {
     name: result.name ?? name,

@@ -126,7 +126,7 @@ export default function OnboardingTutorial({ mode, onComplete, onRequestNewProje
     function handleClick(e: MouseEvent) {
       const el = document.querySelector(step.target!);
       if (el && (el === e.target || el.contains(e.target as Node))) {
-        // Let the click through, then advance
+        // The actual target was clicked — advance the tutorial
         setTimeout(() => {
           setCurrentStep((s) => s + 1);
         }, 300);
@@ -138,10 +138,25 @@ export default function OnboardingTutorial({ mode, onComplete, onRequestNewProje
     return () => document.removeEventListener('click', handleClick, true);
   }, [step, currentStep]);
 
+  // Safety valve: Escape always dismisses the tutorial
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        handleDismiss();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, []);
+
   function handleNext() {
     if (step.waitForClick && onRequestNewProject) {
-      // The user needs to click the target element; prompt them
+      // Programmatically trigger the New Project wizard AND advance the tutorial
       onRequestNewProject();
+      setTimeout(() => {
+        setCurrentStep((s) => s + 1);
+      }, 300);
       return;
     }
     if (currentStep < STEPS.length - 1) {
@@ -256,16 +271,23 @@ export default function OnboardingTutorial({ mode, onComplete, onRequestNewProje
         />
       )}
 
-      {/* Make the spotlighted area clickable */}
+      {/* Make the spotlighted area clickable — clicks pass through to the actual element */}
       {targetRect && (
         <div
-          className="fixed"
+          className="fixed cursor-pointer"
           style={{
             left: targetRect.left - padding,
             top: targetRect.top - padding,
             width: targetRect.width + padding * 2,
             height: targetRect.height + padding * 2,
             pointerEvents: 'auto',
+          }}
+          onClick={() => {
+            // For waitForClick steps, programmatically click the target element
+            if (step.waitForClick && step.target) {
+              const el = document.querySelector(step.target) as HTMLElement | null;
+              if (el) el.click();
+            }
           }}
         />
       )}

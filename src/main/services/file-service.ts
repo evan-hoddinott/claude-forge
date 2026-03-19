@@ -503,8 +503,8 @@ export async function openInDefaultEditor(filePath: string, projectPath: string)
     }
   }
   // Fallback
-  const { shell } = await import('electron');
-  await shell.openPath(filePath);
+  const { openUrl } = await import('../utils/open-url');
+  openUrl(`file://${filePath}`);
 }
 
 export async function openInTerminal(filePath: string, projectPath: string): Promise<void> {

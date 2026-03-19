@@ -305,12 +305,29 @@ function GitHubTab({ collapsed, expanded, onToggle }: { collapsed: boolean; expa
 
               {loginState === 'polling' && deviceCode && (
                 <div className="space-y-2">
-                  <p className="text-[10px] text-text-muted">Enter this code in your browser:</p>
-                  <div className="bg-white/5 border border-white/8 rounded-md px-2.5 py-1.5 text-center">
-                    <span className="text-sm font-mono font-bold text-accent tracking-wider">
-                      {deviceCode}
-                    </span>
+                  <p className="text-[10px] text-text-muted">Enter this code on GitHub:</p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-white/5 border border-white/8 rounded-md px-2.5 py-1.5 text-center">
+                      <span className="text-sm font-mono font-bold text-accent tracking-wider">
+                        {deviceCode}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(deviceCode);
+                      }}
+                      className="px-2 py-1.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/8 text-[10px] font-medium text-text-secondary transition-colors shrink-0"
+                      title="Copy code"
+                    >
+                      Copy
+                    </button>
                   </div>
+                  <button
+                    onClick={() => api.system.openExternal('https://github.com/login/device')}
+                    className="w-full px-3 py-1.5 rounded-md bg-accent/10 hover:bg-accent/15 border border-accent/20 text-xs font-medium text-accent transition-colors"
+                  >
+                    Open GitHub in Browser
+                  </button>
                   <div className="flex items-center gap-2">
                     <Spinner size="xs" />
                     <p className="text-[10px] text-text-muted">Waiting for authorization...</p>

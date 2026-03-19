@@ -1,8 +1,19 @@
-import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useAPI, useMutation } from '../../hooks/useAPI';
 import { useToast } from '../Toast';
 import type { FileTreeNode, FileReadResult, UserPreferences, Project } from '../../../shared/types';
 import { AGENTS } from '../../../shared/types';
+
+// Configure Monaco workers for Electron/Vite
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(self as any).MonacoEnvironment = {
+  getWorker(_workerId: string, _label: string) {
+    return new Worker(
+      new URL('monaco-editor/esm/vs/editor/editor.worker.js', import.meta.url),
+      { type: 'module' },
+    );
+  },
+};
 
 const MonacoEditor = lazy(() => import('@monaco-editor/react'));
 
@@ -258,71 +269,145 @@ export default function FilePreview({
         </div>
       </div>
 
-      {/* Monaco Editor */}
+      {/* Monaco Editor with timeout fallback */}
       <div className="flex-1 min-h-0">
-        <Suspense
-          fallback={
-            <div className="h-full flex items-center justify-center text-text-muted text-sm">
-              Loading editor...
-            </div>
-          }
-        >
-          <MonacoEditor
-            height="100%"
-            language={fileContent?.language ?? 'plaintext'}
-            value={editMode ? editorContent : fileContent?.content ?? ''}
-            onChange={editMode ? handleEditorChange : undefined}
-            theme="claude-forge-dark"
-            options={{
-              readOnly: !editMode,
-              fontSize,
-              fontFamily: "'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace",
-              fontLigatures: true,
-              minimap: { enabled: minimap },
-              wordWrap: wordWrap as 'on' | 'off',
-              lineNumbers: 'on',
-              renderLineHighlight: 'line',
-              scrollBeyondLastLine: false,
-              smoothScrolling: true,
-              cursorBlinking: 'smooth',
-              tabSize: 2,
-              bracketPairColorization: { enabled: true },
-              padding: { top: 8 },
-              overviewRulerBorder: false,
-              hideCursorInOverviewRuler: true,
-              scrollbar: {
-                verticalScrollbarSize: 8,
-                horizontalScrollbarSize: 8,
-              },
-            }}
-            beforeMount={(monaco) => {
-              // Define custom theme matching app dark theme
-              monaco.editor.defineTheme('claude-forge-dark', {
-                base: 'vs-dark',
-                inherit: true,
-                rules: [],
-                colors: {
-                  'editor.background': '#0d0d14',
-                  'editor.foreground': '#ededef',
-                  'editor.lineHighlightBackground': '#ffffff06',
-                  'editor.selectionBackground': '#38bdf830',
-                  'editor.inactiveSelectionBackground': '#38bdf815',
-                  'editorLineNumber.foreground': '#4e4e62',
-                  'editorLineNumber.activeForeground': '#8e8ea0',
-                  'editorCursor.foreground': '#38bdf8',
-                  'editorIndentGuide.background': '#ffffff08',
-                  'editorIndentGuide.activeBackground': '#ffffff15',
-                  'editor.selectionHighlightBackground': '#38bdf815',
-                  'editorWidget.background': '#13131a',
-                  'editorWidget.border': '#ffffff10',
-                  'minimap.background': '#0a0a0f',
-                },
-              });
-            }}
-          />
-        </Suspense>
+        <MonacoWithFallback
+          language={fileContent?.language ?? 'plaintext'}
+          value={editMode ? editorContent : fileContent?.content ?? ''}
+          onChange={editMode ? handleEditorChange : undefined}
+          editMode={editMode}
+          fontSize={fontSize}
+          minimap={minimap}
+          wordWrap={wordWrap}
+        />
       </div>
     </div>
+  );
+}
+
+function MonacoWithFallback({
+  language,
+  value,
+  onChange,
+  editMode,
+  fontSize,
+  minimap,
+  wordWrap,
+}: {
+  language: string;
+  value: string;
+  onChange?: (value: string | undefined) => void;
+  editMode: boolean;
+  fontSize: number;
+  minimap: boolean;
+  wordWrap: string;
+}) {
+  const [timedOut, setTimedOut] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = false;
+    setTimedOut(false);
+    const timer = setTimeout(() => {
+      if (!mountedRef.current) setTimedOut(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [retryKey]);
+
+  if (timedOut) {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="px-4 py-2 border-b border-white/6 flex items-center gap-3 text-xs text-text-muted">
+          <span>Editor is taking a while...</span>
+          <button
+            onClick={() => { setTimedOut(false); setRetryKey((k) => k + 1); }}
+            className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-text-secondary transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+        <pre className="flex-1 overflow-auto p-4 font-mono text-xs text-text-secondary leading-relaxed whitespace-pre-wrap bg-[#0d0d14]">
+          {value}
+        </pre>
+      </div>
+    );
+  }
+
+  return (
+    <Suspense
+      fallback={
+        <div className="h-full flex flex-col">
+          {/* Code editor skeleton */}
+          <div className="flex-1 bg-[#0d0d14] p-4 space-y-2">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-6 h-3 rounded bg-white/[0.04]" />
+                <div
+                  className="h-3 rounded bg-white/[0.04] animate-pulse"
+                  style={{ width: `${30 + Math.random() * 50}%`, animationDelay: `${i * 80}ms` }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <MonacoEditor
+        key={retryKey}
+        height="100%"
+        language={language}
+        value={value}
+        onChange={onChange}
+        theme="claude-forge-dark"
+        onMount={() => { mountedRef.current = true; }}
+        options={{
+          readOnly: !editMode,
+          fontSize,
+          fontFamily: "'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace",
+          fontLigatures: true,
+          minimap: { enabled: minimap },
+          wordWrap: wordWrap as 'on' | 'off',
+          lineNumbers: 'on',
+          renderLineHighlight: 'line',
+          scrollBeyondLastLine: false,
+          smoothScrolling: true,
+          cursorBlinking: 'smooth',
+          tabSize: 2,
+          bracketPairColorization: { enabled: true },
+          padding: { top: 8 },
+          overviewRulerBorder: false,
+          hideCursorInOverviewRuler: true,
+          scrollbar: {
+            verticalScrollbarSize: 8,
+            horizontalScrollbarSize: 8,
+          },
+        }}
+        beforeMount={(monaco) => {
+          monaco.editor.defineTheme('claude-forge-dark', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [],
+            colors: {
+              'editor.background': '#0d0d14',
+              'editor.foreground': '#ededef',
+              'editor.lineHighlightBackground': '#ffffff06',
+              'editor.selectionBackground': '#38bdf830',
+              'editor.inactiveSelectionBackground': '#38bdf815',
+              'editorLineNumber.foreground': '#4e4e62',
+              'editorLineNumber.activeForeground': '#8e8ea0',
+              'editorCursor.foreground': '#38bdf8',
+              'editorIndentGuide.background': '#ffffff08',
+              'editorIndentGuide.activeBackground': '#ffffff15',
+              'editor.selectionHighlightBackground': '#38bdf815',
+              'editorWidget.background': '#13131a',
+              'editorWidget.border': '#ffffff10',
+              'minimap.background': '#0a0a0f',
+            },
+          });
+        }}
+      />
+    </Suspense>
   );
 }
 

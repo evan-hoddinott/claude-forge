@@ -244,6 +244,31 @@ function LocationModeToggle({
   );
 }
 
+const PROJECT_NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+
+function validateProjectName(name: string): string | null {
+  if (!name) return null; // no error for empty (will be caught by required check)
+  if (name.length > 100) return 'Project name must be 100 characters or fewer';
+  if (/\s/.test(name)) return 'Project names cannot contain spaces. Use hyphens instead.';
+  if (/^[^a-zA-Z0-9]/.test(name)) return 'Project name must start with a letter or number';
+  if (/\.\./.test(name) || /--/.test(name)) return 'Avoid consecutive dots or hyphens';
+  if (!PROJECT_NAME_REGEX.test(name)) return 'Project names can only contain letters, numbers, hyphens, dots, and underscores';
+  return null;
+}
+
+function suggestProjectName(name: string): string | null {
+  if (!name || PROJECT_NAME_REGEX.test(name)) return null;
+  const suggested = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/\.{2,}/g, '.')
+    .replace(/^[^a-z0-9]+/, '')
+    .replace(/-+$/, '');
+  return suggested && suggested !== name ? suggested : null;
+}
+
 function StepBasics({
   data,
   defaultDir,
@@ -267,19 +292,47 @@ function StepBasics({
   useEffect(() => nameRef.current?.focus(), []);
 
   const pathPreview = data.path || `${defaultDir}/${data.name || 'my-project'}`;
+  const nameError = validateProjectName(data.name);
+  const suggestion = suggestProjectName(data.name);
+  const displayError = errors.name || nameError;
+  const isValid = data.name.trim().length > 0 && !nameError;
 
   return (
     <div className="space-y-4 p-6">
-      <FormField label="Project name" error={errors.name}>
-        <input
-          ref={nameRef}
-          data-tutorial="wizard-name"
-          type="text"
-          value={data.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="my-awesome-project"
-          className={INPUT_CLS}
-        />
+      <FormField label="Project name" error={displayError ?? undefined}>
+        <div className="relative">
+          <input
+            ref={nameRef}
+            data-tutorial="wizard-name"
+            type="text"
+            value={data.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            placeholder="my-awesome-project"
+            className={INPUT_CLS}
+          />
+          {data.name.trim() && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm">
+              {isValid ? (
+                <svg className="w-4 h-4 text-status-ready" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 8 6.5 11.5 13 5" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-status-error" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M4 4l8 8M12 4l-8 8" />
+                </svg>
+              )}
+            </span>
+          )}
+        </div>
+        {suggestion && (
+          <button
+            type="button"
+            onClick={() => onChange({ name: suggestion })}
+            className="text-xs text-accent hover:text-accent-hover transition-colors mt-1"
+          >
+            Did you mean: <span className="font-medium">{suggestion}</span>?
+          </button>
+        )}
       </FormField>
 
       <FormField label="Location">
@@ -1568,7 +1621,12 @@ export default function NewProjectWizard({
   function validate(s: number): boolean {
     const e: Record<string, string> = {};
     if (s === 0) {
-      if (!data.name.trim()) e.name = 'Project name is required';
+      if (!data.name.trim()) {
+        e.name = 'Project name is required';
+      } else {
+        const nameErr = validateProjectName(data.name.trim());
+        if (nameErr) e.name = nameErr;
+      }
     }
     if (s === 3) {
       if (data.githubChoice === 'create' && !data.newRepoName.trim() && !data.name.trim()) {
