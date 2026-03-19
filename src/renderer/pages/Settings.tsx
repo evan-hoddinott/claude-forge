@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useToast } from '../components/Toast';
-import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus } from '../../shared/types';
+import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
+import { rawLabel } from '../utils/language';
 
 export default function Settings() {
   const api = useAPI();
@@ -34,6 +35,7 @@ export default function Settings() {
       <div className="max-w-2xl mx-auto px-8 py-8 space-y-8">
         <h1 className="text-xl font-bold text-text-primary">Settings</h1>
 
+        <ExperienceSection prefs={prefs} api={api} refetch={refetch} />
         <GeneralSection prefs={prefs} api={api} refetch={refetch} />
         <EnvironmentSection
           prefs={prefs}
@@ -54,6 +56,7 @@ export default function Settings() {
           agentStatuses={agentStatuses}
         />
         <FileExplorerSection prefs={prefs} api={api} refetch={refetch} />
+        <AccessibilitySection prefs={prefs} api={api} refetch={refetch} />
         <SetupSection />
         <DataSection api={api} refetch={refetch} />
       </div>
@@ -168,6 +171,138 @@ function AgentIcon({ agentType, className }: { agentType: AgentType; className?:
 
 const inputClass =
   'w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-accent/50 transition-colors';
+
+// --- Experience ---
+
+function ExperienceSection({
+  prefs,
+  api,
+  refetch,
+}: {
+  prefs: UserPreferences;
+  api: API;
+  refetch: () => void;
+}) {
+  const currentMode = prefs.mode || 'simple';
+
+  return (
+    <SectionCard title="Experience">
+      {/* Mode toggle */}
+      <div>
+        <FieldLabel>Interface Mode</FieldLabel>
+        <SegmentedControl
+          value={currentMode}
+          options={[
+            { value: 'simple' as AppMode, label: 'Simple Mode' },
+            { value: 'developer' as AppMode, label: 'Developer Mode' },
+          ]}
+          onChange={(v) => updatePref(api, refetch, { mode: v })}
+        />
+        <FieldHint>
+          Changes how technical terms are displayed throughout the app.
+        </FieldHint>
+
+        {/* Preview */}
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-lg bg-white/[0.02] border border-white/6">
+            <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1.5">Simple</p>
+            <p className="text-xs text-text-secondary">{rawLabel('git_push', 'simple')}</p>
+            <p className="text-xs text-text-secondary">{rawLabel('npm_install', 'simple')}</p>
+            <p className="text-xs text-text-secondary">{rawLabel('agent_launch', 'simple')}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-white/[0.02] border border-white/6">
+            <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1.5">Developer</p>
+            <p className="text-xs text-text-secondary">{rawLabel('git_push', 'developer')}</p>
+            <p className="text-xs text-text-secondary">{rawLabel('npm_install', 'developer')}</p>
+            <p className="text-xs text-text-secondary">{rawLabel('agent_launch', 'developer')}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Replay onboarding */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('open-setup-assistant'))}
+          className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-text-secondary transition-colors"
+        >
+          Re-run setup wizard
+        </button>
+      </div>
+    </SectionCard>
+  );
+}
+
+// --- Accessibility ---
+
+function AccessibilitySection({
+  prefs,
+  api,
+  refetch,
+}: {
+  prefs: UserPreferences;
+  api: API;
+  refetch: () => void;
+}) {
+  const [fontSize, setFontSize] = useState(prefs.appFontSize ?? 14);
+
+  useEffect(() => {
+    setFontSize(prefs.appFontSize ?? 14);
+  }, [prefs.appFontSize]);
+
+  // Apply font size to document root
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontSize}px`;
+    return () => {
+      document.documentElement.style.fontSize = '';
+    };
+  }, [fontSize]);
+
+  return (
+    <SectionCard title="Accessibility">
+      <div>
+        <FieldLabel>App font size: {fontSize}px</FieldLabel>
+        <input
+          type="range"
+          min={12}
+          max={20}
+          value={fontSize}
+          onChange={(e) => setFontSize(parseInt(e.target.value, 10))}
+          onMouseUp={() => updatePref(api, refetch, { appFontSize: fontSize })}
+          className="w-48 accent-accent"
+        />
+        <FieldHint>Affects text size throughout the entire app.</FieldHint>
+      </div>
+
+      <div className="space-y-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={prefs.reduceAnimations ?? false}
+            onChange={(e) =>
+              updatePref(api, refetch, { reduceAnimations: e.target.checked })
+            }
+            className="rounded border-white/20 bg-white/5 text-accent focus:ring-accent/25"
+          />
+          <span className="text-sm text-text-secondary">Reduce animations</span>
+        </label>
+        <FieldHint>Disables most transition and motion effects.</FieldHint>
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={prefs.highContrast ?? false}
+            onChange={(e) =>
+              updatePref(api, refetch, { highContrast: e.target.checked })
+            }
+            className="rounded border-white/20 bg-white/5 text-accent focus:ring-accent/25"
+          />
+          <span className="text-sm text-text-secondary">High contrast</span>
+        </label>
+        <FieldHint>Increases contrast for better readability.</FieldHint>
+      </div>
+    </SectionCard>
+  );
+}
 
 // --- General ---
 

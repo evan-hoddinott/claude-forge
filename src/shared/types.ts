@@ -101,6 +101,8 @@ export interface CreateProjectInput {
 
 export type ProjectLocationMode = 'wsl' | 'windows';
 
+export type AppMode = 'simple' | 'developer';
+
 export interface UserPreferences {
   defaultProjectDir: string;
   projectLocationMode: ProjectLocationMode;
@@ -117,6 +119,10 @@ export interface UserPreferences {
   fileExplorerWordWrap: boolean;
   fileExplorerMinimap: boolean;
   setupCompleted: boolean;
+  mode: AppMode;
+  appFontSize: number;
+  reduceAnimations: boolean;
+  highContrast: boolean;
 }
 
 export interface DependencyStatus {

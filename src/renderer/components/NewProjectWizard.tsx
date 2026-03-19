@@ -6,8 +6,9 @@ import {
   useDragControls,
 } from 'framer-motion';
 import { v4 as uuidv4 } from 'uuid';
-import type { ProjectInput, GitHubRepo, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus } from '../../shared/types';
+import type { ProjectInput, GitHubRepo, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
+import { TEMPLATES, type ProjectTemplate } from '../../shared/templates';
 import { useAPI } from '../hooks/useAPI';
 import { useToast } from './Toast';
 
@@ -43,7 +44,7 @@ const INITIAL_DATA: WizardData = {
   launchAgent: 'claude',
 };
 
-const STEP_LABELS = ['Basics', 'Context', 'GitHub', 'Review'];
+const STEP_LABELS = ['Basics', 'Template', 'Context', 'GitHub', 'Review'];
 
 interface InputPreset {
   label: string;
@@ -325,7 +326,86 @@ function StepBasics({
 }
 
 // ---------------------------------------------------------------------------
-// Step 2 — Inputs
+// Step 2 — Templates
+// ---------------------------------------------------------------------------
+
+function TemplateCard({
+  template,
+  mode,
+  onSelect,
+}: {
+  template: ProjectTemplate;
+  mode: AppMode;
+  onSelect: (template: ProjectTemplate) => void;
+}) {
+  const description = mode === 'simple' ? template.simpleDescription : template.description;
+
+  return (
+    <motion.button
+      type="button"
+      onClick={() => onSelect(template)}
+      whileHover={{ y: -2, boxShadow: `0 8px 24px ${template.color}20` }}
+      transition={{ duration: 0.15 }}
+      className="text-left p-4 rounded-xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.04] transition-colors relative overflow-hidden group"
+    >
+      {/* Gradient accent */}
+      <div
+        className="absolute top-0 left-0 right-0 h-1 opacity-60 group-hover:opacity-100 transition-opacity"
+        style={{ background: `linear-gradient(90deg, ${template.color}, ${template.color}80)` }}
+      />
+
+      {/* Badge */}
+      {template.badge && (
+        <span
+          className={`absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+            template.badge === 'popular'
+              ? 'bg-accent/15 text-accent'
+              : 'bg-white/8 text-text-muted'
+          }`}
+        >
+          {template.badge}
+        </span>
+      )}
+
+      <div className="text-2xl mb-2">{template.icon}</div>
+      <p className="text-sm font-semibold text-text-primary">{template.name}</p>
+      <p className="text-xs text-text-muted mt-1 line-clamp-2">{description}</p>
+    </motion.button>
+  );
+}
+
+function StepTemplates({
+  mode,
+  onSelect,
+}: {
+  mode: AppMode;
+  onSelect: (template: ProjectTemplate) => void;
+}) {
+  return (
+    <div className="p-6 space-y-4">
+      <div>
+        <h3 className="text-base font-semibold text-text-primary">Choose a template</h3>
+        <p className="text-xs text-text-muted mt-1">
+          Pick a starting point, or skip to build from scratch.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {TEMPLATES.map((template) => (
+          <TemplateCard
+            key={template.id}
+            template={template}
+            mode={mode}
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Step 3 — Inputs
 // ---------------------------------------------------------------------------
 
 function MultiSelectDropdown({
@@ -1424,6 +1504,8 @@ export default function NewProjectWizard({
   const [envInfo, setEnvInfo] = useState<EnvironmentInfo | null>(null);
   const [locationMode, setLocationMode] = useState<ProjectLocationMode>('wsl');
   const [agentStatuses, setAgentStatuses] = useState<Record<AgentType, AgentStatus> | null>(null);
+  const [appMode, setAppMode] = useState<AppMode>('simple');
+  const selectedTemplateRef = useRef<string | null>(null);
 
   // Fetch default project dir, environment info, and agent statuses on open
   useEffect(() => {
@@ -1431,6 +1513,7 @@ export default function NewProjectWizard({
       api.preferences.get().then((prefs) => {
         setDefaultDir(prefs.defaultProjectDir);
         setLocationMode(prefs.projectLocationMode);
+        setAppMode(prefs.mode || 'simple');
         // Pre-select default agent
         setData((d) => ({
           ...d,
@@ -1467,6 +1550,7 @@ export default function NewProjectWizard({
     setData(INITIAL_DATA);
     setErrors({});
     setCreateError(null);
+    selectedTemplateRef.current = null;
     onClose();
   }
 
@@ -1485,7 +1569,7 @@ export default function NewProjectWizard({
     if (s === 0) {
       if (!data.name.trim()) e.name = 'Project name is required';
     }
-    if (s === 2) {
+    if (s === 3) {
       if (data.githubChoice === 'create' && !data.newRepoName.trim() && !data.name.trim()) {
         e.repoName = 'Repository name is required';
       }
@@ -1497,10 +1581,37 @@ export default function NewProjectWizard({
     return Object.keys(e).length === 0;
   }
 
+  function handleTemplateSelect(template: ProjectTemplate) {
+    if (template.id === 'scratch') {
+      // Skip to context step with empty inputs
+      selectedTemplateRef.current = 'scratch';
+      setDirection(1);
+      setStep(2);
+      toast('Starting from scratch!');
+      return;
+    }
+
+    // Convert template inputs to ProjectInput format
+    const templateInputs: ProjectInput[] = template.inputs.map((ti) => ({
+      id: uuidv4(),
+      label: ti.label,
+      type: ti.type,
+      value: ti.value || '',
+      options: ti.options,
+      selectedOptions: [],
+    }));
+
+    selectedTemplateRef.current = template.id;
+    setData((d) => ({ ...d, inputs: templateInputs }));
+    toast('Template loaded! Feel free to customize the details.');
+    setDirection(1);
+    setStep(2);
+  }
+
   function goNext() {
     if (!validate(step)) return;
     // Auto-fill repo name/description from project if empty
-    if (step === 1) {
+    if (step === 2) {
       setData((d) => ({
         ...d,
         newRepoName: d.newRepoName || d.name,
@@ -1631,7 +1742,7 @@ export default function NewProjectWizard({
         !(e.target instanceof HTMLSelectElement)
       ) {
         e.preventDefault();
-        if (step < 3) goNext();
+        if (step < 4) goNext();
       }
     }
     window.addEventListener('keydown', handleKey);
@@ -1709,6 +1820,12 @@ export default function NewProjectWizard({
                   />
                 )}
                 {step === 1 && (
+                  <StepTemplates
+                    mode={appMode}
+                    onSelect={handleTemplateSelect}
+                  />
+                )}
+                {step === 2 && (
                   <StepInputs
                     inputs={data.inputs}
                     projectName={data.name}
@@ -1716,14 +1833,14 @@ export default function NewProjectWizard({
                     onInputsChange={(inputs) => updateData({ inputs })}
                   />
                 )}
-                {step === 2 && (
+                {step === 3 && (
                   <StepGitHub
                     data={data}
                     errors={errors}
                     onChange={updateData}
                   />
                 )}
-                {step === 3 && (
+                {step === 4 && (
                   <StepReview
                     data={data}
                     defaultDir={defaultDir}
@@ -1751,7 +1868,7 @@ export default function NewProjectWizard({
               {step === 0 ? 'Cancel' : 'Back'}
             </button>
 
-            {step < 3 ? (
+            {step < 4 ? (
               <button
                 type="button"
                 onClick={goNext}

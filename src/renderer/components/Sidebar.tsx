@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Page } from '../App';
-import type { GhAuthStatus, AgentStatus, AgentType } from '../../shared/types';
+import type { GhAuthStatus, AgentStatus, AgentType, AppMode } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
-import { useAPI } from '../hooks/useAPI';
+import { useAPI, useQuery } from '../hooks/useAPI';
+import { setMode as setLanguageMode } from '../utils/language';
 
 interface SidebarProps {
   activePage: Page;
@@ -744,6 +745,46 @@ function AgentsSection({ collapsed, expandedAgent, onToggleAgent }: { collapsed:
 }
 
 // ---------------------------------------------------------------------------
+// Mode toggle (Simple / Developer)
+// ---------------------------------------------------------------------------
+
+function ModeToggle({ collapsed }: { collapsed: boolean }) {
+  const api = useAPI();
+  const { data: prefs, refetch } = useQuery(() => api.preferences.get());
+  const mode: AppMode = prefs?.mode || 'simple';
+
+  // Keep language module in sync
+  useEffect(() => {
+    setLanguageMode(mode);
+  }, [mode]);
+
+  async function toggle() {
+    const next: AppMode = mode === 'simple' ? 'developer' : 'simple';
+    setLanguageMode(next);
+    await api.preferences.update({ mode: next });
+    refetch();
+  }
+
+  if (collapsed) return null;
+
+  return (
+    <div className="px-3 pb-1 shrink-0">
+      <button
+        onClick={toggle}
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-white/[0.03] hover:bg-white/[0.06] transition-colors"
+      >
+        <span className="text-[10px] text-text-muted">
+          {mode === 'simple' ? '\uD83D\uDE80' : '\uD83D\uDD27'}
+        </span>
+        <span className="text-[10px] font-medium text-text-secondary truncate">
+          {mode === 'simple' ? 'Simple Mode' : 'Developer Mode'}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main sidebar
 // ---------------------------------------------------------------------------
 
@@ -870,6 +911,9 @@ export default function Sidebar({
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Mode toggle */}
+      <ModeToggle collapsed={collapsed} />
 
       {/* New Project Button */}
       <div className="px-2 py-2 shrink-0">
