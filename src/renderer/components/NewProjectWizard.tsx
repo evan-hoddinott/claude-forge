@@ -43,14 +43,30 @@ const INITIAL_DATA: WizardData = {
   launchAgent: 'claude',
 };
 
-const STEP_LABELS = ['Basics', 'Inputs', 'GitHub', 'Review'];
+const STEP_LABELS = ['Basics', 'Context', 'GitHub', 'Review'];
 
-const INPUT_PRESETS: { label: string; type: ProjectInput['type']; options?: string[] }[] = [
-  { label: 'Tech Stack', type: 'text' },
-  { label: 'Template', type: 'select', options: ['React', 'Vue', 'Next.js', 'Node', 'Python', 'Custom'] },
-  { label: 'System Prompt', type: 'textarea' },
-  { label: 'Dependencies', type: 'textarea' },
-  { label: 'Features', type: 'textarea' },
+interface InputPreset {
+  label: string;
+  type: ProjectInput['type'];
+  placeholder?: string;
+  options?: string[];
+  multiSelect?: boolean;
+}
+
+const INPUT_PRESETS: InputPreset[] = [
+  { label: 'Description', type: 'textarea', placeholder: 'What are you building? What problem does it solve?' },
+  {
+    label: 'Tech Stack',
+    type: 'select',
+    options: ['React', 'Vue', 'Svelte', 'Next.js', 'Express', 'FastAPI', 'Django', 'Flask', 'Electron', 'React Native', 'Other'],
+    multiSelect: true,
+  },
+  { label: 'Template', type: 'select', options: ['Web App', 'API Server', 'CLI Tool', 'Desktop App', 'Mobile App', 'Chrome Extension', 'Library/Package', 'Full-Stack', 'Other'] },
+  { label: 'Features', type: 'textarea', placeholder: 'List the features you want built...' },
+  { label: 'System Prompt', type: 'textarea', placeholder: 'Custom instructions for Claude Code...' },
+  { label: 'Dependencies', type: 'text', placeholder: 'Key packages or APIs to use...' },
+  { label: 'Design Style', type: 'select', options: ['Minimal', 'Modern', 'Playful', 'Corporate', 'Brutalist', 'Retro', 'No preference'] },
+  { label: 'Target Audience', type: 'text', placeholder: 'Who is this for?' },
 ];
 
 const INPUT_CLS =
@@ -312,6 +328,111 @@ function StepBasics({
 // Step 2 — Inputs
 // ---------------------------------------------------------------------------
 
+function MultiSelectDropdown({
+  options,
+  selectedOptions,
+  onToggle,
+  onCustomAdd,
+}: {
+  options: string[];
+  selectedOptions: string[];
+  onToggle: (opt: string) => void;
+  onCustomAdd: (opt: string) => void;
+}) {
+  const [customText, setCustomText] = useState('');
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => {
+          const selected = selectedOptions.includes(opt);
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onToggle(opt)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                selected
+                  ? 'bg-accent/20 text-accent ring-1 ring-accent/30'
+                  : 'bg-white/5 text-text-secondary hover:bg-white/8 hover:text-text-primary'
+              }`}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex gap-1.5">
+        <input
+          type="text"
+          value={customText}
+          onChange={(e) => setCustomText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && customText.trim()) {
+              e.preventDefault();
+              onCustomAdd(customText.trim());
+              setCustomText('');
+            }
+          }}
+          placeholder="Add custom..."
+          className={`${INPUT_CLS} flex-1 text-xs`}
+        />
+        {customText.trim() && (
+          <button
+            type="button"
+            onClick={() => {
+              onCustomAdd(customText.trim());
+              setCustomText('');
+            }}
+            className="px-2 py-1 rounded-lg bg-accent/10 text-accent text-xs hover:bg-accent/20 transition-colors shrink-0"
+          >
+            Add
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChecklistInput({
+  options,
+  selectedOptions,
+  onToggle,
+}: {
+  options: string[];
+  selectedOptions: string[];
+  onToggle: (opt: string) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      {options.map((opt) => {
+        const checked = selectedOptions.includes(opt);
+        return (
+          <label
+            key={opt}
+            className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.03] cursor-pointer transition-colors"
+          >
+            <div
+              className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                checked
+                  ? 'bg-accent border-accent'
+                  : 'border-white/20 bg-white/5'
+              }`}
+            >
+              {checked && (
+                <svg className="w-2.5 h-2.5 text-bg" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="2 6 5 9 10 3" />
+                </svg>
+              )}
+            </div>
+            <span className="text-xs text-text-primary">{opt}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 function DraggableInputCard({
   input,
   onUpdate,
@@ -322,6 +443,32 @@ function DraggableInputCard({
   onDelete: () => void;
 }) {
   const controls = useDragControls();
+  const preset = INPUT_PRESETS.find((p) => p.label === input.label);
+  const placeholder = preset?.placeholder || 'Value...';
+
+  function toggleOption(opt: string) {
+    const current = input.selectedOptions || [];
+    const next = current.includes(opt)
+      ? current.filter((o) => o !== opt)
+      : [...current, opt];
+    onUpdate({ selectedOptions: next, value: next.join(', ') });
+  }
+
+  function addCustomOption(opt: string) {
+    const currentOpts = input.options || [];
+    if (!currentOpts.includes(opt)) {
+      onUpdate({ options: [...currentOpts, opt] });
+    }
+    const current = input.selectedOptions || [];
+    if (!current.includes(opt)) {
+      const next = [...current, opt];
+      onUpdate({
+        options: currentOpts.includes(opt) ? currentOpts : [...currentOpts, opt],
+        selectedOptions: next,
+        value: next.join(', '),
+      });
+    }
+  }
 
   return (
     <Reorder.Item
@@ -337,7 +484,7 @@ function DraggableInputCard({
         exit={{ opacity: 0, height: 0 }}
         className="p-3 rounded-lg bg-white/[0.03] border border-white/6 space-y-2"
       >
-        {/* Header row: grip, label, type, delete */}
+        {/* Header row: grip, label, delete */}
         <div className="flex items-center gap-2">
           <div
             onPointerDown={(e) => controls.start(e)}
@@ -352,24 +499,12 @@ function DraggableInputCard({
               <circle cx="11" cy="12" r="1.2" />
             </svg>
           </div>
-          <input
-            type="text"
-            value={input.label}
-            onChange={(e) => onUpdate({ label: e.target.value })}
-            placeholder="Label"
-            className="flex-1 bg-transparent text-sm font-medium text-text-primary placeholder:text-text-muted outline-none min-w-0"
-          />
-          <select
-            value={input.type}
-            onChange={(e) =>
-              onUpdate({ type: e.target.value as ProjectInput['type'] })
-            }
-            className="text-xs bg-white/5 border border-white/6 rounded-md px-2 py-1 text-text-secondary outline-none"
-          >
-            <option value="text">Text</option>
-            <option value="textarea">Long Text</option>
-            <option value="select">Dropdown</option>
-          </select>
+          <span className="flex-1 text-sm font-medium text-text-primary min-w-0 truncate">
+            {input.label}
+          </span>
+          <span className="text-[10px] text-text-muted px-1.5 py-0.5 rounded bg-white/5">
+            {input.type === 'textarea' ? 'Long Text' : input.type === 'select' ? (input.multiSelect ? 'Multi-Select' : 'Dropdown') : input.type === 'checklist' ? 'Checklist' : 'Text'}
+          </span>
           <button
             type="button"
             onClick={onDelete}
@@ -381,32 +516,21 @@ function DraggableInputCard({
           </button>
         </div>
 
-        {/* Options (dropdown type only) */}
-        {input.type === 'select' && (
-          <input
-            type="text"
-            value={input.options?.join(', ') ?? ''}
-            onChange={(e) =>
-              onUpdate({
-                options: e.target.value
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-              })
-            }
-            placeholder="Options (comma-separated)"
-            className={`${INPUT_CLS} text-xs`}
-          />
-        )}
-
-        {/* Value */}
+        {/* Value field based on type */}
         {input.type === 'textarea' ? (
           <textarea
             value={input.value}
             onChange={(e) => onUpdate({ value: e.target.value })}
-            placeholder="Value..."
-            rows={2}
+            placeholder={placeholder}
+            rows={3}
             className={`${INPUT_CLS} resize-none text-xs`}
+          />
+        ) : input.type === 'select' && input.multiSelect ? (
+          <MultiSelectDropdown
+            options={input.options || []}
+            selectedOptions={input.selectedOptions || []}
+            onToggle={toggleOption}
+            onCustomAdd={addCustomOption}
           />
         ) : input.type === 'select' && input.options?.length ? (
           <select
@@ -421,12 +545,18 @@ function DraggableInputCard({
               </option>
             ))}
           </select>
+        ) : input.type === 'checklist' && input.options?.length ? (
+          <ChecklistInput
+            options={input.options}
+            selectedOptions={input.selectedOptions || []}
+            onToggle={toggleOption}
+          />
         ) : (
           <input
             type="text"
             value={input.value}
             onChange={(e) => onUpdate({ value: e.target.value })}
-            placeholder="Value..."
+            placeholder={placeholder}
             className={`${INPUT_CLS} text-xs`}
           />
         )}
@@ -435,49 +565,93 @@ function DraggableInputCard({
   );
 }
 
+function generatePreviewMarkdown(projectName: string, description: string, inputs: ProjectInput[]): string {
+  const sections: string[] = [];
+  sections.push(`# ${projectName || 'Untitled Project'}`);
+  if (description) {
+    sections.push(`## What This Is\n${description}`);
+  }
+  for (const input of inputs) {
+    const hasSelected = input.selectedOptions && input.selectedOptions.length > 0;
+    const hasValue = input.value.trim();
+    if (!hasValue && !hasSelected) continue;
+    if (input.type === 'checklist' && hasSelected) {
+      const items = input.selectedOptions!.map((opt) => `- [x] ${opt}`);
+      const unchecked = (input.options || [])
+        .filter((opt) => !input.selectedOptions!.includes(opt))
+        .map((opt) => `- [ ] ${opt}`);
+      sections.push(`## ${input.label}\n${[...items, ...unchecked].join('\n')}`);
+    } else if (input.multiSelect && hasSelected) {
+      sections.push(`## ${input.label}\n${input.selectedOptions!.join(', ')}`);
+    } else if (hasValue) {
+      sections.push(`## ${input.label}\n${input.value}`);
+    }
+  }
+  sections.push(
+    [
+      '## Coding Standards',
+      '- Write clean, readable code with meaningful names',
+      '- Add error handling for external operations',
+      '- Keep functions small and focused',
+      '- Use TypeScript strict mode where applicable',
+      '- Commit after completing each major feature',
+    ].join('\n'),
+  );
+  return sections.join('\n\n') + '\n';
+}
+
 function StepInputs({
   inputs,
+  projectName,
+  description,
   onInputsChange,
 }: {
   inputs: ProjectInput[];
+  projectName: string;
+  description: string;
   onInputsChange: (inputs: ProjectInput[]) => void;
 }) {
-  const [showForm, setShowForm] = useState(false);
-  const [draft, setDraft] = useState({
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [customDraft, setCustomDraft] = useState({
     label: '',
     type: 'text' as ProjectInput['type'],
-    value: '',
     optionsText: '',
   });
 
-  function addInput() {
-    if (!draft.label.trim()) return;
+  function addPreset(preset: InputPreset) {
     const newInput: ProjectInput = {
       id: uuidv4(),
-      label: draft.label.trim(),
-      type: draft.type,
-      value: draft.value,
-      options:
-        draft.type === 'select'
-          ? draft.optionsText
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : undefined,
-    };
-    onInputsChange([...inputs, newInput]);
-    setDraft({ label: '', type: 'text', value: '', optionsText: '' });
-    setShowForm(false);
-  }
-
-  function quickAdd(preset: (typeof INPUT_PRESETS)[number]) {
-    setDraft({
       label: preset.label,
       type: preset.type,
       value: '',
-      optionsText: preset.options?.join(', ') ?? '',
-    });
-    setShowForm(true);
+      options: preset.options,
+      multiSelect: preset.multiSelect,
+      selectedOptions: [],
+    };
+    onInputsChange([...inputs, newInput]);
+  }
+
+  function addCustomInput() {
+    if (!customDraft.label.trim()) return;
+    const options =
+      customDraft.type === 'select' || customDraft.type === 'checklist'
+        ? customDraft.optionsText
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined;
+    const newInput: ProjectInput = {
+      id: uuidv4(),
+      label: customDraft.label.trim(),
+      type: customDraft.type,
+      value: '',
+      options,
+      selectedOptions: [],
+    };
+    onInputsChange([...inputs, newInput]);
+    setCustomDraft({ label: '', type: 'text', optionsText: '' });
+    setShowCustomForm(false);
   }
 
   function updateInput(id: string, updates: Partial<ProjectInput>) {
@@ -490,41 +664,79 @@ function StepInputs({
     onInputsChange(inputs.filter((inp) => inp.id !== id));
   }
 
+  const previewContent = generatePreviewMarkdown(projectName, description, inputs);
+
   return (
     <div className="p-6 space-y-4">
+      {/* Header */}
       <div>
-        <p className="text-xs text-text-secondary mb-3">
-          Add custom inputs that will shape your project&apos;s CLAUDE.md. These
-          are flexible key-value pairs — add whatever context Claude needs.
+        <h3 className="text-base font-semibold text-text-primary">Project Context</h3>
+        <p className="text-xs text-text-muted mt-1">
+          Add any information Claude Code should know about your project.
+          The more context you provide, the better the results.
         </p>
+      </div>
 
-        {/* Quick-add presets */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
+      {/* Quick-add presets — horizontal scrollable row */}
+      <div className="overflow-x-auto -mx-6 px-6 pb-1">
+        <div className="flex gap-1.5 w-max">
           {INPUT_PRESETS.map((preset) => {
-            const alreadyAdded = inputs.some(
-              (i) => i.label === preset.label,
-            );
+            const alreadyAdded = inputs.some((i) => i.label === preset.label);
             return (
               <button
                 key={preset.label}
                 type="button"
                 disabled={alreadyAdded}
-                onClick={() => quickAdd(preset)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                onClick={() => addPreset(preset)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
                   alreadyAdded
-                    ? 'bg-white/3 text-text-muted cursor-default'
-                    : 'bg-accent/10 text-accent hover:bg-accent/20'
+                    ? 'bg-white/[0.03] text-text-muted cursor-default line-through decoration-text-muted/30'
+                    : 'bg-accent/10 text-accent hover:bg-accent/20 hover:shadow-sm'
                 }`}
               >
-                {preset.label}
+                {alreadyAdded ? (
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                    {preset.label}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                      <path d="M6 2v8M2 6h8" />
+                    </svg>
+                    {preset.label}
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Existing inputs (draggable list) */}
-      {inputs.length > 0 && (
+      {/* Input cards or empty state */}
+      {inputs.length === 0 ? (
+        <div className="py-8 text-center space-y-3">
+          <div className="flex justify-center gap-3 opacity-30">
+            {/* Ghost preview cards */}
+            {['Description', 'Tech Stack', 'Features'].map((label) => (
+              <div
+                key={label}
+                className="w-28 h-16 rounded-lg border border-dashed border-white/10 flex items-center justify-center"
+              >
+                <span className="text-[10px] text-text-muted">{label}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-text-muted">
+            No context added yet
+          </p>
+          <p className="text-xs text-text-muted">
+            Use the quick-add buttons above or create your own below.
+          </p>
+        </div>
+      ) : (
         <Reorder.Group
           axis="y"
           values={inputs}
@@ -544,9 +756,9 @@ function StepInputs({
         </Reorder.Group>
       )}
 
-      {/* Add input form */}
+      {/* Custom input builder */}
       <AnimatePresence>
-        {showForm && (
+        {showCustomForm && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -554,79 +766,70 @@ function StepInputs({
             className="overflow-hidden"
           >
             <div className="p-4 rounded-lg border border-accent/20 bg-accent/[0.03] space-y-3">
+              <p className="text-xs font-medium text-text-secondary">Add Custom Input</p>
               <div className="flex gap-2">
                 <input
                   type="text"
-                  value={draft.label}
+                  value={customDraft.label}
                   onChange={(e) =>
-                    setDraft((d) => ({ ...d, label: e.target.value }))
+                    setCustomDraft((d) => ({ ...d, label: e.target.value }))
                   }
-                  placeholder="Input label (e.g. Tech Stack)"
+                  placeholder="Label (e.g. Database Schema, API Endpoints)"
                   className={`${INPUT_CLS} flex-1`}
                   autoFocus
                 />
                 <select
-                  value={draft.type}
+                  value={customDraft.type}
                   onChange={(e) =>
-                    setDraft((d) => ({
+                    setCustomDraft((d) => ({
                       ...d,
                       type: e.target.value as ProjectInput['type'],
                     }))
                   }
                   className="bg-white/5 border border-white/6 rounded-lg px-2 py-2 text-sm text-text-secondary outline-none"
                 >
-                  <option value="text">Text</option>
+                  <option value="text">Short Text</option>
                   <option value="textarea">Long Text</option>
                   <option value="select">Dropdown</option>
+                  <option value="checklist">Checklist</option>
                 </select>
               </div>
 
-              {draft.type === 'select' && (
-                <input
-                  type="text"
-                  value={draft.optionsText}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, optionsText: e.target.value }))
-                  }
-                  placeholder="Options (comma-separated, e.g. React, Vue, Svelte)"
-                  className={INPUT_CLS}
-                />
-              )}
-
-              {draft.type === 'textarea' ? (
-                <textarea
-                  value={draft.value}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, value: e.target.value }))
-                  }
-                  placeholder="Value..."
-                  rows={3}
-                  className={`${INPUT_CLS} resize-none`}
-                />
-              ) : (
-                <input
-                  type="text"
-                  value={draft.value}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, value: e.target.value }))
-                  }
-                  placeholder="Value..."
-                  className={INPUT_CLS}
-                />
+              {(customDraft.type === 'select' || customDraft.type === 'checklist') && (
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    value={customDraft.optionsText}
+                    onChange={(e) =>
+                      setCustomDraft((d) => ({ ...d, optionsText: e.target.value }))
+                    }
+                    placeholder="Options (comma-separated, e.g. Option A, Option B, Option C)"
+                    className={INPUT_CLS}
+                  />
+                  {customDraft.optionsText && (
+                    <div className="flex flex-wrap gap-1">
+                      {customDraft.optionsText.split(',').map((opt, i) => opt.trim() && (
+                        <span key={i} className="px-2 py-0.5 rounded-full bg-white/5 text-[10px] text-text-secondary">
+                          {opt.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
 
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => setShowCustomForm(false)}
                   className="px-3 py-1.5 rounded-lg text-xs text-text-secondary hover:text-text-primary transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  onClick={addInput}
-                  disabled={!draft.label.trim()}
+                  onClick={addCustomInput}
+                  disabled={!customDraft.label.trim()}
                   className="px-3 py-1.5 rounded-lg bg-accent hover:bg-accent-hover text-bg text-xs font-medium transition-colors disabled:opacity-40 disabled:pointer-events-none"
                 >
                   Add
@@ -637,19 +840,64 @@ function StepInputs({
         )}
       </AnimatePresence>
 
-      {/* Add button */}
-      {!showForm && (
+      {/* Add custom input button */}
+      {!showCustomForm && (
         <button
           type="button"
-          onClick={() => setShowForm(true)}
+          onClick={() => setShowCustomForm(true)}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-white/10 text-sm text-text-muted hover:text-text-secondary hover:border-white/20 transition-colors"
         >
           <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
             <path d="M8 3v10M3 8h10" />
           </svg>
-          Add Input
+          Add Custom Input
         </button>
       )}
+
+      {/* CLAUDE.md Preview */}
+      <div className="border border-white/6 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowPreview(!showPreview)}
+          className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-white/[0.02] transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 3h12M2 6.5h8M2 10h10M2 13.5h6" />
+            </svg>
+            Preview CLAUDE.md
+          </span>
+          <motion.svg
+            animate={{ rotate: showPreview ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="w-3.5 h-3.5"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="4 6 8 10 12 6" />
+          </motion.svg>
+        </button>
+        <AnimatePresence>
+          {showPreview && (
+            <motion.div
+              initial={{ height: 0 }}
+              animate={{ height: 'auto' }}
+              exit={{ height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="border-t border-white/6 bg-white/[0.02] px-4 py-3 max-h-48 overflow-y-auto">
+                <pre className="text-[11px] text-text-secondary font-mono whitespace-pre-wrap leading-relaxed">
+                  {previewContent}
+                </pre>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -1366,6 +1614,8 @@ export default function NewProjectWizard({
                 {step === 1 && (
                   <StepInputs
                     inputs={data.inputs}
+                    projectName={data.name}
+                    description={data.description}
                     onInputsChange={(inputs) => updateData({ inputs })}
                   />
                 )}

@@ -14,8 +14,21 @@ export function generateContextContent(project: Project, _agentType: AgentType):
   }
 
   for (const input of project.inputs) {
-    if (!input.value.trim()) continue;
-    sections.push(`## ${input.label}\n${input.value}`);
+    const hasSelected = input.selectedOptions && input.selectedOptions.length > 0;
+    const hasValue = input.value.trim();
+    if (!hasValue && !hasSelected) continue;
+
+    if (input.type === 'checklist' && hasSelected) {
+      const items = input.selectedOptions!.map((opt) => `- [x] ${opt}`);
+      const unchecked = (input.options || [])
+        .filter((opt) => !input.selectedOptions!.includes(opt))
+        .map((opt) => `- [ ] ${opt}`);
+      sections.push(`## ${input.label}\n${[...items, ...unchecked].join('\n')}`);
+    } else if (input.multiSelect && hasSelected) {
+      sections.push(`## ${input.label}\n${input.selectedOptions!.join(', ')}`);
+    } else if (hasValue) {
+      sections.push(`## ${input.label}\n${input.value}`);
+    }
   }
 
   if (project.tags.length > 0) {

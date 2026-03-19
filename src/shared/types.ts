@@ -66,8 +66,10 @@ export interface ProjectInput {
   id: string;
   label: string;
   value: string;
-  type: 'text' | 'textarea' | 'select';
+  type: 'text' | 'textarea' | 'select' | 'checklist';
   options?: string[];
+  multiSelect?: boolean;
+  selectedOptions?: string[];
 }
 
 export interface Project {
