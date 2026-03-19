@@ -56,7 +56,7 @@ linux:
   desktop:
     entry:
       Name: Claude Forge
-      Comment: Desktop app for managing Claude Code projects
+      Comment: AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex
       Categories: Development;Utility;
 
 deb:

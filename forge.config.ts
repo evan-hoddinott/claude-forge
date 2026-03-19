@@ -38,7 +38,7 @@ const config: ForgeConfig = {
       name: 'ClaudeForge',
       setupIcon: path.join(iconDir, 'icon.ico'),
       iconUrl: 'https://raw.githubusercontent.com/evan-hoddinott/claude-forge/master/assets/icons/icon.ico',
-      description: 'Desktop app for managing Claude Code projects',
+      description: 'AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex',
     }),
     // Linux — .deb package
     new MakerDeb({
@@ -46,7 +46,7 @@ const config: ForgeConfig = {
         name: 'claude-forge',
         productName: 'Claude Forge',
         genericName: 'Developer Tool',
-        description: 'Desktop app for managing Claude Code projects',
+        description: 'AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex',
         categories: ['Development', 'Utility'],
         icon: path.join(iconDir, 'icon.png'),
         section: 'devel',
@@ -59,7 +59,7 @@ const config: ForgeConfig = {
         name: 'claude-forge',
         productName: 'Claude Forge',
         genericName: 'Developer Tool',
-        description: 'Desktop app for managing Claude Code projects',
+        description: 'AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex',
         categories: ['Development', 'Utility'],
         icon: path.join(iconDir, 'icon.png'),
       },

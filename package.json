@@ -2,7 +2,7 @@
   "name": "claude-forge",
   "productName": "Claude Forge",
   "version": "1.0.0",
-  "description": "Desktop app for managing Claude Code projects",
+  "description": "AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex",
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {
@@ -22,7 +22,7 @@
   },
   "keywords": [],
   "author": {
-    "name": "evan-hoddinott",
+    "name": "Evan Hoddinott",
     "email": "evan.hoddinott@gmail.com"
   },
   "license": "MIT",
