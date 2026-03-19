@@ -844,7 +844,7 @@ export default function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="px-2 py-2 space-y-1">
+      <nav data-tutorial="sidebar" className="px-2 py-2 space-y-1">
         <NavItem
           icon={
             <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -886,7 +886,7 @@ export default function Sidebar({
       <div className="mx-3 border-t border-white/6" />
 
       {/* Connection Status Tabs */}
-      <div className="px-2 py-2 space-y-0.5 relative">
+      <div data-tutorial="connections" className="px-2 py-2 space-y-0.5 relative">
         <GitHubTab
           collapsed={collapsed}
           expanded={expandedSection === 'github'}
@@ -916,7 +916,7 @@ export default function Sidebar({
       <ModeToggle collapsed={collapsed} />
 
       {/* New Project Button */}
-      <div className="px-2 py-2 shrink-0">
+      <div data-tutorial="new-project" className="px-2 py-2 shrink-0">
         <button
           onClick={onNewProject}
           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-bg text-sm font-semibold transition-all hover:shadow-[0_0_20px_var(--color-accent-glow)]"

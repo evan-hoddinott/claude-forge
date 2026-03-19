@@ -119,6 +119,7 @@ export interface UserPreferences {
   fileExplorerWordWrap: boolean;
   fileExplorerMinimap: boolean;
   setupCompleted: boolean;
+  tutorialCompleted: boolean;
   mode: AppMode;
   appFontSize: number;
   reduceAnimations: boolean;

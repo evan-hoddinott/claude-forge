@@ -30,6 +30,7 @@ function preferenceDefaults(): UserPreferences {
     fileExplorerWordWrap: false,
     fileExplorerMinimap: true,
     setupCompleted: false,
+    tutorialCompleted: false,
     mode: 'simple',
     appFontSize: 14,
     reduceAnimations: false,

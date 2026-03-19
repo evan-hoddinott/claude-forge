@@ -273,6 +273,7 @@ function StepBasics({
       <FormField label="Project name" error={errors.name}>
         <input
           ref={nameRef}
+          data-tutorial="wizard-name"
           type="text"
           value={data.name}
           onChange={(e) => onChange({ name: e.target.value })}
@@ -382,7 +383,7 @@ function StepTemplates({
   onSelect: (template: ProjectTemplate) => void;
 }) {
   return (
-    <div className="p-6 space-y-4">
+    <div data-tutorial="wizard-templates" className="p-6 space-y-4">
       <div>
         <h3 className="text-base font-semibold text-text-primary">Choose a template</h3>
         <p className="text-xs text-text-muted mt-1">
@@ -747,7 +748,7 @@ function StepInputs({
   const previewContent = generatePreviewMarkdown(projectName, description, inputs);
 
   return (
-    <div className="p-6 space-y-4">
+    <div data-tutorial="wizard-inputs" className="p-6 space-y-4">
       {/* Header */}
       <div>
         <h3 className="text-base font-semibold text-text-primary">Project Context</h3>
@@ -1040,7 +1041,7 @@ function StepGitHub({
     ) ?? [];
 
   return (
-    <div className="p-6 space-y-4">
+    <div data-tutorial="wizard-github" className="p-6 space-y-4">
       {/* Offline warning */}
       {offline && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-status-in-progress/10 border border-status-in-progress/20">

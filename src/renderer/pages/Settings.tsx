@@ -227,6 +227,12 @@ function ExperienceSection({
         >
           Re-run setup wizard
         </button>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('open-tutorial'))}
+          className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-text-secondary transition-colors"
+        >
+          Replay tutorial
+        </button>
       </div>
     </SectionCard>
   );
@@ -787,23 +793,26 @@ function FileExplorerSection({
 // --- Setup ---
 
 function SetupSection() {
-  const handleRunSetup = () => {
-    // Dispatch a custom event that App.tsx listens for
-    window.dispatchEvent(new CustomEvent('open-setup-assistant'));
-  };
-
   return (
     <SectionCard title="Setup">
       <div>
         <p className="text-xs text-text-muted mb-3">
-          Re-run the setup assistant to check for required dependencies (Node.js, Git, GitHub CLI).
+          Re-run the setup wizard to check dependencies and reconfigure your environment, or replay the interactive tutorial.
         </p>
-        <button
-          onClick={handleRunSetup}
-          className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-text-secondary transition-colors"
-        >
-          Run Setup Assistant
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('open-setup-assistant'))}
+            className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-text-secondary transition-colors"
+          >
+            Run Setup Wizard
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('open-tutorial'))}
+            className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-text-secondary transition-colors"
+          >
+            Replay Tutorial
+          </button>
+        </div>
       </div>
     </SectionCard>
   );

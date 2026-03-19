@@ -15,6 +15,8 @@
     "make:win": "npm run build:dist && electron-builder --win",
     "make:linux": "npm run build:dist && electron-builder --linux",
     "make:all": "npm run build:dist && electron-builder --win --linux",
+    "make:express:win": "node scripts/build-express-installer.mjs --platform=win && npm run make:win",
+    "make:express:linux": "node scripts/build-express-installer.mjs --platform=linux && npm run make:linux",
     "lint": "eslint --ext .ts,.tsx .",
     "icons": "node scripts/generate-icons.mjs"
   },

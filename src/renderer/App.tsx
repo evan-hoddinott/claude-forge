@@ -6,12 +6,13 @@ import NewProjectWizard from './components/NewProjectWizard';
 import CommandPalette from './components/CommandPalette';
 import ContextMenu from './components/ContextMenu';
 import SetupAssistant from './components/SetupAssistant';
+import OnboardingTutorial from './components/OnboardingTutorial';
 import Dashboard from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
 import Settings from './pages/Settings';
 import { useToast } from './components/Toast';
 import { useAPI } from './hooks/useAPI';
-import type { Project } from '../shared/types';
+import type { Project, AppMode } from '../shared/types';
 
 export type Page = 'dashboard' | 'settings';
 
@@ -32,6 +33,8 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showSetup, setShowSetup] = useState(false);
   const [setupChecked, setSetupChecked] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [appMode, setAppMode] = useState<AppMode>('simple');
 
   // Check if setup has been completed on first load
   useEffect(() => {
@@ -39,6 +42,7 @@ export default function App() {
       if (!prefs.setupCompleted) {
         setShowSetup(true);
       }
+      setAppMode(prefs.mode || 'simple');
       setSetupChecked(true);
     }).catch(() => {
       setSetupChecked(true);
@@ -50,8 +54,15 @@ export default function App() {
     function handleOpenSetup() {
       setShowSetup(true);
     }
+    function handleOpenTutorial() {
+      setShowTutorial(true);
+    }
     window.addEventListener('open-setup-assistant', handleOpenSetup);
-    return () => window.removeEventListener('open-setup-assistant', handleOpenSetup);
+    window.addEventListener('open-tutorial', handleOpenTutorial);
+    return () => {
+      window.removeEventListener('open-setup-assistant', handleOpenSetup);
+      window.removeEventListener('open-tutorial', handleOpenTutorial);
+    };
   }, []);
 
   // Context menu state
@@ -95,6 +106,26 @@ export default function App() {
     }
     setContextMenu(null);
   }, [api, toast]);
+
+  function handleSetupComplete(opts?: { startTutorial?: boolean; openWizard?: boolean }) {
+    setShowSetup(false);
+    // Refresh mode preference
+    api.preferences.get().then((prefs) => {
+      setAppMode(prefs.mode || 'simple');
+    });
+    if (opts?.startTutorial) {
+      setShowTutorial(true);
+    }
+    if (opts?.openWizard) {
+      // Delay slightly so the tutorial overlay is ready
+      setTimeout(() => setShowWizard(true), 400);
+    }
+  }
+
+  async function handleTutorialComplete() {
+    setShowTutorial(false);
+    await api.preferences.update({ tutorialCompleted: true });
+  }
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -235,7 +266,15 @@ export default function App() {
       )}
 
       {showSetup && (
-        <SetupAssistant onComplete={() => setShowSetup(false)} />
+        <SetupAssistant onComplete={handleSetupComplete} />
+      )}
+
+      {showTutorial && !showSetup && (
+        <OnboardingTutorial
+          mode={appMode}
+          onComplete={handleTutorialComplete}
+          onRequestNewProject={handleNewProject}
+        />
       )}
     </div>
   );
