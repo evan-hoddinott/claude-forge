@@ -23,6 +23,10 @@ function preferenceDefaults(): UserPreferences {
     customSystemPrompt: '',
     defaultAgent: 'claude',
     autoGenerateAllContextFiles: false,
+    fileExplorerFontSize: 13,
+    fileExplorerShowHidden: false,
+    fileExplorerWordWrap: false,
+    fileExplorerMinimap: true,
   };
 }
 

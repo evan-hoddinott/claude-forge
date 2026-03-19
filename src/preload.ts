@@ -67,6 +67,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
     importProjects: () => ipcRenderer.invoke('data:import'),
     resetAll: () => ipcRenderer.invoke('data:reset'),
   },
+  files: {
+    tree: (projectPath: string) => ipcRenderer.invoke('files:tree', projectPath),
+    read: (filePath: string) => ipcRenderer.invoke('files:read', filePath),
+    gitStatus: (projectPath: string) => ipcRenderer.invoke('files:git-status', projectPath),
+    searchNames: (projectPath: string, query: string) =>
+      ipcRenderer.invoke('files:search-names', projectPath, query),
+    searchContents: (projectPath: string, query: string) =>
+      ipcRenderer.invoke('files:search-contents', projectPath, query),
+    openVSCode: (filePath: string, lineNumber?: number) =>
+      ipcRenderer.invoke('files:open-vscode', filePath, lineNumber),
+    openFolderVSCode: (folderPath: string) =>
+      ipcRenderer.invoke('files:open-folder-vscode', folderPath),
+    openDefaultEditor: (filePath: string) =>
+      ipcRenderer.invoke('files:open-default-editor', filePath),
+    openInTerminal: (filePath: string) =>
+      ipcRenderer.invoke('files:open-terminal', filePath),
+    watch: (projectPath: string) => ipcRenderer.invoke('files:watch', projectPath),
+    unwatch: (projectPath: string) => ipcRenderer.invoke('files:unwatch', projectPath),
+    save: (filePath: string, content: string) =>
+      ipcRenderer.invoke('files:save', filePath, content),
+    onFileChange: (callback: (data: { type: string; path: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { type: string; path: string }) => callback(data);
+      ipcRenderer.on('files:change', handler);
+    },
+    offFileChange: () => {
+      ipcRenderer.removeAllListeners('files:change');
+    },
+  },
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     maximize: () => ipcRenderer.invoke('window:maximize'),

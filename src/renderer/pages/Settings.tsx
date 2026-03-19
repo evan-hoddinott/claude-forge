@@ -53,6 +53,7 @@ export default function Settings() {
           refetch={refetch}
           agentStatuses={agentStatuses}
         />
+        <FileExplorerSection prefs={prefs} api={api} refetch={refetch} />
         <DataSection api={api} refetch={refetch} />
       </div>
     </div>
@@ -552,6 +553,96 @@ function AgentsSection({
         <FieldHint>
           This text is prepended to the context files generated for every new project.
         </FieldHint>
+      </div>
+    </SectionCard>
+  );
+}
+
+// --- File Explorer ---
+
+function FileExplorerSection({
+  prefs,
+  api,
+  refetch,
+}: {
+  prefs: UserPreferences;
+  api: API;
+  refetch: () => void;
+}) {
+  const [fontSize, setFontSize] = useState(prefs.fileExplorerFontSize ?? 13);
+
+  useEffect(() => {
+    setFontSize(prefs.fileExplorerFontSize ?? 13);
+  }, [prefs.fileExplorerFontSize]);
+
+  return (
+    <SectionCard title="File Explorer">
+      <div>
+        <FieldLabel>Default editor</FieldLabel>
+        <SegmentedControl
+          value={prefs.defaultEditor}
+          options={[
+            { value: 'code', label: 'VS Code' },
+            { value: 'cursor', label: 'Cursor' },
+            { value: 'windsurf', label: 'Windsurf' },
+            { value: 'subl', label: 'Sublime' },
+          ]}
+          onChange={(v) => updatePref(api, refetch, { defaultEditor: v })}
+        />
+        <FieldHint>
+          Editor used when clicking "Open in Editor" in the file explorer.
+        </FieldHint>
+      </div>
+
+      <div>
+        <FieldLabel>Code preview font size: {fontSize}px</FieldLabel>
+        <input
+          type="range"
+          min={10}
+          max={20}
+          value={fontSize}
+          onChange={(e) => setFontSize(parseInt(e.target.value, 10))}
+          onMouseUp={() => updatePref(api, refetch, { fileExplorerFontSize: fontSize })}
+          className="w-48 accent-accent"
+        />
+      </div>
+
+      <div className="space-y-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={prefs.fileExplorerShowHidden}
+            onChange={(e) =>
+              updatePref(api, refetch, { fileExplorerShowHidden: e.target.checked })
+            }
+            className="rounded border-white/20 bg-white/5 text-accent focus:ring-accent/25"
+          />
+          <span className="text-sm text-text-secondary">Show hidden files</span>
+        </label>
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={prefs.fileExplorerWordWrap}
+            onChange={(e) =>
+              updatePref(api, refetch, { fileExplorerWordWrap: e.target.checked })
+            }
+            className="rounded border-white/20 bg-white/5 text-accent focus:ring-accent/25"
+          />
+          <span className="text-sm text-text-secondary">Word wrap in preview</span>
+        </label>
+
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={prefs.fileExplorerMinimap ?? true}
+            onChange={(e) =>
+              updatePref(api, refetch, { fileExplorerMinimap: e.target.checked })
+            }
+            className="rounded border-white/20 bg-white/5 text-accent focus:ring-accent/25"
+          />
+          <span className="text-sm text-text-secondary">Show minimap</span>
+        </label>
       </div>
     </SectionCard>
   );

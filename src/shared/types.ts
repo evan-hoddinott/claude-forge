@@ -112,6 +112,40 @@ export interface UserPreferences {
   customSystemPrompt: string;
   defaultAgent: AgentType;
   autoGenerateAllContextFiles: boolean;
+  fileExplorerFontSize: number;
+  fileExplorerShowHidden: boolean;
+  fileExplorerWordWrap: boolean;
+  fileExplorerMinimap: boolean;
+}
+
+// --- File Explorer Types ---
+
+export type GitFileStatus = 'modified' | 'added' | 'deleted' | 'untracked' | 'renamed';
+
+export interface FileTreeNode {
+  name: string;
+  path: string;
+  relativePath: string;
+  type: 'file' | 'directory';
+  extension: string | null;
+  size: number;
+  modifiedAt: string;
+  children?: FileTreeNode[];
+  gitStatus?: GitFileStatus | null;
+}
+
+export interface FileReadResult {
+  content: string;
+  language: string;
+  lineCount: number;
+  isTruncated?: boolean;
+}
+
+export interface SearchResult {
+  filePath: string;
+  relativePath: string;
+  lineNumber: number;
+  lineContent: string;
 }
 
 export interface EnvironmentInfo {
@@ -190,6 +224,22 @@ export interface ElectronAPI {
     exportProjects: () => Promise<string | null>;
     importProjects: () => Promise<number>;
     resetAll: () => Promise<void>;
+  };
+  files: {
+    tree: (projectPath: string) => Promise<FileTreeNode[]>;
+    read: (filePath: string) => Promise<FileReadResult>;
+    gitStatus: (projectPath: string) => Promise<Record<string, GitFileStatus>>;
+    searchNames: (projectPath: string, query: string) => Promise<FileTreeNode[]>;
+    searchContents: (projectPath: string, query: string) => Promise<SearchResult[]>;
+    openVSCode: (filePath: string, lineNumber?: number) => Promise<void>;
+    openFolderVSCode: (folderPath: string) => Promise<void>;
+    openDefaultEditor: (filePath: string) => Promise<void>;
+    openInTerminal: (filePath: string) => Promise<void>;
+    watch: (projectPath: string) => Promise<void>;
+    unwatch: (projectPath: string) => Promise<void>;
+    save: (filePath: string, content: string) => Promise<void>;
+    onFileChange: (callback: (data: { type: string; path: string }) => void) => void;
+    offFileChange: () => void;
   };
   window: {
     minimize: () => Promise<void>;

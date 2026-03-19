@@ -11,6 +11,7 @@ import * as projectService from './services/project-service';
 import * as githubService from './services/github-service';
 import * as agentService from './services/agent-service';
 import * as environmentService from './services/environment-service';
+import * as fileService from './services/file-service';
 
 const execFileAsync = promisify(execFile);
 
@@ -495,6 +496,58 @@ export function registerIpcHandlers(): void {
     } catch {
       return 0;
     }
+  });
+
+  // --- Files ---
+
+  ipcMain.handle('files:tree', async (_, projectPath: string) => {
+    return fileService.buildFileTree(projectPath);
+  });
+
+  ipcMain.handle('files:read', async (_, filePath: string) => {
+    return fileService.readFile(filePath);
+  });
+
+  ipcMain.handle('files:git-status', async (_, projectPath: string) => {
+    const statusMap = await fileService.getGitStatus(projectPath);
+    return Object.fromEntries(statusMap);
+  });
+
+  ipcMain.handle('files:search-names', async (_, projectPath: string, query: string) => {
+    return fileService.searchFileNames(projectPath, query);
+  });
+
+  ipcMain.handle('files:search-contents', async (_, projectPath: string, query: string) => {
+    return fileService.searchFileContents(projectPath, query);
+  });
+
+  ipcMain.handle('files:open-vscode', async (_, filePath: string, lineNumber?: number) => {
+    return fileService.openInVSCode(filePath, lineNumber);
+  });
+
+  ipcMain.handle('files:open-folder-vscode', async (_, folderPath: string) => {
+    return fileService.openFolderInVSCode(folderPath);
+  });
+
+  ipcMain.handle('files:open-default-editor', async (_, filePath: string) => {
+    return fileService.openInDefaultEditor(filePath);
+  });
+
+  ipcMain.handle('files:open-terminal', async (_, filePath: string) => {
+    return fileService.openInTerminal(filePath);
+  });
+
+  ipcMain.handle('files:watch', async (event, projectPath: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) fileService.watchProject(projectPath, win);
+  });
+
+  ipcMain.handle('files:unwatch', async (_, projectPath: string) => {
+    fileService.unwatchProject(projectPath);
+  });
+
+  ipcMain.handle('files:save', async (_, filePath: string, content: string) => {
+    return fileService.saveFile(filePath, content);
   });
 
   // --- Data ---

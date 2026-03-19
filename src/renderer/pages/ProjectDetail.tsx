@@ -5,11 +5,13 @@ import { useToast } from '../components/Toast';
 import type { Project, ProjectInput, AgentType } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import StatusBadge from '../components/StatusBadge';
+import FileExplorer from '../components/FileExplorer';
 
-type Tab = 'overview' | 'github' | 'agents' | 'settings';
+type Tab = 'overview' | 'files' | 'github' | 'agents' | 'settings';
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
+  { id: 'files', label: 'Files' },
   { id: 'github', label: 'GitHub' },
   { id: 'agents', label: 'AI Agents' },
   { id: 'settings', label: 'Settings' },
@@ -200,29 +202,35 @@ export default function ProjectDetail({
 
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="p-6"
-          >
-            {activeTab === 'overview' && <OverviewTab project={project} />}
-            {activeTab === 'github' && (
-              <GitHubTab project={project} onUpdate={refetch} />
-            )}
-            {activeTab === 'agents' && <AgentsTab project={project} />}
-            {activeTab === 'settings' && (
-              <SettingsTab
-                project={project}
-                onUpdate={refetch}
-                onDelete={onBack}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {activeTab === 'files' ? (
+          <div className="h-full">
+            <FileExplorer project={project} />
+          </div>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="p-6"
+            >
+              {activeTab === 'overview' && <OverviewTab project={project} />}
+              {activeTab === 'github' && (
+                <GitHubTab project={project} onUpdate={refetch} />
+              )}
+              {activeTab === 'agents' && <AgentsTab project={project} />}
+              {activeTab === 'settings' && (
+                <SettingsTab
+                  project={project}
+                  onUpdate={refetch}
+                  onDelete={onBack}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );
