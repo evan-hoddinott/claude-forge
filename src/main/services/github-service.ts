@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { GitHubRepo } from '../../shared/types';
+import { isValidRepoName, sanitizeDescription, isValidUrl } from '../utils/sanitize';
 
 const execFileAsync = promisify(execFile);
 
@@ -10,7 +11,13 @@ export async function createRepo(
   description: string,
   projectPath: string,
 ): Promise<GitHubRepo> {
+  // Validate repo name
+  if (!isValidRepoName(name)) {
+    throw new Error('Invalid repository name. Use only letters, numbers, hyphens, underscores, and dots.');
+  }
+
   const visibility = isPrivate ? '--private' : '--public';
+  const safeDescription = sanitizeDescription(description);
 
   const args = [
     'repo',
@@ -26,8 +33,8 @@ export async function createRepo(
     'url,nameWithOwner,name',
   ];
 
-  if (description) {
-    args.push('--description', description);
+  if (safeDescription) {
+    args.push('--description', safeDescription);
   }
 
   const { stdout } = await execFileAsync('gh', args, { cwd: projectPath });
@@ -67,6 +74,11 @@ export async function linkExistingRepo(
   projectPath: string,
   repoUrl: string,
 ): Promise<void> {
+  // Validate the repo URL
+  if (!isValidUrl(repoUrl) && !/^git@[\w.-]+:[\w./-]+\.git$/.test(repoUrl)) {
+    throw new Error('Invalid repository URL');
+  }
+
   // Check if remote already exists
   try {
     await execFileAsync('git', ['remote', 'get-url', 'origin'], {

@@ -4,10 +4,14 @@ import { promisify } from 'node:util';
 import type { CreateProjectInput, Project } from '../../shared/types';
 import * as store from '../store';
 import { writeContextFiles } from './context-generator';
+import { sanitizeProjectName } from '../utils/sanitize';
 
 const execFileAsync = promisify(execFile);
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {
+  // Validate and sanitize the project name before any file operations
+  sanitizeProjectName(input.name);
+
   const project = store.createProject(input);
 
   // Check if folder already exists and has content
@@ -15,7 +19,7 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
     const entries = await fs.readdir(project.path);
     if (entries.length > 0) {
       throw new Error(
-        `Folder already exists and is not empty: ${project.path}. Choose a different name or location.`,
+        'Folder already exists and is not empty. Choose a different name or location.',
       );
     }
   } catch (err) {

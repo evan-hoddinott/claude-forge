@@ -238,6 +238,7 @@ export interface ElectronAPI {
     watch: (projectPath: string) => Promise<void>;
     unwatch: (projectPath: string) => Promise<void>;
     save: (filePath: string, content: string) => Promise<void>;
+    regenerateContext: (projectId: string, agentType: AgentType) => Promise<void>;
     onFileChange: (callback: (data: { type: string; path: string }) => void) => void;
     offFileChange: () => void;
   };

@@ -1,6 +1,8 @@
 import Store from 'electron-store';
 import { app } from 'electron';
 import path from 'node:path';
+import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
 import type { Project, CreateProjectInput, UserPreferences } from '../shared/types';
 
@@ -30,9 +32,37 @@ function preferenceDefaults(): UserPreferences {
   };
 }
 
+/**
+ * Get or generate an encryption key for electron-store.
+ * Tries to use a machine-specific key stored in the app's userData directory.
+ * This provides encryption at rest (the store file is unreadable gibberish).
+ */
+function getEncryptionKey(): string {
+  const keyPath = path.join(app.getPath('userData'), '.store-key');
+  try {
+    const existing = fs.readFileSync(keyPath, 'utf-8').trim();
+    if (existing.length >= 32) return existing;
+  } catch {
+    // Key doesn't exist yet
+  }
+
+  // Generate a new random key
+  const key = crypto.randomBytes(32).toString('hex');
+  try {
+    fs.mkdirSync(path.dirname(keyPath), { recursive: true });
+    fs.writeFileSync(keyPath, key, { mode: 0o600 }); // Owner-only permissions
+  } catch {
+    // If we can't persist the key, use it ephemerally
+    // (data will need re-encryption on next launch — but this is a rare edge case)
+  }
+
+  return key;
+}
+
 function getStore(): Store<StoreSchema> {
   if (!_store) {
     _store = new Store<StoreSchema>({
+      encryptionKey: getEncryptionKey(),
       defaults: {
         projects: [],
         preferences: preferenceDefaults(),
@@ -87,7 +117,7 @@ export function updateProject(
   const store = getStore();
   const projects = store.get('projects');
   const index = projects.findIndex((p) => p.id === id);
-  if (index === -1) throw new Error(`Project not found: ${id}`);
+  if (index === -1) throw new Error('Project not found');
 
   projects[index] = {
     ...projects[index],
@@ -137,4 +167,14 @@ export function importProjects(projects: Project[]): number {
 
 export function resetAll(): void {
   getStore().clear();
+}
+
+export function getEncryptionStatus(): 'active' | 'fallback' {
+  const keyPath = path.join(app.getPath('userData'), '.store-key');
+  try {
+    fs.accessSync(keyPath);
+    return 'active';
+  } catch {
+    return 'fallback';
+  }
 }

@@ -127,6 +127,21 @@ export default function FileExplorer({ project }: FileExplorerProps) {
       .map(([ext]) => ext);
   }, [fileTree]);
 
+  // Build flat list of all file nodes for arrow key navigation
+  const allFiles = useMemo(() => {
+    if (!fileTree) return [];
+    const files: FileTreeNode[] = [];
+    function walk(nodes: FileTreeNode[]) {
+      for (const node of nodes) {
+        if (node.type === 'file') files.push(node);
+        if (node.children) walk(node.children);
+      }
+    }
+    for (const node of contextFiles) files.push(node);
+    walk(mainTree);
+    return files;
+  }, [fileTree, contextFiles, mainTree]);
+
   // Search handler
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -175,6 +190,31 @@ export default function FileExplorer({ project }: FileExplorerProps) {
         searchInputRef.current?.focus();
         setSearchInContents(true);
       }
+      // Ctrl+Enter - Open selected file in VS Code
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedFile) {
+          api.files.openVSCode(selectedFile.path);
+        }
+      }
+      // Arrow keys - Navigate file list (only when search input is not focused)
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && document.activeElement !== searchInputRef.current) {
+        e.preventDefault();
+        const files = allFiles;
+        if (files.length === 0) return;
+        const currentIdx = selectedFile ? files.findIndex((f) => f.path === selectedFile.path) : -1;
+        let nextIdx: number;
+        if (e.key === 'ArrowDown') {
+          nextIdx = currentIdx < files.length - 1 ? currentIdx + 1 : 0;
+        } else {
+          nextIdx = currentIdx > 0 ? currentIdx - 1 : files.length - 1;
+        }
+        setSelectedFile(files[nextIdx]);
+      }
+      // Enter - Open selected file in preview (already selected, this is a no-op if file is selected)
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && document.activeElement !== searchInputRef.current) {
+        // Already handled by selection, no additional action needed
+      }
       // Escape
       if (e.key === 'Escape') {
         if (searchQuery) {
@@ -182,12 +222,14 @@ export default function FileExplorer({ project }: FileExplorerProps) {
           searchInputRef.current?.blur();
         } else if (contextMenuState) {
           setContextMenuState(null);
+        } else if (selectedFile) {
+          setSelectedFile(null);
         }
       }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [searchQuery, contextMenuState]);
+  }, [searchQuery, contextMenuState, selectedFile, api, allFiles]);
 
   // Close context menu on click outside
   useEffect(() => {
@@ -254,6 +296,7 @@ export default function FileExplorer({ project }: FileExplorerProps) {
     walk(fileTree);
     return files.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
   }, [flatView, fileTree]);
+
 
   const showSearchResults = searchQuery.trim().length > 0;
 
@@ -408,6 +451,7 @@ export default function FileExplorer({ project }: FileExplorerProps) {
         <FilePreview
           selectedFile={selectedFile}
           preferences={preferences}
+          project={project}
           totalFiles={stats.totalFiles}
           totalLines={stats.totalLines}
           detectedLanguages={stats.languages}
@@ -589,6 +633,17 @@ function ContextMenuOverlay({
             onClose();
           }}
         />
+        {isFile && (
+          <MenuItem
+            label="Open Containing Folder"
+            onClick={() => {
+              // Open parent directory in file manager
+              const parentDir = node.path.substring(0, node.path.lastIndexOf('/'));
+              api.files.openFolderVSCode(parentDir);
+              onClose();
+            }}
+          />
+        )}
 
         <div className="my-1 mx-2 border-t border-white/[0.06]" />
 

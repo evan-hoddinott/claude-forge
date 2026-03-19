@@ -6,6 +6,7 @@ import { BrowserWindow } from 'electron';
 import ignore from 'ignore';
 import type { FSWatcher } from 'chokidar';
 import type { FileTreeNode, FileReadResult, GitFileStatus, SearchResult } from '../../shared/types';
+import { validatePath, sanitizeSearchQuery } from '../utils/sanitize';
 
 const execFileAsync = promisify(execFile);
 
@@ -93,10 +94,15 @@ async function loadIgnoreFilter(projectPath: string): Promise<(filePath: string)
 // --- File Tree Builder ---
 
 export async function buildFileTree(projectPath: string): Promise<FileTreeNode[]> {
-  const isIgnored = await loadIgnoreFilter(projectPath);
-  const gitStatusMap = await getGitStatus(projectPath);
+  // Validate the project path is a real directory
+  const resolvedRoot = path.resolve(projectPath);
+  const isIgnored = await loadIgnoreFilter(resolvedRoot);
+  const gitStatusMap = await getGitStatus(resolvedRoot);
 
   async function scanDir(dirPath: string): Promise<FileTreeNode[]> {
+    // Ensure we don't escape the project root via symlinks
+    await validatePath(dirPath, resolvedRoot);
+
     let entries;
     try {
       entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -108,7 +114,7 @@ export async function buildFileTree(projectPath: string): Promise<FileTreeNode[]
 
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry.name);
-      const relativePath = path.relative(projectPath, fullPath);
+      const relativePath = path.relative(resolvedRoot, fullPath);
 
       // Skip hidden files (starting with .) except context files
       if (entry.name.startsWith('.') && !['CLAUDE.md', 'GEMINI.md', 'codex.md'].includes(entry.name)) {
@@ -155,14 +161,17 @@ export async function buildFileTree(projectPath: string): Promise<FileTreeNode[]
     return nodes;
   }
 
-  return scanDir(projectPath);
+  return scanDir(resolvedRoot);
 }
 
 // --- File Reader ---
 
-const MAX_FILE_SIZE = 1024 * 1024; // 1MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB max for editor preview
 
-export async function readFile(filePath: string): Promise<FileReadResult> {
+export async function readFile(filePath: string, projectPath: string): Promise<FileReadResult> {
+  // Validate path is within project
+  await validatePath(filePath, projectPath);
+
   const ext = path.extname(filePath).toLowerCase();
 
   if (BINARY_EXTENSIONS.has(ext)) {
@@ -174,14 +183,25 @@ export async function readFile(filePath: string): Promise<FileReadResult> {
   }
 
   const stat = await fs.stat(filePath);
+
+  if (stat.size > MAX_FILE_SIZE) {
+    return {
+      content: `[File too large: ${(stat.size / (1024 * 1024)).toFixed(1)} MB]\n\nFiles larger than 5MB cannot be previewed.`,
+      language: 'plaintext',
+      lineCount: 0,
+      isTruncated: true,
+    };
+  }
+
   let isTruncated = false;
+  const DISPLAY_LIMIT = 1024 * 1024; // 1MB display limit
 
   let content: string;
-  if (stat.size > MAX_FILE_SIZE) {
-    const buffer = Buffer.alloc(MAX_FILE_SIZE);
+  if (stat.size > DISPLAY_LIMIT) {
+    const buffer = Buffer.alloc(DISPLAY_LIMIT);
     const fileHandle = await fs.open(filePath, 'r');
     try {
-      await fileHandle.read(buffer, 0, MAX_FILE_SIZE, 0);
+      await fileHandle.read(buffer, 0, DISPLAY_LIMIT, 0);
     } finally {
       await fileHandle.close();
     }
@@ -255,11 +275,21 @@ export async function getGitStatus(projectPath: string): Promise<Map<string, Git
 // --- File Search (names) ---
 
 export async function searchFileNames(projectPath: string, query: string): Promise<FileTreeNode[]> {
+  const sanitizedQuery = sanitizeSearchQuery(query);
+  if (!sanitizedQuery) return [];
+
   const isIgnored = await loadIgnoreFilter(projectPath);
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = sanitizedQuery.toLowerCase();
   const results: FileTreeNode[] = [];
 
   async function walk(dirPath: string) {
+    // Validate each directory we walk into
+    try {
+      await validatePath(dirPath, projectPath);
+    } catch {
+      return;
+    }
+
     let entries;
     try {
       entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -321,12 +351,34 @@ export async function searchFileNames(projectPath: string, query: string): Promi
 
 // --- File Search (contents) ---
 
+// Limit concurrent content searches
+let activeSearches = 0;
+const MAX_CONCURRENT_SEARCHES = 5;
+
 export async function searchFileContents(projectPath: string, query: string): Promise<SearchResult[]> {
+  const sanitizedQuery = sanitizeSearchQuery(query);
+  if (!sanitizedQuery) return [];
+
+  if (activeSearches >= MAX_CONCURRENT_SEARCHES) {
+    throw new Error('Too many concurrent searches. Please wait for a search to complete.');
+  }
+
+  activeSearches++;
+  try {
+    return await doSearchFileContents(projectPath, sanitizedQuery);
+  } finally {
+    activeSearches--;
+  }
+}
+
+async function doSearchFileContents(projectPath: string, query: string): Promise<SearchResult[]> {
   const results: SearchResult[] = [];
 
   try {
+    // Use grep -F for fixed string matching (safe, no regex interpretation)
     const { stdout } = await execFileAsync('grep', [
       '-rn',
+      '-F', // Fixed string mode — no regex interpretation of the query
       '--include=*.ts', '--include=*.tsx',
       '--include=*.js', '--include=*.jsx',
       '--include=*.py', '--include=*.rs', '--include=*.go',
@@ -395,6 +447,7 @@ export async function watchProject(projectPath: string, win: BrowserWindow): Pro
     persistent: true,
     ignoreInitial: true,
     depth: 20,
+    followSymlinks: false, // Don't follow symlinks outside project
   });
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -427,7 +480,8 @@ export function unwatchProject(projectPath: string): void {
 
 // --- Open in Editor ---
 
-export async function openInVSCode(filePath: string, lineNumber?: number): Promise<void> {
+export async function openInVSCode(filePath: string, projectPath: string, lineNumber?: number): Promise<void> {
+  await validatePath(filePath, projectPath);
   const target = lineNumber ? `${filePath}:${lineNumber}` : filePath;
   await execFileAsync('code', ['--goto', target]);
 }
@@ -436,7 +490,8 @@ export async function openFolderInVSCode(folderPath: string): Promise<void> {
   await execFileAsync('code', [folderPath]);
 }
 
-export async function openInDefaultEditor(filePath: string): Promise<void> {
+export async function openInDefaultEditor(filePath: string, projectPath: string): Promise<void> {
+  await validatePath(filePath, projectPath);
   const editors = ['code', 'cursor', 'windsurf', 'subl', 'atom'];
   for (const editor of editors) {
     try {
@@ -452,12 +507,14 @@ export async function openInDefaultEditor(filePath: string): Promise<void> {
   await shell.openPath(filePath);
 }
 
-export async function openInTerminal(filePath: string): Promise<void> {
+export async function openInTerminal(filePath: string, projectPath: string): Promise<void> {
+  await validatePath(filePath, projectPath);
   const dir = path.dirname(filePath);
   if (process.platform === 'darwin') {
     await execFileAsync('open', ['-a', 'Terminal', dir]);
   } else if (process.platform === 'win32') {
-    await execFileAsync('cmd', ['/c', 'start', 'cmd', '/k', `cd /d "${dir}"`]);
+    // Pass dir as a separate argument, not interpolated into a string
+    await execFileAsync('cmd', ['/c', 'start', 'cmd', '/k', 'cd', '/d', dir]);
   } else {
     spawn('x-terminal-emulator', [], {
       cwd: dir,
@@ -466,8 +523,71 @@ export async function openInTerminal(filePath: string): Promise<void> {
   }
 }
 
-// --- Save File ---
+// --- Backup & Save File ---
 
-export async function saveFile(filePath: string, content: string): Promise<void> {
+const BACKUP_DIR = '.claude-forge-backup';
+const MAX_BACKUPS_PER_FILE = 5;
+
+async function createBackup(filePath: string, projectPath: string): Promise<void> {
+  try {
+    const backupDir = path.join(projectPath, BACKUP_DIR);
+    await fs.mkdir(backupDir, { recursive: true });
+
+    const relativePath = path.relative(projectPath, filePath);
+    const safeName = relativePath.replace(/[/\\]/g, '__');
+    const timestamp = Date.now();
+    const backupPath = path.join(backupDir, `${safeName}.${timestamp}.bak`);
+
+    await fs.copyFile(filePath, backupPath);
+
+    // Rotate: keep only the last N backups for this file
+    const files = await fs.readdir(backupDir);
+    const prefix = safeName + '.';
+    const backups = files
+      .filter((f) => f.startsWith(prefix) && f.endsWith('.bak'))
+      .sort()
+      .reverse();
+
+    for (const old of backups.slice(MAX_BACKUPS_PER_FILE)) {
+      await fs.unlink(path.join(backupDir, old)).catch(() => {});
+    }
+  } catch {
+    // Backup is best-effort, don't block the save
+  }
+}
+
+export async function saveFile(filePath: string, content: string, projectPath: string): Promise<void> {
+  // Validate path is within project
+  await validatePath(filePath, projectPath);
+
+  // Create backup before writing
+  await createBackup(filePath, projectPath);
+
   await fs.writeFile(filePath, content, 'utf-8');
+}
+
+export async function restoreBackup(filePath: string, projectPath: string): Promise<string | null> {
+  await validatePath(filePath, projectPath);
+
+  const backupDir = path.join(projectPath, BACKUP_DIR);
+  const relativePath = path.relative(projectPath, filePath);
+  const safeName = relativePath.replace(/[/\\]/g, '__');
+
+  try {
+    const files = await fs.readdir(backupDir);
+    const prefix = safeName + '.';
+    const backups = files
+      .filter((f) => f.startsWith(prefix) && f.endsWith('.bak'))
+      .sort()
+      .reverse();
+
+    if (backups.length === 0) return null;
+
+    const latestBackup = path.join(backupDir, backups[0]);
+    const content = await fs.readFile(latestBackup, 'utf-8');
+    await fs.writeFile(filePath, content, 'utf-8');
+    return content;
+  } catch {
+    return null;
+  }
 }

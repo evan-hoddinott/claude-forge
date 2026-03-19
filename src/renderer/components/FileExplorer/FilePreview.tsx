@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useAPI, useMutation } from '../../hooks/useAPI';
 import { useToast } from '../Toast';
-import type { FileTreeNode, FileReadResult, UserPreferences } from '../../../shared/types';
+import type { FileTreeNode, FileReadResult, UserPreferences, Project } from '../../../shared/types';
 import { AGENTS } from '../../../shared/types';
 
 const MonacoEditor = lazy(() => import('@monaco-editor/react'));
@@ -9,6 +9,7 @@ const MonacoEditor = lazy(() => import('@monaco-editor/react'));
 interface FilePreviewProps {
   selectedFile: FileTreeNode | null;
   preferences: UserPreferences | null;
+  project: Project;
   totalFiles: number;
   totalLines: number;
   detectedLanguages: string[];
@@ -17,6 +18,7 @@ interface FilePreviewProps {
 export default function FilePreview({
   selectedFile,
   preferences,
+  project,
   totalFiles,
   totalLines,
   detectedLanguages,
@@ -69,6 +71,17 @@ export default function FilePreview({
     await api.files.save(selectedFile.path, editorContent);
     setHasUnsavedChanges(false);
     toast('File saved');
+  });
+
+  const regenerateContext = useMutation(async () => {
+    if (!contextFileAgent) return;
+    await api.files.regenerateContext(project.id, contextFileAgent.type);
+    // Reload the file content
+    const result = await api.files.read(selectedFile!.path);
+    setFileContent(result);
+    setEditorContent(result.content);
+    setHasUnsavedChanges(false);
+    toast('Context file regenerated');
   });
 
   const handleEditorChange = useCallback((value: string | undefined) => {
@@ -154,9 +167,24 @@ export default function FilePreview({
             color: contextFileAgent.color,
           }}
         >
-          <span>
+          <span className="flex-1">
             Context file for <strong>{contextFileAgent.displayName}</strong> — read by the agent when working on your project.
           </span>
+          <button
+            onClick={() => {
+              if (confirm('Regenerate this context file from project inputs? This will overwrite the current contents.')) {
+                regenerateContext.mutate();
+              }
+            }}
+            disabled={regenerateContext.loading}
+            className="px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors shrink-0"
+            style={{
+              backgroundColor: contextFileAgent.color + '20',
+              color: contextFileAgent.color,
+            }}
+          >
+            {regenerateContext.loading ? 'Regenerating...' : 'Regenerate'}
+          </button>
         </div>
       )}
 
@@ -214,6 +242,7 @@ export default function FilePreview({
             onClick={toggleEditMode}
             title={editMode ? 'Exit edit mode (Ctrl+E)' : 'Edit file (Ctrl+E)'}
             active={editMode}
+            prominent={!!contextFileAgent && !editMode}
           >
             {editMode ? 'Read-only' : 'Edit'}
           </ActionButton>
@@ -311,11 +340,13 @@ function ActionButton({
   children,
   title,
   active,
+  prominent,
 }: {
   onClick: () => void;
   children: React.ReactNode;
   title?: string;
   active?: boolean;
+  prominent?: boolean;
 }) {
   return (
     <button
@@ -324,7 +355,9 @@ function ActionButton({
       className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
         active
           ? 'bg-status-in-progress/20 text-status-in-progress'
-          : 'bg-white/5 hover:bg-white/10 text-text-muted hover:text-text-secondary'
+          : prominent
+            ? 'bg-accent/20 text-accent hover:bg-accent/30'
+            : 'bg-white/5 hover:bg-white/10 text-text-muted hover:text-text-secondary'
       }`}
     >
       {children}

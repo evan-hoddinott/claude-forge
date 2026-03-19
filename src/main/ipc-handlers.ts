@@ -12,8 +12,27 @@ import * as githubService from './services/github-service';
 import * as agentService from './services/agent-service';
 import * as environmentService from './services/environment-service';
 import * as fileService from './services/file-service';
+import * as contextGenerator from './services/context-generator';
+import {
+  validateString,
+  isValidAgentType,
+  isValidUrl,
+  sanitizeErrorMessage,
+  validatePath,
+} from './utils/sanitize';
 
 const execFileAsync = promisify(execFile);
+
+// --- Rate limiting ---
+let activeGitOps = new Set<string>();
+let activeInstalls = 0;
+
+function safeError(err: unknown): string {
+  if (err instanceof Error) {
+    return sanitizeErrorMessage(err.message);
+  }
+  return 'An unexpected error occurred';
+}
 
 export function registerIpcHandlers(): void {
   // --- Projects ---
@@ -22,25 +41,38 @@ export function registerIpcHandlers(): void {
     return store.getAllProjects();
   });
 
-  ipcMain.handle('projects:get', (_, id: string) => {
-    return store.getProjectById(id);
+  ipcMain.handle('projects:get', (_, id: unknown) => {
+    const validId = validateString(id, 'id');
+    return store.getProjectById(validId);
   });
 
-  ipcMain.handle('projects:create', async (_, input: CreateProjectInput) => {
-    return projectService.createProject(input);
+  ipcMain.handle('projects:create', async (_, input: unknown) => {
+    if (!input || typeof input !== 'object') throw new Error('Invalid input');
+    try {
+      return await projectService.createProject(input as CreateProjectInput);
+    } catch (err) {
+      throw new Error(safeError(err));
+    }
   });
 
   ipcMain.handle(
     'projects:update',
-    (_, id: string, updates: Partial<Project>) => {
-      return store.updateProject(id, updates);
+    (_, id: unknown, updates: unknown) => {
+      const validId = validateString(id, 'id');
+      if (!updates || typeof updates !== 'object') throw new Error('Invalid updates');
+      try {
+        return store.updateProject(validId, updates as Partial<Project>);
+      } catch (err) {
+        throw new Error(safeError(err));
+      }
     },
   );
 
   ipcMain.handle(
     'projects:delete',
-    async (_, id: string, deleteFromDisk?: boolean) => {
-      return projectService.deleteProject(id, deleteFromDisk ?? false);
+    async (_, id: unknown, deleteFromDisk?: unknown) => {
+      const validId = validateString(id, 'id');
+      return projectService.deleteProject(validId, deleteFromDisk === true);
     },
   );
 
@@ -48,8 +80,15 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     'github:create-repo',
-    async (_, name: string, isPrivate: boolean, description: string, projectPath: string) => {
-      return githubService.createRepo(name, isPrivate, description, projectPath);
+    async (_, name: unknown, isPrivate: unknown, description: unknown, projectPath: unknown) => {
+      const validName = validateString(name, 'name', 100);
+      const validDesc = validateString(description, 'description', 500);
+      const validPath = validateString(projectPath, 'projectPath');
+      try {
+        return await githubService.createRepo(validName, isPrivate === true, validDesc, validPath);
+      } catch (err) {
+        throw new Error(safeError(err));
+      }
     },
   );
 
@@ -59,16 +98,25 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     'github:link-repo',
-    async (_, projectPath: string, repoUrl: string) => {
-      return githubService.linkExistingRepo(projectPath, repoUrl);
+    async (_, projectPath: unknown, repoUrl: unknown) => {
+      const validPath = validateString(projectPath, 'projectPath');
+      const validUrl = validateString(repoUrl, 'repoUrl', 500);
+      try {
+        return await githubService.linkExistingRepo(validPath, validUrl);
+      } catch (err) {
+        throw new Error(safeError(err));
+      }
     },
   );
 
   // --- Agent (unified for Claude, Gemini, Codex) ---
 
-  ipcMain.handle('agent:start', async (_, projectId: string, agentType: AgentType) => {
-    const project = store.getProjectById(projectId);
-    if (!project) throw new Error(`Project not found: ${projectId}`);
+  ipcMain.handle('agent:start', async (_, projectId: unknown, agentType: unknown) => {
+    const validId = validateString(projectId, 'projectId');
+    if (!isValidAgentType(agentType)) throw new Error('Invalid agent type');
+
+    const project = store.getProjectById(validId);
+    if (!project) throw new Error('Project not found');
 
     // Check if agent CLI is installed before attempting launch
     const config = AGENTS[agentType];
@@ -82,25 +130,28 @@ export function registerIpcHandlers(): void {
 
     agentService.startAgent(
       agentType,
-      projectId,
+      validId,
       project.path,
       project.name,
       project.inputs,
     );
 
-    store.updateProject(projectId, {
+    store.updateProject(validId, {
       lastClaudeSession: new Date().toISOString(),
       status: 'in-progress',
     });
   });
 
-  ipcMain.handle('agent:status', async (_, projectId: string) => {
-    const project = store.getProjectById(projectId);
+  ipcMain.handle('agent:status', async (_, projectId: unknown) => {
+    const validId = validateString(projectId, 'projectId');
+    const project = store.getProjectById(validId);
     if (!project) return { running: false, hasHistory: false };
-    return agentService.getStatus(projectId, project.path);
+    return agentService.getStatus(validId, project.path);
   });
 
-  ipcMain.handle('agent:check-full-status', async (_, agentType: AgentType): Promise<AgentStatus> => {
+  ipcMain.handle('agent:check-full-status', async (_, agentType: unknown): Promise<AgentStatus> => {
+    if (!isValidAgentType(agentType)) throw new Error('Invalid agent type');
+
     const config = AGENTS[agentType];
     const result: AgentStatus = {
       nodeInstalled: false,
@@ -247,82 +298,106 @@ export function registerIpcHandlers(): void {
     return results as Record<AgentType, AgentStatus>;
   });
 
-  ipcMain.handle('agent:install', async (event, agentType: AgentType) => {
+  ipcMain.handle('agent:install', async (event, agentType: unknown) => {
+    if (!isValidAgentType(agentType)) throw new Error('Invalid agent type');
+    if (activeInstalls >= 1) throw new Error('An install is already in progress');
+
     const config = AGENTS[agentType];
     const win = BrowserWindow.fromWebContents(event.sender);
-    return new Promise<{ success: boolean; error?: string }>((resolve) => {
-      const child = spawn('npm', ['install', '-g', config.npmPackage], {
-        shell: true,
-        env: { ...process.env },
-      });
+    activeInstalls++;
 
-      let errorOutput = '';
+    try {
+      return await new Promise<{ success: boolean; error?: string }>((resolve) => {
+        // Use execFile-style args without shell: true
+        const child = spawn('npm', ['install', '-g', config.npmPackage], {
+          env: { ...process.env },
+        });
 
-      child.stdout.on('data', (data: Buffer) => {
-        const line = data.toString();
-        win?.webContents.send('agent:install-progress', { line });
-      });
+        let errorOutput = '';
 
-      child.stderr.on('data', (data: Buffer) => {
-        const line = data.toString();
-        errorOutput += line;
-        win?.webContents.send('agent:install-progress', { line });
-      });
+        child.stdout.on('data', (data: Buffer) => {
+          const line = data.toString();
+          win?.webContents.send('agent:install-progress', { line });
+        });
 
-      child.on('close', (code) => {
-        if (code === 0) {
-          resolve({ success: true });
-        } else {
-          resolve({ success: false, error: errorOutput.slice(-500) });
-        }
-      });
+        child.stderr.on('data', (data: Buffer) => {
+          const line = data.toString();
+          errorOutput += line;
+          win?.webContents.send('agent:install-progress', { line });
+        });
 
-      child.on('error', (err) => {
-        resolve({ success: false, error: err.message });
+        child.on('close', (code) => {
+          activeInstalls--;
+          if (code === 0) {
+            resolve({ success: true });
+          } else {
+            resolve({ success: false, error: sanitizeErrorMessage(errorOutput.slice(-500)) });
+          }
+        });
+
+        child.on('error', (err) => {
+          activeInstalls--;
+          resolve({ success: false, error: sanitizeErrorMessage(err.message) });
+        });
       });
-    });
+    } catch {
+      activeInstalls--;
+      return { success: false, error: 'Install failed' };
+    }
   });
 
-  ipcMain.handle('agent:update', async (event, agentType: AgentType) => {
+  ipcMain.handle('agent:update', async (event, agentType: unknown) => {
+    if (!isValidAgentType(agentType)) throw new Error('Invalid agent type');
+    if (activeInstalls >= 1) throw new Error('An install/update is already in progress');
+
     const config = AGENTS[agentType];
     const win = BrowserWindow.fromWebContents(event.sender);
-    return new Promise<{ success: boolean; error?: string }>((resolve) => {
-      const child = spawn('npm', ['install', '-g', `${config.npmPackage}@latest`], {
-        shell: true,
-        env: { ...process.env },
-      });
+    activeInstalls++;
 
-      let errorOutput = '';
+    try {
+      return await new Promise<{ success: boolean; error?: string }>((resolve) => {
+        const child = spawn('npm', ['install', '-g', `${config.npmPackage}@latest`], {
+          env: { ...process.env },
+        });
 
-      child.stdout.on('data', (data: Buffer) => {
-        win?.webContents.send('agent:install-progress', { line: data.toString() });
-      });
+        let errorOutput = '';
 
-      child.stderr.on('data', (data: Buffer) => {
-        const line = data.toString();
-        errorOutput += line;
-        win?.webContents.send('agent:install-progress', { line });
-      });
+        child.stdout.on('data', (data: Buffer) => {
+          win?.webContents.send('agent:install-progress', { line: data.toString() });
+        });
 
-      child.on('close', (code) => {
-        if (code === 0) {
-          resolve({ success: true });
-        } else {
-          resolve({ success: false, error: errorOutput.slice(-500) });
-        }
-      });
+        child.stderr.on('data', (data: Buffer) => {
+          const line = data.toString();
+          errorOutput += line;
+          win?.webContents.send('agent:install-progress', { line });
+        });
 
-      child.on('error', (err) => {
-        resolve({ success: false, error: err.message });
+        child.on('close', (code) => {
+          activeInstalls--;
+          if (code === 0) {
+            resolve({ success: true });
+          } else {
+            resolve({ success: false, error: sanitizeErrorMessage(errorOutput.slice(-500)) });
+          }
+        });
+
+        child.on('error', (err) => {
+          activeInstalls--;
+          resolve({ success: false, error: sanitizeErrorMessage(err.message) });
+        });
       });
-    });
+    } catch {
+      activeInstalls--;
+      return { success: false, error: 'Update failed' };
+    }
   });
 
-  ipcMain.handle('agent:login', async (_, agentType: AgentType) => {
+  ipcMain.handle('agent:login', async (_, agentType: unknown) => {
+    if (!isValidAgentType(agentType)) throw new Error('Invalid agent type');
+
     const config = AGENTS[agentType];
     return new Promise<{ success: boolean }>((resolve) => {
       const child = spawn(config.loginCommand, [], {
-        shell: true,
         detached: true,
         stdio: 'ignore',
       });
@@ -333,9 +408,10 @@ export function registerIpcHandlers(): void {
 
   // --- File System Checks ---
 
-  ipcMain.handle('system:check-path-exists', async (_, targetPath: string) => {
+  ipcMain.handle('system:check-path-exists', async (_, targetPath: unknown) => {
+    const validPath = validateString(targetPath, 'path');
     try {
-      const entries = await fs.readdir(targetPath);
+      const entries = await fs.readdir(validPath);
       return { exists: true, hasContent: entries.length > 0 };
     } catch {
       return { exists: false, hasContent: false };
@@ -351,29 +427,35 @@ export function registerIpcHandlers(): void {
     return result.canceled ? null : result.filePaths[0];
   });
 
-  ipcMain.handle('system:open-in-terminal', async (_, dirPath: string) => {
+  ipcMain.handle('system:open-in-terminal', async (_, dirPath: unknown) => {
+    const validPath = validateString(dirPath, 'dirPath');
     if (process.platform === 'darwin') {
-      await execFileAsync('open', ['-a', 'Terminal', dirPath]);
+      await execFileAsync('open', ['-a', 'Terminal', validPath]);
     } else if (process.platform === 'win32') {
-      await execFileAsync('cmd', ['/c', 'start', 'cmd', '/k', `cd /d "${dirPath}"`]);
+      await execFileAsync('cmd', ['/c', 'start', 'cmd', '/k', 'cd', '/d', validPath]);
     } else {
       spawn('x-terminal-emulator', [], {
-        cwd: dirPath,
+        cwd: validPath,
         detached: true,
       }).unref();
     }
   });
 
-  ipcMain.handle('system:open-in-editor', async (_, dirPath: string) => {
+  ipcMain.handle('system:open-in-editor', async (_, dirPath: unknown) => {
+    const validPath = validateString(dirPath, 'dirPath');
     try {
-      await execFileAsync('code', [dirPath]);
+      await execFileAsync('code', [validPath]);
     } catch {
-      await shell.openPath(dirPath);
+      await shell.openPath(validPath);
     }
   });
 
-  ipcMain.handle('system:open-external', async (_, url: string) => {
-    await shell.openExternal(url);
+  ipcMain.handle('system:open-external', async (_, url: unknown) => {
+    const validUrl = validateString(url, 'url', 2000);
+    if (!isValidUrl(validUrl)) {
+      throw new Error('Invalid URL: only http and https URLs are allowed');
+    }
+    await shell.openExternal(validUrl);
   });
 
   // --- Environment ---
@@ -390,8 +472,9 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     'preferences:update',
-    (_, updates: Partial<import('../shared/types').UserPreferences>) => {
-      return store.updatePreferences(updates);
+    (_, updates: unknown) => {
+      if (!updates || typeof updates !== 'object') throw new Error('Invalid updates');
+      return store.updatePreferences(updates as Partial<import('../shared/types').UserPreferences>);
     },
   );
 
@@ -462,7 +545,7 @@ export function registerIpcHandlers(): void {
       child.on('error', (err) => {
         if (!resolved) {
           resolved = true;
-          resolve({ error: err.message });
+          resolve({ error: sanitizeErrorMessage(err.message) });
         }
       });
 
@@ -499,55 +582,105 @@ export function registerIpcHandlers(): void {
   });
 
   // --- Files ---
+  // All file operations require a project path for path validation.
+  // We look up the project to get its root path for validation.
 
-  ipcMain.handle('files:tree', async (_, projectPath: string) => {
-    return fileService.buildFileTree(projectPath);
+  function getProjectPathForFile(filePath: string): string | null {
+    const projects = store.getAllProjects();
+    for (const p of projects) {
+      const root = path.resolve(p.path);
+      const resolved = path.resolve(filePath);
+      if (resolved === root || resolved.startsWith(root + path.sep)) {
+        return root;
+      }
+    }
+    return null;
+  }
+
+  ipcMain.handle('files:tree', async (_, projectPath: unknown) => {
+    const validPath = validateString(projectPath, 'projectPath');
+    return fileService.buildFileTree(validPath);
   });
 
-  ipcMain.handle('files:read', async (_, filePath: string) => {
-    return fileService.readFile(filePath);
+  ipcMain.handle('files:read', async (_, filePath: unknown) => {
+    const validPath = validateString(filePath, 'filePath');
+    const projectRoot = getProjectPathForFile(validPath);
+    if (!projectRoot) throw new Error('File is not within any known project');
+    return fileService.readFile(validPath, projectRoot);
   });
 
-  ipcMain.handle('files:git-status', async (_, projectPath: string) => {
-    const statusMap = await fileService.getGitStatus(projectPath);
+  ipcMain.handle('files:git-status', async (_, projectPath: unknown) => {
+    const validPath = validateString(projectPath, 'projectPath');
+    const statusMap = await fileService.getGitStatus(validPath);
     return Object.fromEntries(statusMap);
   });
 
-  ipcMain.handle('files:search-names', async (_, projectPath: string, query: string) => {
-    return fileService.searchFileNames(projectPath, query);
+  ipcMain.handle('files:search-names', async (_, projectPath: unknown, query: unknown) => {
+    const validPath = validateString(projectPath, 'projectPath');
+    const validQuery = validateString(query, 'query', 500);
+    return fileService.searchFileNames(validPath, validQuery);
   });
 
-  ipcMain.handle('files:search-contents', async (_, projectPath: string, query: string) => {
-    return fileService.searchFileContents(projectPath, query);
+  ipcMain.handle('files:search-contents', async (_, projectPath: unknown, query: unknown) => {
+    const validPath = validateString(projectPath, 'projectPath');
+    const validQuery = validateString(query, 'query', 500);
+    return fileService.searchFileContents(validPath, validQuery);
   });
 
-  ipcMain.handle('files:open-vscode', async (_, filePath: string, lineNumber?: number) => {
-    return fileService.openInVSCode(filePath, lineNumber);
+  ipcMain.handle('files:open-vscode', async (_, filePath: unknown, lineNumber?: unknown) => {
+    const validPath = validateString(filePath, 'filePath');
+    const projectRoot = getProjectPathForFile(validPath);
+    if (!projectRoot) throw new Error('File is not within any known project');
+    const validLine = typeof lineNumber === 'number' ? lineNumber : undefined;
+    return fileService.openInVSCode(validPath, projectRoot, validLine);
   });
 
-  ipcMain.handle('files:open-folder-vscode', async (_, folderPath: string) => {
-    return fileService.openFolderInVSCode(folderPath);
+  ipcMain.handle('files:open-folder-vscode', async (_, folderPath: unknown) => {
+    const validPath = validateString(folderPath, 'folderPath');
+    return fileService.openFolderInVSCode(validPath);
   });
 
-  ipcMain.handle('files:open-default-editor', async (_, filePath: string) => {
-    return fileService.openInDefaultEditor(filePath);
+  ipcMain.handle('files:open-default-editor', async (_, filePath: unknown) => {
+    const validPath = validateString(filePath, 'filePath');
+    const projectRoot = getProjectPathForFile(validPath);
+    if (!projectRoot) throw new Error('File is not within any known project');
+    return fileService.openInDefaultEditor(validPath, projectRoot);
   });
 
-  ipcMain.handle('files:open-terminal', async (_, filePath: string) => {
-    return fileService.openInTerminal(filePath);
+  ipcMain.handle('files:open-terminal', async (_, filePath: unknown) => {
+    const validPath = validateString(filePath, 'filePath');
+    const projectRoot = getProjectPathForFile(validPath);
+    if (!projectRoot) throw new Error('File is not within any known project');
+    return fileService.openInTerminal(validPath, projectRoot);
   });
 
-  ipcMain.handle('files:watch', async (event, projectPath: string) => {
+  ipcMain.handle('files:watch', async (event, projectPath: unknown) => {
+    const validPath = validateString(projectPath, 'projectPath');
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (win) fileService.watchProject(projectPath, win);
+    if (win) fileService.watchProject(validPath, win);
   });
 
-  ipcMain.handle('files:unwatch', async (_, projectPath: string) => {
-    fileService.unwatchProject(projectPath);
+  ipcMain.handle('files:unwatch', async (_, projectPath: unknown) => {
+    const validPath = validateString(projectPath, 'projectPath');
+    fileService.unwatchProject(validPath);
   });
 
-  ipcMain.handle('files:save', async (_, filePath: string, content: string) => {
-    return fileService.saveFile(filePath, content);
+  ipcMain.handle('files:save', async (_, filePath: unknown, content: unknown) => {
+    const validPath = validateString(filePath, 'filePath');
+    const validContent = validateString(content, 'content', 10 * 1024 * 1024); // 10MB max
+    const projectRoot = getProjectPathForFile(validPath);
+    if (!projectRoot) throw new Error('File is not within any known project');
+    return fileService.saveFile(validPath, validContent, projectRoot);
+  });
+
+  // --- Context file regeneration ---
+
+  ipcMain.handle('files:regenerate-context', async (_, projectId: unknown, agentType: unknown) => {
+    const validId = validateString(projectId, 'projectId');
+    if (!isValidAgentType(agentType)) throw new Error('Invalid agent type');
+    const project = store.getProjectById(validId);
+    if (!project) throw new Error('Project not found');
+    await contextGenerator.writeContextFile(project, agentType);
   });
 
   // --- Data ---
@@ -576,6 +709,8 @@ export function registerIpcHandlers(): void {
     });
     if (result.canceled || !result.filePaths[0]) return 0;
     const content = await fs.readFile(result.filePaths[0], 'utf-8');
+    // Limit import file size
+    if (content.length > 10 * 1024 * 1024) throw new Error('Import file too large');
     const parsed = JSON.parse(content);
     if (!Array.isArray(parsed))
       throw new Error('Invalid format: expected an array of projects');
@@ -584,5 +719,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('data:reset', () => {
     store.resetAll();
+  });
+
+  // --- Encryption Status ---
+
+  ipcMain.handle('system:encryption-status', () => {
+    return store.getEncryptionStatus();
   });
 }

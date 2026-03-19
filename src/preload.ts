@@ -87,6 +87,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     unwatch: (projectPath: string) => ipcRenderer.invoke('files:unwatch', projectPath),
     save: (filePath: string, content: string) =>
       ipcRenderer.invoke('files:save', filePath, content),
+    regenerateContext: (projectId: string, agentType: string) =>
+      ipcRenderer.invoke('files:regenerate-context', projectId, agentType),
     onFileChange: (callback: (data: { type: string; path: string }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: { type: string; path: string }) => callback(data);
       ipcRenderer.on('files:change', handler);

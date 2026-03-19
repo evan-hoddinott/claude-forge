@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, session } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { registerIpcHandlers } from './main/ipc-handlers';
@@ -40,7 +40,30 @@ const createWindow = () => {
     icon: getIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
     },
+  });
+
+  // --- Content Security Policy ---
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          [
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "font-src 'self' https://fonts.gstatic.com",
+            "img-src 'self' https://github.com https://avatars.githubusercontent.com data:",
+            "connect-src 'self' https://registry.npmjs.org",
+          ].join('; '),
+        ],
+      },
+    });
   });
 
   // --- Window control IPC ---
@@ -62,6 +85,19 @@ const createWindow = () => {
   // Log renderer load failures for debugging
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
     console.error(`Renderer failed to load: ${errorCode} ${errorDescription}`);
+  });
+
+  // Prevent navigation to external URLs
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL && url.startsWith(MAIN_WINDOW_VITE_DEV_SERVER_URL)) {
+      return; // Allow dev server navigation
+    }
+    event.preventDefault();
+  });
+
+  // Prevent new windows from being opened
+  mainWindow.webContents.setWindowOpenHandler(() => {
+    return { action: 'deny' };
   });
 
   // Initialize auto-updater in production builds
