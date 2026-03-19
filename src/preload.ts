@@ -100,6 +100,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeAllListeners('files:change');
     },
   },
+  updater: {
+    checkNow: () => ipcRenderer.invoke('updater:check-now'),
+    download: () => ipcRenderer.invoke('updater:download'),
+    install: () => ipcRenderer.invoke('updater:install'),
+    getVersion: () => ipcRenderer.invoke('updater:get-version') as Promise<string>,
+    onUpdateStatus: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('update-status', handler);
+    },
+    offUpdateStatus: () => {
+      ipcRenderer.removeAllListeners('update-status');
+    },
+  },
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     maximize: () => ipcRenderer.invoke('window:maximize'),

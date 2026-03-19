@@ -18,7 +18,13 @@
     "make:express:win": "node scripts/build-express-installer.mjs --platform=win && npm run make:win",
     "make:express:linux": "node scripts/build-express-installer.mjs --platform=linux && npm run make:linux",
     "lint": "eslint --ext .ts,.tsx .",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "publish:win": "electron-builder --win --publish always",
+    "publish:linux": "electron-builder --linux --publish always",
+    "publish:all": "electron-builder --win --linux --publish always",
+    "version:patch": "npm version patch && npm run publish:all",
+    "version:minor": "npm version minor && npm run publish:all",
+    "version:major": "npm version major && npm run publish:all"
   },
   "keywords": [],
   "author": {

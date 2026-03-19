@@ -7,6 +7,7 @@ import CommandPalette from './components/CommandPalette';
 import ContextMenu from './components/ContextMenu';
 import SetupAssistant from './components/SetupAssistant';
 import OnboardingTutorial from './components/OnboardingTutorial';
+import UpdateNotification from './components/UpdateNotification';
 import Dashboard from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
 import Settings from './pages/Settings';
@@ -186,6 +187,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-bg overflow-hidden">
       <TitleBar />
+      <UpdateNotification mode={appMode} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           activePage={activePage}

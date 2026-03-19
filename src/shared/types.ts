@@ -203,6 +203,17 @@ export interface AgentStatus {
   authenticated: boolean;
 }
 
+export interface UpdateStatus {
+  status: 'checking' | 'available' | 'up-to-date' | 'downloading' | 'ready' | 'error';
+  version?: string;
+  currentVersion?: string;
+  releaseNotes?: string;
+  percent?: number;
+  transferred?: number;
+  total?: number;
+  message?: string;
+}
+
 export interface ElectronAPI {
   setup: {
     checkDependencies: () => Promise<SetupCheckResult>;
@@ -268,6 +279,14 @@ export interface ElectronAPI {
     regenerateContext: (projectId: string, agentType: AgentType) => Promise<void>;
     onFileChange: (callback: (data: { type: string; path: string }) => void) => void;
     offFileChange: () => void;
+  };
+  updater: {
+    checkNow: () => Promise<void>;
+    download: () => Promise<void>;
+    install: () => Promise<void>;
+    getVersion: () => Promise<string>;
+    onUpdateStatus: (callback: (data: UpdateStatus) => void) => void;
+    offUpdateStatus: () => void;
   };
   window: {
     minimize: () => Promise<void>;

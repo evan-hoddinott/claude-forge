@@ -100,12 +100,12 @@ const createWindow = () => {
     return { action: 'deny' };
   });
 
-  // Initialize auto-updater in production builds
-  if (!MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+  // Initialize auto-updater in production builds only
+  if (app.isPackaged) {
     import('./main/auto-updater').then(({ initAutoUpdater }) => {
       initAutoUpdater(mainWindow);
-    }).catch(() => {
-      // Auto-updater not available in dev
+    }).catch((err) => {
+      console.error('Auto-updater init failed:', err);
     });
   }
 };

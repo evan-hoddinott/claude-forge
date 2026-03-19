@@ -69,3 +69,10 @@ deb:
 
 appImage:
   artifactName: Claude-Forge-${version}.${ext}
+
+# ── Auto-update ─────────────────────────────────────────────
+publish:
+  provider: github
+  owner: evan-hoddinott
+  repo: claude-forge
+  releaseType: release

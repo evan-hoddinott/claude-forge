@@ -4,6 +4,7 @@ import { useToast } from '../components/Toast';
 import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import { rawLabel } from '../utils/language';
+import { useUpdateStatus } from '../components/UpdateNotification';
 
 export default function Settings() {
   const api = useAPI();
@@ -57,6 +58,7 @@ export default function Settings() {
         />
         <FileExplorerSection prefs={prefs} api={api} refetch={refetch} />
         <AccessibilitySection prefs={prefs} api={api} refetch={refetch} />
+        <UpdatesSection prefs={prefs} />
         <SetupSection />
         <DataSection api={api} refetch={refetch} />
       </div>
@@ -788,6 +790,121 @@ function FileExplorerSection({
       </div>
     </SectionCard>
   );
+}
+
+// --- Setup ---
+
+// --- Updates ---
+
+function UpdatesSection({ prefs }: { prefs: UserPreferences }) {
+  const { status, lastChecked, checkNow, install } = useUpdateStatus();
+  const [checking, setChecking] = useState(false);
+
+  const handleCheck = async () => {
+    setChecking(true);
+    await checkNow();
+    // Give it a moment to settle
+    setTimeout(() => setChecking(false), 2000);
+  };
+
+  const isDeveloper = prefs.mode === 'developer';
+  const currentVersion = status?.currentVersion || status?.version;
+
+  return (
+    <SectionCard title="Updates">
+      {/* Version display */}
+      {currentVersion && (
+        <div>
+          <FieldLabel>Current Version</FieldLabel>
+          <p className="text-sm text-text-primary">v{currentVersion}</p>
+        </div>
+      )}
+
+      {/* Status */}
+      <div>
+        <FieldLabel>Update Status</FieldLabel>
+        {(!status || status.status === 'up-to-date') && (
+          <p className="text-sm text-status-ready">
+            {isDeveloper ? 'Up to date' : 'You have the latest version'}
+          </p>
+        )}
+        {status?.status === 'checking' && (
+          <p className="text-sm text-text-muted">Checking for updates...</p>
+        )}
+        {status?.status === 'available' && (
+          <p className="text-sm text-accent-primary">
+            {isDeveloper
+              ? `Update available: v${status.version}`
+              : `A new version (v${status.version}) is available!`}
+          </p>
+        )}
+        {status?.status === 'downloading' && (
+          <div className="space-y-1.5">
+            <p className="text-sm text-text-secondary">
+              Downloading... {status.percent}%
+            </p>
+            <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-accent-primary/60 transition-all duration-300"
+                style={{ width: `${status.percent ?? 0}%` }}
+              />
+            </div>
+          </div>
+        )}
+        {status?.status === 'ready' && (
+          <div className="space-y-2">
+            <p className="text-sm text-status-ready">
+              {isDeveloper
+                ? `v${status.version} downloaded — restart to install`
+                : 'Update downloaded! Restart to apply.'}
+            </p>
+            <button
+              onClick={install}
+              className="px-4 py-2 rounded-lg bg-status-ready/20 text-status-ready text-sm font-medium hover:bg-status-ready/30 transition-colors"
+            >
+              Restart Now to Install
+            </button>
+          </div>
+        )}
+        {status?.status === 'error' && (
+          <p className="text-sm text-status-error">
+            Update check failed{isDeveloper && status.message ? `: ${status.message}` : ''}
+          </p>
+        )}
+      </div>
+
+      {/* Check button and last checked */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleCheck}
+          disabled={checking || status?.status === 'downloading'}
+          className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-text-secondary transition-colors disabled:opacity-50"
+        >
+          {checking ? 'Checking...' : 'Check for Updates'}
+        </button>
+        {lastChecked && (
+          <span className="text-xs text-text-muted">
+            Last checked: {formatTimeAgo(lastChecked)}
+          </span>
+        )}
+      </div>
+
+      {/* Note about Linux .deb */}
+      <FieldHint>
+        Auto-updates work with Windows (.exe) and Linux AppImage builds.
+        If using the .deb package, download new versions manually.
+      </FieldHint>
+    </SectionCard>
+  );
+}
+
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.round((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
 }
 
 // --- Setup ---
