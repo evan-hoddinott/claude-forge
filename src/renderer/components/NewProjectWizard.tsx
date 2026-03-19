@@ -1203,6 +1203,8 @@ function StepReview({
   defaultDir,
   creating,
   createError,
+  folderConflict,
+  onForceCreate,
   agentStatuses,
   onAgentsChange,
   onLaunchAgentChange,
@@ -1211,6 +1213,8 @@ function StepReview({
   defaultDir: string;
   creating: boolean;
   createError: string | null;
+  folderConflict: string | null;
+  onForceCreate: () => void;
   agentStatuses: Record<AgentType, AgentStatus> | null;
   onAgentsChange: (agents: AgentType[]) => void;
   onLaunchAgentChange: (agent: AgentType) => void;
@@ -1364,6 +1368,19 @@ function StepReview({
         </div>
       )}
 
+      {folderConflict && !createError && (
+        <div className="p-3 rounded-lg bg-status-warning/10 border border-status-warning/20 text-sm text-status-warning">
+          <p>Folder &quot;{folderConflict}&quot; already exists and is not empty.</p>
+          <button
+            type="button"
+            onClick={onForceCreate}
+            className="mt-2 px-3 py-1 rounded text-xs bg-status-warning/20 hover:bg-status-warning/30 transition-colors"
+          >
+            Create anyway
+          </button>
+        </div>
+      )}
+
       {creating && (
         <div className="flex items-center justify-center gap-2 text-sm text-text-secondary py-2">
           <motion.div
@@ -1402,6 +1419,7 @@ export default function NewProjectWizard({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [folderConflict, setFolderConflict] = useState<string | null>(null);
   const [defaultDir, setDefaultDir] = useState('~/Projects');
   const [envInfo, setEnvInfo] = useState<EnvironmentInfo | null>(null);
   const [locationMode, setLocationMode] = useState<ProjectLocationMode>('wsl');
@@ -1498,26 +1516,12 @@ export default function NewProjectWizard({
     setStep((s) => s - 1);
   }
 
-  const handleCreate = useCallback(
+  const defaultDirRef = useRef(defaultDir);
+  defaultDirRef.current = defaultDir;
+  const lastLaunchAgentRef = useRef(false);
+
+  const doCreate = useCallback(
     async (launchAgent: boolean) => {
-      setCreating(true);
-      setCreateError(null);
-
-      // Pre-check: does the target folder already exist?
-      const targetPath = data.path.trim() || `${defaultDir}/${data.name.trim()}`;
-      try {
-        const pathCheck = await api.system.checkPathExists(targetPath);
-        if (pathCheck.exists && pathCheck.hasContent) {
-          setCreateError(
-            `Folder "${targetPath}" already exists and is not empty. Choose a different name or location.`,
-          );
-          setCreating(false);
-          return;
-        }
-      } catch {
-        // If check fails, proceed anyway — createProject will catch it
-      }
-
       try {
         const project = await api.projects.create({
           name: data.name.trim(),
@@ -1580,8 +1584,38 @@ export default function NewProjectWizard({
         setCreating(false);
       }
     },
-    [data, api, onCreated], // eslint-disable-line react-hooks/exhaustive-deps
+    [data, api, onCreated],
   );
+
+  const handleCreate = useCallback(
+    async (launchAgent: boolean) => {
+      lastLaunchAgentRef.current = launchAgent;
+      setCreating(true);
+      setCreateError(null);
+      setFolderConflict(null);
+
+      const targetPath = data.path.trim() || `${defaultDirRef.current}/${data.name.trim()}`;
+      try {
+        const pathCheck = await api.system.checkPathExists(targetPath);
+        if (pathCheck.exists && pathCheck.hasContent) {
+          setFolderConflict(targetPath);
+          setCreating(false);
+          return;
+        }
+      } catch {
+        // If check fails, proceed anyway
+      }
+
+      await doCreate(launchAgent);
+    },
+    [data.path, data.name, api, doCreate],
+  );
+
+  const handleForceCreate = useCallback(() => {
+    setFolderConflict(null);
+    setCreating(true);
+    doCreate(lastLaunchAgentRef.current);
+  }, [doCreate]);
 
   // Keyboard: Escape to close, Enter to advance
   useEffect(() => {
@@ -1695,6 +1729,8 @@ export default function NewProjectWizard({
                     defaultDir={defaultDir}
                     creating={creating}
                     createError={createError}
+                    folderConflict={folderConflict}
+                    onForceCreate={handleForceCreate}
                     agentStatuses={agentStatuses}
                     onAgentsChange={(agents) => updateData({ selectedAgents: agents })}
                     onLaunchAgentChange={(agent) => updateData({ launchAgent: agent })}
