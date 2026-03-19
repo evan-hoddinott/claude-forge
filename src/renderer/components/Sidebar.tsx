@@ -121,9 +121,8 @@ function RefreshButton({ onClick, spinning }: { onClick: () => void; spinning: b
 // GitHub tab content
 // ---------------------------------------------------------------------------
 
-function GitHubTab({ collapsed }: { collapsed: boolean }) {
+function GitHubTab({ collapsed, expanded, onToggle }: { collapsed: boolean; expanded: boolean; onToggle: () => void }) {
   const api = useAPI();
-  const [expanded, setExpanded] = useState(false);
   const [auth, setAuth] = useState<GhAuthStatus | null>(null);
   const [repoCount, setRepoCount] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -194,7 +193,7 @@ function GitHubTab({ collapsed }: { collapsed: boolean }) {
   return (
     <div>
       <button
-        onClick={() => !collapsed && setExpanded((v) => !v)}
+        onClick={() => !collapsed && onToggle()}
         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
           expanded && !collapsed
             ? 'bg-white/[0.04]'
@@ -350,17 +349,20 @@ function AgentCard({
   statuses,
   onRefresh,
   refreshing,
+  expanded,
+  onToggle,
 }: {
   agentType: AgentType;
   collapsed: boolean;
   statuses: Record<AgentType, AgentStatus> | null;
   onRefresh: () => void;
   refreshing: boolean;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
   const api = useAPI();
   const config = AGENTS[agentType];
   const status = statuses?.[agentType] ?? null;
-  const [expanded, setExpanded] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [installLog, setInstallLog] = useState<string[]>([]);
@@ -453,7 +455,7 @@ function AgentCard({
   return (
     <div>
       <button
-        onClick={() => !collapsed && setExpanded((v) => !v)}
+        onClick={() => !collapsed && onToggle()}
         className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
           expanded && !collapsed
             ? 'bg-white/[0.04]'
@@ -688,7 +690,7 @@ function AgentCard({
 // AI Agents section — shows all three agents
 // ---------------------------------------------------------------------------
 
-function AgentsSection({ collapsed }: { collapsed: boolean }) {
+function AgentsSection({ collapsed, expandedAgent, onToggleAgent }: { collapsed: boolean; expandedAgent: AgentType | null; onToggleAgent: (agentType: AgentType) => void }) {
   const api = useAPI();
   const [statuses, setStatuses] = useState<Record<AgentType, AgentStatus> | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -733,6 +735,8 @@ function AgentsSection({ collapsed }: { collapsed: boolean }) {
           statuses={statuses}
           onRefresh={checkAll}
           refreshing={refreshing}
+          expanded={expandedAgent === agentType}
+          onToggle={() => onToggleAgent(agentType)}
         />
       ))}
     </div>
@@ -743,6 +747,8 @@ function AgentsSection({ collapsed }: { collapsed: boolean }) {
 // Main sidebar
 // ---------------------------------------------------------------------------
 
+type SidebarSection = 'github' | AgentType | null;
+
 export default function Sidebar({
   activePage,
   onNavigate,
@@ -750,6 +756,21 @@ export default function Sidebar({
   onToggleCollapse,
   onNewProject,
 }: SidebarProps) {
+  // Accordion state: only one section expanded at a time
+  const [expandedSection, setExpandedSection] = useState<SidebarSection>(() => {
+    try {
+      return (localStorage.getItem('sidebar-expanded-section') as SidebarSection) || null;
+    } catch { return null; }
+  });
+
+  function toggleSection(section: SidebarSection) {
+    setExpandedSection((prev) => {
+      const next = prev === section ? null : section;
+      try { localStorage.setItem('sidebar-expanded-section', next || ''); } catch { /* ignore */ }
+      return next;
+    });
+  }
+
   return (
     <motion.aside
       initial={false}
@@ -825,7 +846,11 @@ export default function Sidebar({
 
       {/* Connection Status Tabs */}
       <div className="px-2 py-2 space-y-0.5 relative">
-        <GitHubTab collapsed={collapsed} />
+        <GitHubTab
+          collapsed={collapsed}
+          expanded={expandedSection === 'github'}
+          onToggle={() => toggleSection('github')}
+        />
       </div>
 
       {/* Separator */}
@@ -833,7 +858,11 @@ export default function Sidebar({
 
       {/* AI Agents */}
       <div className="px-2 py-2 relative overflow-y-auto flex-shrink min-h-0">
-        <AgentsSection collapsed={collapsed} />
+        <AgentsSection
+          collapsed={collapsed}
+          expandedAgent={expandedSection === 'claude' || expandedSection === 'gemini' || expandedSection === 'codex' ? expandedSection as AgentType : null}
+          onToggleAgent={(agentType) => toggleSection(agentType)}
+        />
       </div>
 
       {/* Separator */}

@@ -919,6 +919,28 @@ function StepGitHub({
   const [repos, setRepos] = useState<GitHubRepo[] | null>(null);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [repoSearch, setRepoSearch] = useState('');
+  const [ghAuthStatus, setGhAuthStatus] = useState<{ checked: boolean; authenticated: boolean }>({ checked: false, authenticated: true });
+  const [offline, setOffline] = useState(!navigator.onLine);
+
+  // Check GitHub auth and online status when this step mounts
+  useEffect(() => {
+    setOffline(!navigator.onLine);
+    const handleOnline = () => setOffline(false);
+    const handleOffline = () => setOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    api.github.checkAuth().then((status) => {
+      setGhAuthStatus({ checked: true, authenticated: status.authenticated });
+    }).catch(() => {
+      setGhAuthStatus({ checked: true, authenticated: false });
+    });
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [api]);
 
   function handleChoiceChange(choice: WizardData['githubChoice']) {
     onChange({ githubChoice: choice });
@@ -939,6 +961,32 @@ function StepGitHub({
 
   return (
     <div className="p-6 space-y-4">
+      {/* Offline warning */}
+      {offline && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-status-in-progress/10 border border-status-in-progress/20">
+          <svg className="w-4 h-4 text-status-in-progress shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M8 5v3M8 11h.01" />
+            <circle cx="8" cy="8" r="6.5" />
+          </svg>
+          <span className="text-xs text-status-in-progress">
+            You appear to be offline. GitHub operations require an internet connection.
+          </span>
+        </div>
+      )}
+
+      {/* Auth expired warning */}
+      {ghAuthStatus.checked && !ghAuthStatus.authenticated && !offline && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-status-error/10 border border-status-error/20">
+          <svg className="w-4 h-4 text-status-error shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M8 5v3M8 11h.01" />
+            <circle cx="8" cy="8" r="6.5" />
+          </svg>
+          <span className="text-xs text-status-error">
+            GitHub authentication expired or not configured. Reconnect from the sidebar GitHub tab, or skip for now.
+          </span>
+        </div>
+      )}
+
       <div className="space-y-2">
         <RadioOption
           selected={data.githubChoice === 'create'}
@@ -1454,6 +1502,21 @@ export default function NewProjectWizard({
     async (launchAgent: boolean) => {
       setCreating(true);
       setCreateError(null);
+
+      // Pre-check: does the target folder already exist?
+      const targetPath = data.path.trim() || `${defaultDir}/${data.name.trim()}`;
+      try {
+        const pathCheck = await api.system.checkPathExists(targetPath);
+        if (pathCheck.exists && pathCheck.hasContent) {
+          setCreateError(
+            `Folder "${targetPath}" already exists and is not empty. Choose a different name or location.`,
+          );
+          setCreating(false);
+          return;
+        }
+      } catch {
+        // If check fails, proceed anyway — createProject will catch it
+      }
 
       try {
         const project = await api.projects.create({

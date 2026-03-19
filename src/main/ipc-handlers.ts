@@ -69,6 +69,16 @@ export function registerIpcHandlers(): void {
     const project = store.getProjectById(projectId);
     if (!project) throw new Error(`Project not found: ${projectId}`);
 
+    // Check if agent CLI is installed before attempting launch
+    const config = AGENTS[agentType];
+    try {
+      await execFileAsync(config.command, ['--version'], { timeout: 5000 });
+    } catch {
+      throw new Error(
+        `${config.displayName} is not installed. Please install it from the sidebar before launching.`,
+      );
+    }
+
     agentService.startAgent(
       agentType,
       projectId,
@@ -318,6 +328,17 @@ export function registerIpcHandlers(): void {
       child.unref();
       resolve({ success: true });
     });
+  });
+
+  // --- File System Checks ---
+
+  ipcMain.handle('system:check-path-exists', async (_, targetPath: string) => {
+    try {
+      const entries = await fs.readdir(targetPath);
+      return { exists: true, hasContent: entries.length > 0 };
+    } catch {
+      return { exists: false, hasContent: false };
+    }
   });
 
   // --- System ---

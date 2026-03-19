@@ -175,6 +175,7 @@ export interface ElectronAPI {
   };
   system: {
     selectDirectory: () => Promise<string | null>;
+    checkPathExists: (path: string) => Promise<{ exists: boolean; hasContent: boolean }>;
     openInTerminal: (path: string) => Promise<void>;
     openInEditor: (path: string) => Promise<void>;
     checkGhAuth: () => Promise<{ authenticated: boolean; username: string }>;

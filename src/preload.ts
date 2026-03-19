@@ -46,6 +46,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   system: {
     selectDirectory: () => ipcRenderer.invoke('system:select-directory'),
+    checkPathExists: (path: string) =>
+      ipcRenderer.invoke('system:check-path-exists', path) as Promise<{ exists: boolean; hasContent: boolean }>,
     openInTerminal: (path: string) =>
       ipcRenderer.invoke('system:open-in-terminal', path),
     openInEditor: (path: string) =>
