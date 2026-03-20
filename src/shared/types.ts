@@ -107,7 +107,7 @@ export interface UserPreferences {
   defaultProjectDir: string;
   projectLocationMode: ProjectLocationMode;
   githubUsername: string;
-  theme: 'dark' | 'light' | 'system';
+  theme: 'forge' | 'clean';
   defaultEditor: string;
   defaultRepoVisibility: 'public' | 'private';
   claudeLaunchMode: 'interactive' | 'auto';
@@ -124,6 +124,7 @@ export interface UserPreferences {
   appFontSize: number;
   reduceAnimations: boolean;
   highContrast: boolean;
+  showSplash: boolean;
 }
 
 export interface DependencyStatus {

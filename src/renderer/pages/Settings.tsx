@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useCachedQuery } from '../hooks/usePerformance';
 import { useToast } from '../components/Toast';
+import { useTheme, type ThemeName } from '../contexts/ThemeContext';
 import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import { rawLabel } from '../utils/language';
@@ -361,18 +362,7 @@ function GeneralSection({
         </div>
       </div>
 
-      <div>
-        <FieldLabel>Theme</FieldLabel>
-        <SegmentedControl
-          value={prefs.theme}
-          options={[
-            { value: 'dark', label: 'Dark' },
-            { value: 'light', label: 'Light' },
-            { value: 'system', label: 'System' },
-          ]}
-          onChange={(v) => updatePref(api, refetch, { theme: v })}
-        />
-      </div>
+      <ThemeSection prefs={prefs} api={api} refetch={refetch} />
 
       <div>
         <FieldLabel>Default editor command</FieldLabel>
@@ -388,6 +378,62 @@ function GeneralSection({
         </FieldHint>
       </div>
     </SectionCard>
+  );
+}
+
+// --- Theme ---
+
+function ThemeSection({
+  prefs,
+  api,
+  refetch,
+}: {
+  prefs: UserPreferences;
+  api: API;
+  refetch: () => void;
+}) {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <>
+      <div>
+        <FieldLabel>Theme</FieldLabel>
+        <SegmentedControl
+          value={theme}
+          options={[
+            { value: 'forge' as ThemeName, label: 'Forge (retro)' },
+            { value: 'clean' as ThemeName, label: 'Clean (modern)' },
+          ]}
+          onChange={(v) => setTheme(v)}
+        />
+        <FieldHint>
+          {theme === 'forge'
+            ? 'Retro neocities-inspired theme with pixel fonts and neon accents.'
+            : 'Clean, modern dark theme inspired by Linear and Raycast.'}
+        </FieldHint>
+      </div>
+
+      {theme === 'forge' && (
+        <div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={prefs.showSplash !== false}
+              onChange={(e) =>
+                updatePref(api, refetch, { showSplash: e.target.checked })
+              }
+              className="rounded border-white/20 bg-white/5 text-accent focus:ring-accent/25"
+            />
+            <span className="text-sm text-text-secondary">
+              Show splash screen on launch
+            </span>
+          </label>
+          <FieldHint>
+            Shows a brief retro boot-up animation when the app starts.
+          </FieldHint>
+        </div>
+      )}
+    </>
   );
 }
 

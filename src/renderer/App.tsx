@@ -9,6 +9,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import { useToast } from './components/Toast';
 import { useAPI } from './hooks/useAPI';
 import { useReduceMotion } from './hooks/usePerformance';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import type { Project, AppMode } from '../shared/types';
 
 // Lazy-load heavy components that aren't needed on initial render
@@ -17,6 +18,7 @@ const CommandPalette = lazy(() => import('./components/CommandPalette'));
 const SetupAssistant = lazy(() => import('./components/SetupAssistant'));
 const OnboardingTutorial = lazy(() => import('./components/OnboardingTutorial'));
 const Settings = lazy(() => import('./pages/Settings'));
+const SplashScreen = lazy(() => import('./components/SplashScreen'));
 
 export type Page = 'dashboard' | 'settings';
 
@@ -35,9 +37,18 @@ const pageVariantsInstant = {
 const LazyFallback = <div className="h-full" />;
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
+  );
+}
+
+function AppInner() {
   const api = useAPI();
   const { toast } = useToast();
   const reduceMotion = useReduceMotion();
+  const { theme, loaded: themeLoaded } = useTheme();
   const pageVariants = reduceMotion ? pageVariantsInstant : pageVariantsAnimated;
   const [activePage, setActivePage] = useState<Page>('dashboard');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -49,6 +60,7 @@ export default function App() {
   const [setupChecked, setSetupChecked] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('simple');
+  const [showSplash, setShowSplash] = useState(false);
 
   // Check if setup has been completed on first load
   useEffect(() => {
@@ -57,6 +69,12 @@ export default function App() {
         setShowSetup(true);
       }
       setAppMode(prefs.mode || 'simple');
+      // Show splash if forge theme and splash enabled
+      const t = prefs.theme as string;
+      const isForge = t === 'forge' || (t !== 'clean');
+      if (isForge && prefs.showSplash !== false) {
+        setShowSplash(true);
+      }
       setSetupChecked(true);
     }).catch(() => {
       setSetupChecked(true);
@@ -303,6 +321,12 @@ export default function App() {
             onComplete={handleTutorialComplete}
             onRequestNewProject={handleNewProject}
           />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {showSplash && (
+          <SplashScreen onComplete={() => setShowSplash(false)} />
         )}
       </Suspense>
     </div>

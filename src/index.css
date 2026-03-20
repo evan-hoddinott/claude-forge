@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './renderer/styles/themes/forge.css';
+@import './renderer/styles/themes/clean.css';
 
 @theme {
   --color-bg: #0a0a0f;

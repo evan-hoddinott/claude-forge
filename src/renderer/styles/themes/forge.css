@@ -1,0 +1,429 @@
+/*
+ * ╔═══════════════════════════════════════════════════════╗
+ * ║  FORGE THEME — Retro Neocities / Web Revival          ║
+ * ║  A love letter to the old web, with modern usability   ║
+ * ╚═══════════════════════════════════════════════════════╝
+ */
+
+/* ─── Color & Font Overrides ─────────────────────────── */
+
+.theme-forge {
+  --color-bg: #0a0a1a;
+  --color-surface: #0d0d2b;
+  --color-surface-hover: #14143a;
+  --color-accent: #00ffff;
+  --color-accent-hover: #00cccc;
+  --color-accent-glow: rgba(0, 255, 255, 0.2);
+  --color-text-primary: #e0e0ff;
+  --color-text-secondary: #a0a0cc;
+  --color-text-muted: #6060a0;
+  --color-status-created: #00ccff;
+  --color-status-in-progress: #ffa500;
+  --color-status-ready: #00ff88;
+  --color-status-error: #ff3366;
+  --font-sans: 'Space Mono', 'JetBrains Mono', monospace;
+
+  /* Forge-specific custom properties */
+  --forge-cyan: #00ffff;
+  --forge-magenta: #ff00ff;
+  --forge-lime: #00ff00;
+  --forge-orange: #ffa500;
+}
+
+/* ─── CRT Scanline Overlay ───────────────────────────── */
+
+.theme-forge #root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+/* ─── Typography: Pixel Headings ─────────────────────── */
+
+.theme-forge h1,
+.theme-forge h2,
+.theme-forge h3 {
+  font-family: 'Press Start 2P', 'VT323', monospace !important;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+  line-height: 1.8;
+}
+
+.theme-forge h1 {
+  font-size: 0.875rem;
+}
+
+.theme-forge h2 {
+  font-size: 0.6875rem;
+}
+
+.theme-forge h3 {
+  font-size: 0.625rem;
+}
+
+/* Nav labels, section headers, and small labels in pixel font */
+.theme-forge [data-tutorial] .uppercase,
+.theme-forge .forge-pixel {
+  font-family: 'Press Start 2P', 'VT323', monospace;
+}
+
+/* ─── Text Glow ──────────────────────────────────────── */
+
+.theme-forge .text-text-primary {
+  text-shadow: 0 0 8px rgba(224, 224, 255, 0.08);
+}
+
+/* ─── Selection Colors ───────────────────────────────── */
+
+.theme-forge ::selection {
+  background-color: #ff00ff;
+  color: #00ffff;
+}
+
+.theme-forge ::-moz-selection {
+  background-color: #ff00ff;
+  color: #00ffff;
+}
+
+/* ─── Custom Scrollbars ──────────────────────────────── */
+
+.theme-forge * {
+  scrollbar-color: rgba(0, 255, 255, 0.2) transparent;
+}
+
+.theme-forge *::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.theme-forge *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.theme-forge *::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.theme-forge *::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 255, 0.4);
+}
+
+/* ─── Focus Rings: Neon Glow ─────────────────────────── */
+
+.theme-forge *:focus-visible {
+  outline: 1px solid var(--forge-cyan);
+  outline-offset: 1px;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+/* ─── Sidebar ────────────────────────────────────────── */
+
+/* Right border glow */
+.theme-forge aside {
+  border-right-color: rgba(0, 255, 255, 0.15) !important;
+  box-shadow: 1px 0 10px rgba(0, 255, 255, 0.05);
+}
+
+/* Logo ember glow animation */
+.theme-forge .forge-logo-icon {
+  animation: ember-glow 3s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.4));
+}
+
+@keyframes ember-glow {
+  0% {
+    filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.4))
+            drop-shadow(0 0 12px rgba(255, 0, 255, 0.1));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.6))
+            drop-shadow(0 0 20px rgba(255, 0, 255, 0.2));
+  }
+  100% {
+    filter: drop-shadow(0 0 6px rgba(255, 0, 255, 0.4))
+            drop-shadow(0 0 12px rgba(0, 255, 255, 0.1));
+  }
+}
+
+/* Logo text glow */
+.theme-forge .forge-logo-text {
+  font-family: 'Press Start 2P', monospace !important;
+  font-size: 0.6rem !important;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.5),
+               0 0 16px rgba(255, 0, 255, 0.2);
+}
+
+/* Sidebar separators */
+.theme-forge aside .border-t {
+  border-color: rgba(0, 255, 255, 0.1) !important;
+}
+
+/* Sidebar nav buttons - hover glow */
+.theme-forge aside button:hover {
+  text-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
+}
+
+/* Status dots pulse */
+.theme-forge .forge-status-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 3px currentColor; }
+  50% { opacity: 0.6; box-shadow: 0 0 6px currentColor; }
+}
+
+/* ─── Buttons ────────────────────────────────────────── */
+
+/* Primary action buttons (New Project, etc.) */
+.theme-forge button[class*="bg-accent"] {
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.3),
+              inset 0 0 15px rgba(0, 255, 255, 0.1);
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  transition: box-shadow 0.2s ease;
+}
+
+.theme-forge button[class*="bg-accent"]:hover {
+  box-shadow: 0 0 25px rgba(0, 255, 255, 0.5),
+              0 0 50px rgba(0, 255, 255, 0.15),
+              inset 0 0 15px rgba(0, 255, 255, 0.1);
+}
+
+/* Secondary buttons hover glow */
+.theme-forge button:not([class*="bg-accent"]):hover {
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.1);
+}
+
+/* ─── Cards & Surfaces ───────────────────────────────── */
+
+/* SectionCard-style rounded panels */
+.theme-forge .rounded-xl {
+  border-color: rgba(0, 255, 255, 0.08) !important;
+  box-shadow: 0 0 1px rgba(0, 255, 255, 0.1),
+              inset 0 1px 0 rgba(0, 255, 255, 0.03);
+}
+
+.theme-forge .rounded-xl:hover {
+  border-color: rgba(0, 255, 255, 0.15) !important;
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.06),
+              inset 0 1px 0 rgba(0, 255, 255, 0.05);
+}
+
+/* ─── Input Fields ───────────────────────────────────── */
+
+.theme-forge input[type="text"],
+.theme-forge input[type="search"],
+.theme-forge input:not([type]),
+.theme-forge textarea,
+.theme-forge select {
+  border-color: rgba(0, 255, 255, 0.12) !important;
+  caret-color: var(--forge-cyan);
+}
+
+.theme-forge input:focus,
+.theme-forge textarea:focus,
+.theme-forge select:focus {
+  border-color: rgba(0, 255, 255, 0.4) !important;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.15);
+}
+
+/* ─── Links ──────────────────────────────────────────── */
+
+.theme-forge a {
+  text-decoration-color: rgba(0, 255, 255, 0.3);
+}
+
+.theme-forge a:hover {
+  text-shadow: 0 0 6px rgba(0, 255, 255, 0.3);
+  text-decoration-color: var(--forge-cyan);
+}
+
+/* ─── Progress Bars ──────────────────────────────────── */
+
+.theme-forge .rounded-full[class*="bg-accent"],
+.theme-forge div[class*="h-1"][class*="rounded-full"] > div {
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+/* ─── Code Blocks ────────────────────────────────────── */
+
+.theme-forge code {
+  border: 1px solid rgba(0, 255, 255, 0.1);
+  text-shadow: 0 0 4px rgba(0, 255, 255, 0.15);
+}
+
+/* ─── Tooltips ───────────────────────────────────────── */
+
+.theme-forge [title]::after {
+  font-family: 'Space Mono', monospace;
+}
+
+/* ─── Toggle Switches ────────────────────────────────── */
+
+.theme-forge input[type="checkbox"] {
+  accent-color: var(--forge-cyan);
+}
+
+.theme-forge input[type="range"] {
+  accent-color: var(--forge-cyan);
+}
+
+/* ─── Segmented Controls ─────────────────────────────── */
+
+.theme-forge .rounded-lg[class*="bg-white"] button[class*="bg-white/8"] {
+  box-shadow: 0 0 6px rgba(0, 255, 255, 0.15);
+}
+
+/* ─── Project Cards on Dashboard ─────────────────────── */
+
+.theme-forge main .rounded-xl {
+  transition: border-color 0.2s ease, box-shadow 0.3s ease;
+}
+
+/* ─── Status Badges ──────────────────────────────────── */
+
+.theme-forge [class*="bg-status-"] {
+  box-shadow: 0 0 4px currentColor;
+}
+
+/* ─── Empty State ────────────────────────────────────── */
+
+.theme-forge .forge-under-construction {
+  font-family: 'Press Start 2P', monospace;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+  animation: blink-soft 3s ease-in-out infinite;
+}
+
+@keyframes blink-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ─── Decorative Section Separators ──────────────────── */
+
+.theme-forge .forge-separator {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 255, 255, 0.3),
+    rgba(255, 0, 255, 0.2),
+    rgba(0, 255, 255, 0.3),
+    transparent
+  );
+}
+
+/* ─── Theme Transition ───────────────────────────────── */
+
+.theme-forge,
+.theme-clean {
+  transition: background-color 0.3s ease,
+              color 0.3s ease,
+              border-color 0.3s ease;
+}
+
+.theme-forge *,
+.theme-clean * {
+  transition: background-color 0.3s ease,
+              color 0.3s ease,
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
+/* Exclude elements that need instant transitions */
+.theme-forge [class*="animate-"],
+.theme-clean [class*="animate-"],
+.theme-forge .transition-none,
+.theme-clean .transition-none {
+  transition: none !important;
+}
+
+/* ─── Title Bar ──────────────────────────────────────── */
+
+.theme-forge .titlebar-drag {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 255, 255, 0.02) 0%,
+    transparent 100%
+  );
+}
+
+/* ─── Wizard Step Indicators ─────────────────────────── */
+
+.theme-forge .forge-step-dot {
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--forge-cyan);
+  border-radius: 0;
+  background: transparent;
+}
+
+.theme-forge .forge-step-dot.active {
+  background: var(--forge-cyan);
+  box-shadow: 0 0 6px var(--forge-cyan);
+}
+
+/* ─── File Explorer ──────────────────────────────────── */
+
+/* Tree connectors - terminal style */
+.theme-forge [class*="font-mono"] {
+  text-shadow: 0 0 2px rgba(0, 255, 255, 0.1);
+}
+
+/* ─── Command Palette ────────────────────────────────── */
+
+.theme-forge [class*="backdrop-blur"] {
+  backdrop-filter: blur(8px) brightness(0.7);
+}
+
+/* ─── Theme Toggle Button ────────────────────────────── */
+
+.forge-theme-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  background: rgba(0, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.forge-theme-toggle:hover {
+  border-color: rgba(0, 255, 255, 0.4);
+  background: rgba(0, 255, 255, 0.1);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+}
+
+.clean-theme-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clean-theme-toggle:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+}

@@ -18,7 +18,7 @@ function preferenceDefaults(): UserPreferences {
     defaultProjectDir: path.join(app.getPath('home'), 'Projects'),
     projectLocationMode: 'wsl',
     githubUsername: '',
-    theme: 'dark',
+    theme: 'forge',
     defaultEditor: 'code',
     defaultRepoVisibility: 'private',
     claudeLaunchMode: 'interactive',
@@ -35,6 +35,7 @@ function preferenceDefaults(): UserPreferences {
     appFontSize: 14,
     reduceAnimations: false,
     highContrast: false,
+    showSplash: true,
   };
 }
 
