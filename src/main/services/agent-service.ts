@@ -1,4 +1,5 @@
-import { spawn, ChildProcess } from 'node:child_process';
+import { spawn, execFile, ChildProcess } from 'node:child_process';
+import { promisify } from 'node:util';
 import * as fs from 'node:fs/promises';
 import * as fsSync from 'node:fs';
 import path from 'node:path';
@@ -6,7 +7,21 @@ import type { AgentType, ProjectInput } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import { sanitizeProjectName, sanitizeDescription } from '../utils/sanitize';
 
+const execFileAsync = promisify(execFile);
 const activeProcesses = new Map<string, ChildProcess>();
+
+/**
+ * Resolves the full binary path for an agent command using a login shell,
+ * so that PATH includes ~/.local/bin, nvm paths, etc.
+ */
+async function resolveAgentBinary(command: string): Promise<string> {
+  try {
+    const { stdout } = await execFileAsync('bash', ['-l', '-c', `which ${command}`], { timeout: 5000 });
+    return stdout.trim();
+  } catch {
+    return command;
+  }
+}
 
 function buildInitialPrompt(
   projectName: string,
@@ -51,13 +66,13 @@ function buildLaunchArgs(agentType: AgentType, prompt: string): string[] {
   return [config.command, '-p', prompt];
 }
 
-export function startAgent(
+export async function startAgent(
   agentType: AgentType,
   projectId: string,
   projectPath: string,
   projectName: string,
   inputs: ProjectInput[],
-): void {
+): Promise<void> {
   const processKey = `${projectId}:${agentType}`;
   if (activeProcesses.has(processKey)) return;
 
@@ -65,8 +80,8 @@ export function startAgent(
   fsSync.mkdirSync(projectPath, { recursive: true });
 
   const config = AGENTS[agentType];
-  // Launch agent in interactive mode — the context file (CLAUDE.md etc.) provides all context
-  const agentCmd = config.command;
+  // Resolve full binary path so it works even without full PATH in the terminal
+  const agentCmd = await resolveAgentBinary(config.command);
 
   let child: ChildProcess;
 
@@ -95,23 +110,23 @@ export function startAgent(
       const escapedPath = shellEscape(projectPath);
       const innerCmd = `cd '${escapedPath}' && ${agentCmd}`;
 
-      // Try wt.exe first, fall back to cmd.exe
-      const wtCmd = `wt.exe -d "$(wslpath -w '${escapedPath}')" wsl.exe bash -c '${shellEscape(innerCmd)}'`;
-      const fallbackCmd = `cmd.exe /c start bash -c "${innerCmd.replace(/"/g, '\\"')}"`;
+      // Try wt.exe first, fall back to cmd.exe — use login shell (-l) for full PATH
+      const wtCmd = `wt.exe -d "$(wslpath -w '${escapedPath}')" wsl.exe bash -l -c '${shellEscape(innerCmd)}'`;
+      const fallbackCmd = `cmd.exe /c start bash -l -c "${innerCmd.replace(/"/g, '\\"')}"`;
 
       child = spawn(
         'bash',
-        ['-c', `${wtCmd} 2>/dev/null || ${fallbackCmd}`],
+        ['-l', '-c', `${wtCmd} 2>/dev/null || ${fallbackCmd}`],
         { detached: true, stdio: 'ignore' },
       );
     } else {
-      // Linux: use x-terminal-emulator
+      // Linux: use x-terminal-emulator — use login shell (-l) for full PATH
       const escapedPath = shellEscape(projectPath);
       const launchCmd = `cd '${escapedPath}' && ${agentCmd}`;
 
       child = spawn(
         'x-terminal-emulator',
-        ['-e', `bash -c '${shellEscape(launchCmd)}; exec bash'`],
+        ['-e', `bash -l -c '${shellEscape(launchCmd)}; exec bash'`],
         { detached: true, stdio: 'ignore' },
       );
     }

@@ -217,7 +217,7 @@ export function registerIpcHandlers(): void {
       );
     }
 
-    agentService.startAgent(
+    await agentService.startAgent(
       agentType,
       validId,
       project.path,
