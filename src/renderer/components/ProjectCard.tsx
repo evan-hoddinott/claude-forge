@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import type { Project } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
@@ -41,7 +42,7 @@ function ActionButton({
   );
 }
 
-export default function ProjectCard({
+export default memo(function ProjectCard({
   project,
   viewMode,
   onClick,
@@ -68,8 +69,7 @@ export default function ProjectCard({
 
   if (viewMode === 'list') {
     return (
-      <motion.div
-        layout
+      <div
         onClick={onClick}
         className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] hover:border-white/[0.08] transition-all cursor-pointer group"
       >
@@ -119,16 +119,14 @@ export default function ProjectCard({
             <SparkleIcon />
           </ActionButton>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      layout
-      whileHover={{ y: -2 }}
+    <div
       onClick={onClick}
-      className="flex flex-col rounded-xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] hover:border-white/[0.1] backdrop-blur-xl transition-all cursor-pointer group"
+      className="flex flex-col rounded-xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] hover:border-white/[0.1] transition-all cursor-pointer group hover:-translate-y-0.5"
     >
       <div className="flex-1 p-4">
         {/* Header */}
@@ -189,9 +187,9 @@ export default function ProjectCard({
           </ActionButton>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
-}
+});
 
 function GitHubLink({
   url,

@@ -443,11 +443,19 @@ export async function watchProject(projectPath: string, win: BrowserWindow): Pro
       '**/build/**',
       '**/.next/**',
       '**/.vite/**',
+      '**/__pycache__/**',
+      '**/.cache/**',
+      '**/.turbo/**',
+      '**/coverage/**',
+      '**/.tox/**',
+      '**/.mypy_cache/**',
+      '**/.pytest_cache/**',
     ],
     persistent: true,
     ignoreInitial: true,
-    depth: 20,
+    depth: 3,
     followSymlinks: false, // Don't follow symlinks outside project
+    usePolling: false, // Use native FS events (faster than polling)
   });
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;

@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useToast } from '../components/Toast';
 import type { Project, ProjectInput, AgentType } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import StatusBadge from '../components/StatusBadge';
-import FileExplorer from '../components/FileExplorer';
+
+// Lazy-load FileExplorer (includes Monaco Editor) — only when Files tab is opened
+const FileExplorer = lazy(() => import('../components/FileExplorer'));
 
 type Tab = 'overview' | 'files' | 'github' | 'agents' | 'settings';
 
@@ -204,7 +206,9 @@ export default function ProjectDetail({
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'files' ? (
           <div className="h-full">
-            <FileExplorer project={project} />
+            <Suspense fallback={<FileExplorerSkeleton />}>
+              <FileExplorer project={project} />
+            </Suspense>
           </div>
         ) : (
           <AnimatePresence mode="wait">
@@ -932,6 +936,25 @@ function LoadingSkeleton() {
       <div className="h-8 w-64 rounded bg-white/[0.04] animate-pulse" />
       <div className="h-10 w-full rounded bg-white/[0.04] animate-pulse" />
       <div className="h-48 w-full rounded-xl bg-white/[0.02] animate-pulse mt-6" />
+    </div>
+  );
+}
+
+function FileExplorerSkeleton() {
+  return (
+    <div className="h-full flex">
+      <div className="w-80 border-r border-white/[0.06] p-4 space-y-2">
+        {Array.from({ length: 12 }, (_, i) => (
+          <div
+            key={i}
+            className="h-5 rounded bg-white/[0.03] animate-pulse"
+            style={{ width: `${50 + Math.random() * 40}%`, animationDelay: `${i * 40}ms` }}
+          />
+        ))}
+      </div>
+      <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
+        Loading file explorer...
+      </div>
     </div>
   );
 }

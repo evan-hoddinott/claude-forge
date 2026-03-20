@@ -35,7 +35,7 @@ export default function UpdateNotification({ mode }: Props) {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -40, opacity: 0 }}
         transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-        className="relative z-40 border-b border-white/[0.06] bg-white/[0.03] backdrop-blur-sm"
+        className="relative z-40 border-b border-white/[0.06] bg-surface"
       >
         <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center gap-3">
           {/* Available state */}

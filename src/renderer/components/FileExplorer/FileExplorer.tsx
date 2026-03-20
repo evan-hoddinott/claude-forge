@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VscSearch, VscRefresh, VscFolderOpened, VscListFlat, VscListTree } from 'react-icons/vsc';
 import { useAPI, useQuery } from '../../hooks/useAPI';
 import { useToast } from '../Toast';
 import FileTree from './FileTree';
-import FilePreview from './FilePreview';
 import type { FileTreeNode, SearchResult, Project, AgentType } from '../../../shared/types';
 import { AGENTS } from '../../../shared/types';
+
+// Lazy-load FilePreview (contains Monaco Editor)
+const FilePreview = lazy(() => import('./FilePreview'));
 
 interface FileExplorerProps {
   project: Project;
@@ -74,18 +76,26 @@ export default function FileExplorer({ project }: FileExplorerProps) {
     return fileTree.filter((node) => !CONTEXT_FILE_NAMES.includes(node.name));
   }, [fileTree]);
 
-  // Compute project stats
-  const stats = useMemo(() => {
-    if (!fileTree) return { totalFiles: 0, totalLines: 0, languages: [] as string[] };
+  // Single tree walk to compute stats, common extensions, and all files
+  const { stats, commonExtensions, allFiles } = useMemo(() => {
+    if (!fileTree) {
+      return {
+        stats: { totalFiles: 0, totalLines: 0, languages: [] as string[] },
+        commonExtensions: [] as string[],
+        allFiles: [] as FileTreeNode[],
+      };
+    }
 
     let totalFiles = 0;
     const langSet = new Set<string>();
     const extCounts = new Map<string, number>();
+    const files: FileTreeNode[] = [];
 
     function walk(nodes: FileTreeNode[]) {
       for (const node of nodes) {
         if (node.type === 'file') {
           totalFiles++;
+          files.push(node);
           if (node.extension) {
             extCounts.set(node.extension, (extCounts.get(node.extension) ?? 0) + 1);
             const lang = extToLanguage(node.extension);
@@ -99,48 +109,18 @@ export default function FileExplorer({ project }: FileExplorerProps) {
     walk(fileTree);
 
     return {
-      totalFiles,
-      totalLines: 0, // Would require reading all files, skip
-      languages: Array.from(langSet),
+      stats: {
+        totalFiles,
+        totalLines: 0,
+        languages: Array.from(langSet),
+      },
+      commonExtensions: Array.from(extCounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6)
+        .map(([ext]) => ext),
+      allFiles: files,
     };
   }, [fileTree]);
-
-  // Compute common extensions for filter pills
-  const commonExtensions = useMemo(() => {
-    if (!fileTree) return [];
-    const extCounts = new Map<string, number>();
-
-    function walk(nodes: FileTreeNode[]) {
-      for (const node of nodes) {
-        if (node.type === 'file' && node.extension) {
-          extCounts.set(node.extension, (extCounts.get(node.extension) ?? 0) + 1);
-        }
-        if (node.children) walk(node.children);
-      }
-    }
-
-    walk(fileTree);
-
-    return Array.from(extCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([ext]) => ext);
-  }, [fileTree]);
-
-  // Build flat list of all file nodes for arrow key navigation
-  const allFiles = useMemo(() => {
-    if (!fileTree) return [];
-    const files: FileTreeNode[] = [];
-    function walk(nodes: FileTreeNode[]) {
-      for (const node of nodes) {
-        if (node.type === 'file') files.push(node);
-        if (node.children) walk(node.children);
-      }
-    }
-    for (const node of contextFiles) files.push(node);
-    walk(mainTree);
-    return files;
-  }, [fileTree, contextFiles, mainTree]);
 
   // Search handler
   useEffect(() => {
@@ -448,14 +428,16 @@ export default function FileExplorer({ project }: FileExplorerProps) {
 
       {/* RIGHT PANEL — File Preview */}
       <div className="flex-1 min-w-0">
-        <FilePreview
-          selectedFile={selectedFile}
-          preferences={preferences}
-          project={project}
-          totalFiles={stats.totalFiles}
-          totalLines={stats.totalLines}
-          detectedLanguages={stats.languages}
-        />
+        <Suspense fallback={<div className="h-full flex items-center justify-center text-text-muted text-sm">Loading preview...</div>}>
+          <FilePreview
+            selectedFile={selectedFile}
+            preferences={preferences}
+            project={project}
+            totalFiles={stats.totalFiles}
+            totalLines={stats.totalLines}
+            detectedLanguages={stats.languages}
+          />
+        </Suspense>
       </div>
 
       {/* Context Menu */}
@@ -608,7 +590,7 @@ function ContextMenuOverlay({
       className="fixed z-50"
       style={menuStyle}
     >
-      <div className="bg-surface border border-white/[0.1] rounded-xl shadow-2xl py-1 min-w-[180px] backdrop-blur-xl">
+      <div className="bg-surface border border-white/[0.1] rounded-xl shadow-2xl py-1 min-w-[180px]">
         <MenuItem
           label="Open in VS Code"
           onClick={() => {

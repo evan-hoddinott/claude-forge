@@ -1,31 +1,44 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Sidebar from './components/Sidebar';
 import TitleBar from './components/TitleBar';
-import NewProjectWizard from './components/NewProjectWizard';
-import CommandPalette from './components/CommandPalette';
 import ContextMenu from './components/ContextMenu';
-import SetupAssistant from './components/SetupAssistant';
-import OnboardingTutorial from './components/OnboardingTutorial';
 import UpdateNotification from './components/UpdateNotification';
 import Dashboard from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
-import Settings from './pages/Settings';
 import { useToast } from './components/Toast';
 import { useAPI } from './hooks/useAPI';
+import { useReduceMotion } from './hooks/usePerformance';
 import type { Project, AppMode } from '../shared/types';
+
+// Lazy-load heavy components that aren't needed on initial render
+const NewProjectWizard = lazy(() => import('./components/NewProjectWizard'));
+const CommandPalette = lazy(() => import('./components/CommandPalette'));
+const SetupAssistant = lazy(() => import('./components/SetupAssistant'));
+const OnboardingTutorial = lazy(() => import('./components/OnboardingTutorial'));
+const Settings = lazy(() => import('./pages/Settings'));
 
 export type Page = 'dashboard' | 'settings';
 
-const pageVariants = {
+const pageVariantsAnimated = {
   initial: { opacity: 0, y: 6 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] as const } },
   exit: { opacity: 0, y: -6, transition: { duration: 0.15 } },
 };
 
+const pageVariantsInstant = {
+  initial: { opacity: 1 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0, transition: { duration: 0.05 } },
+};
+
+const LazyFallback = <div className="h-full" />;
+
 export default function App() {
   const api = useAPI();
   const { toast } = useToast();
+  const reduceMotion = useReduceMotion();
+  const pageVariants = reduceMotion ? pageVariantsInstant : pageVariantsAnimated;
   const [activePage, setActivePage] = useState<Page>('dashboard');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -236,26 +249,36 @@ export default function App() {
                 exit="exit"
                 className="h-full"
               >
-                <Settings />
+                <Suspense fallback={LazyFallback}>
+                  <Settings />
+                </Suspense>
               </motion.div>
             )}
           </AnimatePresence>
         </main>
       </div>
 
-      <NewProjectWizard
-        open={showWizard}
-        onClose={() => setShowWizard(false)}
-        onCreated={handleProjectCreated}
-      />
+      <Suspense fallback={null}>
+        {showWizard && (
+          <NewProjectWizard
+            open={showWizard}
+            onClose={() => setShowWizard(false)}
+            onCreated={handleProjectCreated}
+          />
+        )}
+      </Suspense>
 
-      <CommandPalette
-        open={showCommandPalette}
-        onClose={() => setShowCommandPalette(false)}
-        onNewProject={() => { setShowCommandPalette(false); setShowWizard(true); }}
-        onNavigate={(page) => { setShowCommandPalette(false); handleNavigate(page); }}
-        onOpenProject={(id) => { setShowCommandPalette(false); setSelectedProjectId(id); }}
-      />
+      <Suspense fallback={null}>
+        {showCommandPalette && (
+          <CommandPalette
+            open={showCommandPalette}
+            onClose={() => setShowCommandPalette(false)}
+            onNewProject={() => { setShowCommandPalette(false); setShowWizard(true); }}
+            onNavigate={(page) => { setShowCommandPalette(false); handleNavigate(page); }}
+            onOpenProject={(id) => { setShowCommandPalette(false); setSelectedProjectId(id); }}
+          />
+        )}
+      </Suspense>
 
       {contextMenu && (
         <ContextMenu
@@ -267,17 +290,21 @@ export default function App() {
         />
       )}
 
-      {showSetup && (
-        <SetupAssistant onComplete={handleSetupComplete} />
-      )}
+      <Suspense fallback={null}>
+        {showSetup && (
+          <SetupAssistant onComplete={handleSetupComplete} />
+        )}
+      </Suspense>
 
-      {showTutorial && !showSetup && (
-        <OnboardingTutorial
-          mode={appMode}
-          onComplete={handleTutorialComplete}
-          onRequestNewProject={handleNewProject}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showTutorial && !showSetup && (
+          <OnboardingTutorial
+            mode={appMode}
+            onComplete={handleTutorialComplete}
+            onRequestNewProject={handleNewProject}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

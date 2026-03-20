@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
+import { useCachedQuery } from '../hooks/usePerformance';
 import { useToast } from '../components/Toast';
 import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
@@ -13,9 +14,10 @@ export default function Settings() {
     loading,
     refetch,
   } = useQuery(() => api.preferences.get());
-  const { data: ghAuth } = useQuery(() => api.system.checkGhAuth());
-  const { data: agentStatuses } = useQuery(() => api.agent.checkAllStatuses());
-  const { data: envInfo } = useQuery(() => api.system.getEnvironment());
+  // Cache agent statuses for 60s — expensive IPC call (checks 3 CLIs + npm)
+  const { data: ghAuth } = useCachedQuery('gh-auth', () => api.system.checkGhAuth(), 30_000);
+  const { data: agentStatuses } = useCachedQuery('agent-statuses', () => api.agent.checkAllStatuses(), 60_000);
+  const { data: envInfo } = useCachedQuery('environment', () => api.system.getEnvironment(), 300_000);
 
   if (loading || !prefs) {
     return (

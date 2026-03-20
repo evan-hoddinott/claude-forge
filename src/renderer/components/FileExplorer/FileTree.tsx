@@ -1,5 +1,4 @@
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback, memo } from 'react';
 import {
   VscFolder, VscFolderOpened, VscFile,
   VscJson, VscMarkdown, VscSymbolMisc,
@@ -138,35 +137,27 @@ function TreeNode({
         <span className="text-text-secondary truncate text-xs">{node.name}</span>
       </button>
 
-      <AnimatePresence initial={false}>
-        {expanded && node.children && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="overflow-hidden"
-          >
-            {node.children.map((child) => (
-              <TreeNode
-                key={child.path}
-                node={child}
-                depth={depth + 1}
-                selectedPath={selectedPath}
-                onSelect={onSelect}
-                onDoubleClick={onDoubleClick}
-                onContextMenu={onContextMenu}
-                filterExtensions={filterExtensions}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {expanded && node.children && (
+        <div>
+          {node.children.map((child) => (
+            <TreeNode
+              key={child.path}
+              node={child}
+              depth={depth + 1}
+              selectedPath={selectedPath}
+              onSelect={onSelect}
+              onDoubleClick={onDoubleClick}
+              onContextMenu={onContextMenu}
+              filterExtensions={filterExtensions}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function TreeFileNode({
+const TreeFileNode = memo(function TreeFileNode({
   node,
   depth,
   selectedPath,
@@ -214,7 +205,7 @@ function TreeFileNode({
       )}
     </button>
   );
-}
+});
 
 function GitStatusIndicator({ status }: { status: GitFileStatus }) {
   const config: Record<GitFileStatus, { color: string; label: string }> = {

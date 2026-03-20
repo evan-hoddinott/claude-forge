@@ -5,6 +5,7 @@ import type { GhAuthStatus, AgentStatus, AgentType, AppMode } from '../../shared
 import { AGENTS } from '../../shared/types';
 import { useAPI, useQuery } from '../hooks/useAPI';
 import { setMode as setLanguageMode } from '../utils/language';
+import { useVisibleInterval, useDeferredInit } from '../hooks/usePerformance';
 
 interface SidebarProps {
   activePage: Page;
@@ -130,7 +131,6 @@ function GitHubTab({ collapsed, expanded, onToggle }: { collapsed: boolean; expa
   const [loginState, setLoginState] = useState<'idle' | 'waiting' | 'polling'>('idle');
   const [deviceCode, setDeviceCode] = useState('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const checkAuth = useCallback(async () => {
     setRefreshing(true);
@@ -147,14 +147,18 @@ function GitHubTab({ collapsed, expanded, onToggle }: { collapsed: boolean; expa
     }
   }, [api]);
 
+  // Initial check deferred by 3s to not block startup
+  useDeferredInit(3000, checkAuth);
+
+  // Only poll when app is visible
+  useVisibleInterval(checkAuth, 60000);
+
+  // Cleanup login polling on unmount
   useEffect(() => {
-    checkAuth();
-    autoRefreshRef.current = setInterval(checkAuth, 60000);
     return () => {
-      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [checkAuth]);
+  }, []);
 
   async function handleLogin() {
     setLoginState('waiting');
@@ -712,7 +716,6 @@ function AgentsSection({ collapsed, expandedAgent, onToggleAgent }: { collapsed:
   const api = useAPI();
   const [statuses, setStatuses] = useState<Record<AgentType, AgentStatus> | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const checkAll = useCallback(async () => {
     setRefreshing(true);
@@ -726,14 +729,18 @@ function AgentsSection({ collapsed, expandedAgent, onToggleAgent }: { collapsed:
     }
   }, [api]);
 
+  // Defer initial check by 3s to not block startup
+  useDeferredInit(3000, checkAll);
+
+  // Only poll when app is visible
+  useVisibleInterval(checkAll, 60000);
+
+  // Cleanup on unmount
   useEffect(() => {
-    checkAll();
-    autoRefreshRef.current = setInterval(checkAll, 60000);
     return () => {
-      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
       api.agent.offInstallProgress();
     };
-  }, [checkAll, api]);
+  }, [api]);
 
   return (
     <div className="space-y-0.5">
