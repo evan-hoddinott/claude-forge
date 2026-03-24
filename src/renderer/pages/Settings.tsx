@@ -408,7 +408,7 @@ function ThemeSection({
         />
         <FieldHint>
           {theme === 'forge'
-            ? 'Retro neocities-inspired theme with pixel fonts and neon accents.'
+            ? 'Retro neocities-inspired theme with pixel fonts, earthy greens, and warm amber accents.'
             : 'Clean, modern dark theme inspired by Linear and Raycast.'}
         </FieldHint>
       </div>

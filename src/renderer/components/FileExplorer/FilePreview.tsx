@@ -3,6 +3,7 @@ import { useAPI, useMutation } from '../../hooks/useAPI';
 import { useToast } from '../Toast';
 import type { FileTreeNode, FileReadResult, UserPreferences, Project } from '../../../shared/types';
 import { AGENTS } from '../../../shared/types';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Configure Monaco workers for Electron/Vite
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -302,6 +303,7 @@ function MonacoWithFallback({
   minimap: boolean;
   wordWrap: string;
 }) {
+  const { theme } = useTheme();
   const [timedOut, setTimedOut] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const mountedRef = useRef(false);
@@ -339,7 +341,7 @@ function MonacoWithFallback({
       fallback={
         <div className="h-full flex flex-col">
           {/* Code editor skeleton */}
-          <div className="flex-1 bg-[#0d0d14] p-4 space-y-2">
+          <div className="flex-1 p-4 space-y-2" style={{ backgroundColor: theme === 'forge' ? '#1e2418' : '#0d0d14' }}>
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-6 h-3 rounded bg-white/[0.04]" />
@@ -359,7 +361,7 @@ function MonacoWithFallback({
         language={language}
         value={value}
         onChange={onChange}
-        theme="claude-forge-dark"
+        theme={theme === 'forge' ? 'claude-forge-retro' : 'claude-forge-dark'}
         onMount={() => { mountedRef.current = true; }}
         options={{
           readOnly: !editMode,
@@ -403,6 +405,27 @@ function MonacoWithFallback({
               'editorWidget.background': '#13131a',
               'editorWidget.border': '#ffffff10',
               'minimap.background': '#0a0a0f',
+            },
+          });
+          monaco.editor.defineTheme('claude-forge-retro', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [],
+            colors: {
+              'editor.background': '#1e2418',
+              'editor.foreground': '#d4cba8',
+              'editor.lineHighlightBackground': '#2d362510',
+              'editor.selectionBackground': '#5a7a3a40',
+              'editor.inactiveSelectionBackground': '#5a7a3a20',
+              'editorLineNumber.foreground': '#6b6450',
+              'editorLineNumber.activeForeground': '#9c9478',
+              'editorCursor.foreground': '#daa520',
+              'editorIndentGuide.background': '#4a5a3830',
+              'editorIndentGuide.activeBackground': '#4a5a3860',
+              'editor.selectionHighlightBackground': '#5a7a3a20',
+              'editorWidget.background': '#232a1c',
+              'editorWidget.border': '#4a5a38',
+              'minimap.background': '#1a1e14',
             },
           });
         }}

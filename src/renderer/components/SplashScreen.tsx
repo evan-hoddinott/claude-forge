@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -7,13 +8,22 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ onComplete }: SplashScreenProps) {
   const [visible, setVisible] = useState(true);
+  const { theme } = useTheme();
+  const isForge = theme === 'forge';
 
   useEffect(() => {
+    if (!isForge) {
+      // Clean theme: skip splash entirely
+      onComplete();
+      return;
+    }
     const timer = setTimeout(() => {
       setVisible(false);
-    }, 1500);
+    }, 1800);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isForge, onComplete]);
+
+  if (!isForge) return null;
 
   return (
     <AnimatePresence onExitComplete={onComplete}>
@@ -24,70 +34,79 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
           className="fixed inset-0 z-[10000] flex flex-col items-center justify-center"
-          style={{ backgroundColor: '#0a0a1a' }}
+          style={{
+            backgroundColor: 'var(--forge-bg-deep, #1a1e14)',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='.025'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%23ffffff' opacity='.03'/%3E%3Crect x='2' y='5' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'repeat',
+          }}
         >
-          {/* CRT scanlines on splash too */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)',
-            }}
-          />
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="flex flex-col items-center gap-6 relative"
-          >
-            {/* Forge icon with glow */}
-            <div
-              className="w-16 h-16 flex items-center justify-center"
-              style={{
-                filter: 'drop-shadow(0 0 20px rgba(0, 255, 255, 0.5)) drop-shadow(0 0 40px rgba(255, 0, 255, 0.2))',
-              }}
-            >
-              <svg className="w-12 h-12" viewBox="0 0 16 16" fill="#00ffff">
-                <path d="M3 10h10v1.5c0 .83-.67 1.5-1.5 1.5h-7A1.5 1.5 0 013 11.5V10z" />
-                <path d="M2 8.5a.5.5 0 01.5-.5h11a.5.5 0 01.5.5V10H2V8.5z" />
-                <path
-                  d="M4.5 5h7a1.5 1.5 0 011.5 1.5V8H3V6.5A1.5 1.5 0 014.5 5z"
-                  opacity="0.6"
-                />
-                <rect x="6" y="13" width="4" height="1.5" rx="0.5" />
-              </svg>
+          <div className="flex flex-col items-center gap-4">
+            {/* ASCII art box */}
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--forge-text-heading, #e8dfc0)' }}>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+                style={{ fontSize: 14, letterSpacing: 1 }}
+              >
+                {'\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557'}
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.3 }}
+                style={{ fontSize: 14, letterSpacing: 1 }}
+              >
+                {'\u2551'}{'     \u2692  CLAUDE FORGE  \u2692      '}{'\u2551'}
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.3 }}
+                style={{ fontSize: 14, letterSpacing: 1 }}
+              >
+                {'\u2551'}{'   your AI coding workshop    '}{'\u2551'}
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7, duration: 0.3 }}
+                style={{ fontSize: 14, letterSpacing: 1 }}
+              >
+                {'\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D'}
+              </motion.div>
             </div>
 
-            {/* Title */}
-            <motion.h1
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.4 }}
-              style={{
-                fontFamily: "'Press Start 2P', monospace",
-                fontSize: '1rem',
-                color: '#e0e0ff',
-                textShadow: '0 0 10px rgba(0, 255, 255, 0.5), 0 0 20px rgba(255, 0, 255, 0.2)',
-                letterSpacing: '0.05em',
-              }}
+            {/* Pixel fire */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6, duration: 0.4 }}
+              className="forge-fire"
+              style={{ width: 32, height: 32 }}
             >
-              CLAUDE FORGE
-            </motion.h1>
+              <div className="forge-fire-log forge-fire-log-1" />
+              <div className="forge-fire-log forge-fire-log-2" />
+              <div className="forge-fire-flame forge-fire-flame-1" />
+              <div className="forge-fire-flame forge-fire-flame-2" />
+              <div className="forge-fire-flame forge-fire-flame-3" />
+              <div className="forge-fire-flame forge-fire-flame-4" />
+            </motion.div>
 
-            {/* Boot text */}
+            {/* Boot text with blinking cursor */}
             <motion.p
               initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.6, 1, 0.6] }}
-              transition={{ delay: 0.5, duration: 2, repeat: Infinity }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.9, duration: 0.3 }}
               style={{
-                fontFamily: "'Space Mono', monospace",
-                fontSize: '0.7rem',
-                color: '#6060a0',
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: 12,
+                color: 'var(--forge-text-secondary, #9c9478)',
               }}
             >
-              booting up...
+              booting up...<span className="forge-blink-cursor">_</span>
             </motion.p>
-          </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
