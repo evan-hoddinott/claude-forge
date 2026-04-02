@@ -1,9 +1,6 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import type { GitHubRepo } from '../../shared/types';
 import { isValidRepoName, sanitizeDescription, isValidUrl } from '../utils/sanitize';
-
-const execFileAsync = promisify(execFile);
+import { runExecFile } from '../utils/run-command';
 
 export async function createRepo(
   name: string,
@@ -33,10 +30,10 @@ export async function createRepo(
     args.push('--description', safeDescription);
   }
 
-  await execFileAsync('gh', args, { cwd: projectPath });
+  await runExecFile('gh', args, { cwd: projectPath });
 
   // gh repo create doesn't support --json; get repo info separately
-  const { stdout: viewOut } = await execFileAsync(
+  const { stdout: viewOut } = await runExecFile(
     'gh',
     ['repo', 'view', '--json', 'url,nameWithOwner,name'],
     { cwd: projectPath },
@@ -51,7 +48,7 @@ export async function createRepo(
 }
 
 export async function listRepos(): Promise<GitHubRepo[]> {
-  const { stdout } = await execFileAsync('gh', [
+  const { stdout } = await runExecFile('gh', [
     'repo',
     'list',
     '--json',
@@ -84,21 +81,21 @@ export async function linkExistingRepo(
 
   // Check if remote already exists
   try {
-    await execFileAsync('git', ['remote', 'get-url', 'origin'], {
+    await runExecFile('git', ['remote', 'get-url', 'origin'], {
       cwd: projectPath,
     });
     // Remote exists — update it
-    await execFileAsync('git', ['remote', 'set-url', 'origin', repoUrl], {
+    await runExecFile('git', ['remote', 'set-url', 'origin', repoUrl], {
       cwd: projectPath,
     });
   } catch {
     // Remote doesn't exist — add it
-    await execFileAsync('git', ['remote', 'add', 'origin', repoUrl], {
+    await runExecFile('git', ['remote', 'add', 'origin', repoUrl], {
       cwd: projectPath,
     });
   }
 
-  await execFileAsync('git', ['push', '-u', 'origin', 'main'], {
+  await runExecFile('git', ['push', '-u', 'origin', 'main'], {
     cwd: projectPath,
   });
 }

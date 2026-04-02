@@ -1,12 +1,9 @@
 import * as fs from 'node:fs/promises';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import type { CreateProjectInput, Project } from '../../shared/types';
 import * as store from '../store';
 import { writeContextFiles } from './context-generator';
 import { sanitizeProjectName } from '../utils/sanitize';
-
-const execFileAsync = promisify(execFile);
+import { runExecFile } from '../utils/run-command';
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {
   // Validate and sanitize the project name before any file operations
@@ -34,8 +31,8 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
   await fs.mkdir(project.path, { recursive: true });
 
   try {
-    await execFileAsync('git', ['init'], { cwd: project.path });
-    await execFileAsync('git', ['checkout', '-b', 'main'], {
+    await runExecFile('git', ['init'], { cwd: project.path });
+    await runExecFile('git', ['checkout', '-b', 'main'], {
       cwd: project.path,
     });
   } catch {

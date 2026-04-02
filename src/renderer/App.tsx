@@ -9,7 +9,6 @@ import ProjectDetail from './pages/ProjectDetail';
 import { useToast } from './components/Toast';
 import { useAPI } from './hooks/useAPI';
 import { useReduceMotion } from './hooks/usePerformance';
-import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import type { Project, AppMode } from '../shared/types';
 
 // Lazy-load heavy components that aren't needed on initial render
@@ -37,18 +36,18 @@ const pageVariantsInstant = {
 const LazyFallback = <div className="h-full" />;
 
 export default function App() {
-  return (
-    <ThemeProvider>
-      <AppInner />
-    </ThemeProvider>
-  );
+  return <AppInner />;
 }
 
 function AppInner() {
   const api = useAPI();
   const { toast } = useToast();
   const reduceMotion = useReduceMotion();
-  const { theme, loaded: themeLoaded } = useTheme();
+
+  // Always apply forge theme class
+  useEffect(() => {
+    document.documentElement.classList.add('theme-forge');
+  }, []);
   const pageVariants = reduceMotion ? pageVariantsInstant : pageVariantsAnimated;
   const [activePage, setActivePage] = useState<Page>('dashboard');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -69,10 +68,8 @@ function AppInner() {
         setShowSetup(true);
       }
       setAppMode(prefs.mode || 'simple');
-      // Show splash if forge theme and splash enabled
-      const t = prefs.theme as string;
-      const isForge = t === 'forge' || (t !== 'clean');
-      if (isForge && prefs.showSplash !== false) {
+      // Show splash if enabled
+      if (prefs.showSplash !== false) {
         setShowSplash(true);
       }
       setSetupChecked(true);

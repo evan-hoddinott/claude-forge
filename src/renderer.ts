@@ -1,3 +1,4 @@
+import './renderer/assets/fonts/fonts.css';
 import './index.css';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';

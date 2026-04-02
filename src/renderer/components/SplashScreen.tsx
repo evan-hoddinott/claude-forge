@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '../contexts/ThemeContext';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -8,22 +7,13 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ onComplete }: SplashScreenProps) {
   const [visible, setVisible] = useState(true);
-  const { theme } = useTheme();
-  const isForge = theme === 'forge';
 
   useEffect(() => {
-    if (!isForge) {
-      // Clean theme: skip splash entirely
-      onComplete();
-      return;
-    }
     const timer = setTimeout(() => {
       setVisible(false);
     }, 1800);
     return () => clearTimeout(timer);
-  }, [isForge, onComplete]);
-
-  if (!isForge) return null;
+  }, [onComplete]);
 
   return (
     <AnimatePresence onExitComplete={onComplete}>

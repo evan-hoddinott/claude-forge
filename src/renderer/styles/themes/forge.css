@@ -424,30 +424,6 @@
   background: var(--forge-border-light);
 }
 
-/* ─── Theme Transition ───────────────────────────────── */
-
-.theme-forge,
-.theme-clean {
-  transition: background-color 0.3s ease,
-              color 0.3s ease,
-              border-color 0.3s ease;
-}
-
-.theme-forge *,
-.theme-clean * {
-  transition: background-color 0.3s ease,
-              color 0.3s ease,
-              border-color 0.3s ease,
-              box-shadow 0.3s ease;
-}
-
-/* Exclude elements that need instant transitions */
-.theme-forge [class*="animate-"],
-.theme-clean [class*="animate-"],
-.theme-forge .transition-none,
-.theme-clean .transition-none {
-  transition: none !important;
-}
 
 /* ─── Title Bar ──────────────────────────────────────── */
 
@@ -456,7 +432,7 @@
   border-bottom: 2px solid var(--forge-border) !important;
 }
 
-/* Close button keeps red on hover in both themes */
+/* Close button keeps red on hover */
 .theme-forge .titlebar-no-drag button:last-child:hover {
   background-color: #8b4513 !important;
 }
@@ -494,45 +470,6 @@
   background-color: rgba(26, 30, 20, 0.95) !important;
 }
 
-/* ─── Theme Toggle Button ────────────────────────────── */
-
-.forge-theme-toggle {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 0;
-  border: 2px outset var(--forge-border);
-  background: var(--forge-bg-surface);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.forge-theme-toggle:hover {
-  border-color: var(--forge-border-strong);
-  background: var(--forge-accent-green);
-}
-
-.clean-theme-toggle {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.clean-theme-toggle:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
-}
 
 /* ─── Status dots — square in forge ──────────────────── */
 

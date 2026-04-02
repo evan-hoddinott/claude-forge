@@ -107,7 +107,7 @@ export interface UserPreferences {
   defaultProjectDir: string;
   projectLocationMode: ProjectLocationMode;
   githubUsername: string;
-  theme: 'forge' | 'clean';
+  theme: 'forge';
   defaultEditor: string;
   defaultRepoVisibility: 'public' | 'private';
   claudeLaunchMode: 'interactive' | 'auto';

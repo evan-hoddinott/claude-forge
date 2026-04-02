@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, session } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { registerIpcHandlers } from './main/ipc-handlers';
+import { init as initRunCommand } from './main/utils/run-command';
 
 if (started) {
   app.quit();
@@ -56,8 +57,8 @@ const createWindow = () => {
           [
             "default-src 'self'",
             "script-src 'self'",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-            "font-src 'self' https://fonts.gstatic.com",
+            "style-src 'self' 'unsafe-inline'",
+            "font-src 'self'",
             "img-src 'self' https://github.com https://avatars.githubusercontent.com data:",
             "connect-src 'self' https://registry.npmjs.org",
           ].join('; '),
@@ -110,7 +111,10 @@ const createWindow = () => {
   }
 };
 
-app.on('ready', () => {
+app.on('ready', async () => {
+  // Initialize platform detection before anything else —
+  // spawnCommand reads _platformMode synchronously, so it must be cached first
+  await initRunCommand();
   registerIpcHandlers();
   createWindow();
 });

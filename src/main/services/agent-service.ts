@@ -1,23 +1,22 @@
-import { spawn, execFile, ChildProcess } from 'node:child_process';
-import { promisify } from 'node:util';
+import { spawn, ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as fsSync from 'node:fs';
 import path from 'node:path';
 import type { AgentType, ProjectInput } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import { sanitizeProjectName, sanitizeDescription } from '../utils/sanitize';
+import { runCommand, findTerminalEmulator, getPlatformMode } from '../utils/run-command';
 
-const execFileAsync = promisify(execFile);
 const activeProcesses = new Map<string, ChildProcess>();
 
 /**
  * Resolves the full binary path for an agent command using a login shell,
  * so that PATH includes ~/.local/bin, nvm paths, etc.
+ * Uses runCommand for cross-platform support (finds tools inside WSL on Windows).
  */
 async function resolveAgentBinary(command: string): Promise<string> {
   try {
-    const { stdout } = await execFileAsync('bash', ['-l', '-c', `which ${command}`], { timeout: 5000 });
-    return stdout.trim();
+    return await runCommand(`which ${command}`, { timeout: 5000 });
   } catch {
     return command;
   }
@@ -120,12 +119,13 @@ export async function startAgent(
         { detached: true, stdio: 'ignore' },
       );
     } else {
-      // Linux: use x-terminal-emulator — use login shell (-l) for full PATH
+      // Native Linux: detect available terminal emulator
+      const terminal = await findTerminalEmulator();
       const escapedPath = shellEscape(projectPath);
       const launchCmd = `cd '${escapedPath}' && ${agentCmd}`;
 
       child = spawn(
-        'x-terminal-emulator',
+        terminal,
         ['-e', `bash -l -c '${shellEscape(launchCmd)}; exec bash'`],
         { detached: true, stdio: 'ignore' },
       );

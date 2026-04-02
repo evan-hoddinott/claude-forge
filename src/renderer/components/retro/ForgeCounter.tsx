@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useAPI, useQuery } from '../../hooks/useAPI';
 
 function CounterDigit({ digit }: { digit: string }) {
@@ -22,7 +21,6 @@ interface ForgeCounterProps {
 }
 
 export default function ForgeCounter({ className = '' }: ForgeCounterProps) {
-  const { theme } = useTheme();
   const api = useAPI();
   const { data: projects } = useQuery(() => api.projects.list());
   const [agentCount, setAgentCount] = useState(0);
@@ -43,8 +41,6 @@ export default function ForgeCounter({ className = '' }: ForgeCounterProps) {
       setAgentCount(count);
     }).catch(() => { /* agent status check failed — non-critical */ });
   }, [api]);
-
-  if (theme !== 'forge') return null;
 
   return (
     <div className={`forge-counter ${className}`}>

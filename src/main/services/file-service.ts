@@ -1,14 +1,12 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { execFile, spawn } from 'node:child_process';
-import { promisify } from 'node:util';
+import { spawn } from 'node:child_process';
 import { BrowserWindow } from 'electron';
 import ignore from 'ignore';
 import type { FSWatcher } from 'chokidar';
 import type { FileTreeNode, FileReadResult, GitFileStatus, SearchResult } from '../../shared/types';
 import { validatePath, sanitizeSearchQuery } from '../utils/sanitize';
-
-const execFileAsync = promisify(execFile);
+import { runExecFile, findTerminalEmulator } from '../utils/run-command';
 
 // --- Language detection from extension ---
 
@@ -233,7 +231,7 @@ export async function getGitStatus(projectPath: string): Promise<Map<string, Git
   const statusMap = new Map<string, GitFileStatus>();
 
   try {
-    const { stdout } = await execFileAsync('git', ['status', '--porcelain', '-u'], {
+    const { stdout } = await runExecFile('git', ['status', '--porcelain', '-u'], {
       cwd: projectPath,
       timeout: 10000,
     });
@@ -376,7 +374,7 @@ async function doSearchFileContents(projectPath: string, query: string): Promise
 
   try {
     // Use grep -F for fixed string matching (safe, no regex interpretation)
-    const { stdout } = await execFileAsync('grep', [
+    const { stdout } = await runExecFile('grep', [
       '-rn',
       '-F', // Fixed string mode — no regex interpretation of the query
       '--include=*.ts', '--include=*.tsx',
@@ -491,20 +489,21 @@ export function unwatchProject(projectPath: string): void {
 export async function openInVSCode(filePath: string, projectPath: string, lineNumber?: number): Promise<void> {
   await validatePath(filePath, projectPath);
   const target = lineNumber ? `${filePath}:${lineNumber}` : filePath;
-  await execFileAsync('code', ['--goto', target]);
+  await runExecFile('code', ['--goto', target]);
 }
 
 export async function openFolderInVSCode(folderPath: string): Promise<void> {
-  await execFileAsync('code', [folderPath]);
+  await runExecFile('code', [folderPath]);
 }
 
 export async function openInDefaultEditor(filePath: string, projectPath: string): Promise<void> {
   await validatePath(filePath, projectPath);
+  const { runCommand: run } = await import('../utils/run-command');
   const editors = ['code', 'cursor', 'windsurf', 'subl', 'atom'];
   for (const editor of editors) {
     try {
-      await execFileAsync('which', [editor]);
-      await execFileAsync(editor, [filePath]);
+      await run(`which ${editor}`, { timeout: 2000 });
+      await runExecFile(editor, [filePath]);
       return;
     } catch {
       continue;
@@ -519,14 +518,16 @@ export async function openInTerminal(filePath: string, projectPath: string): Pro
   await validatePath(filePath, projectPath);
   const dir = path.dirname(filePath);
   if (process.platform === 'darwin') {
-    await execFileAsync('open', ['-a', 'Terminal', dir]);
+    await runExecFile('open', ['-a', 'Terminal', dir]);
   } else if (process.platform === 'win32') {
-    // Pass dir as a separate argument, not interpolated into a string
-    await execFileAsync('cmd', ['/c', 'start', 'cmd', '/k', 'cd', '/d', dir]);
+    await runExecFile('cmd', ['/c', 'start', 'cmd', '/k', 'cd', '/d', dir]);
   } else {
-    spawn('x-terminal-emulator', [], {
+    // Native Linux — detect available terminal emulator
+    const terminal = await findTerminalEmulator();
+    spawn(terminal, [], {
       cwd: dir,
       detached: true,
+      stdio: 'ignore',
     }).unref();
   }
 }

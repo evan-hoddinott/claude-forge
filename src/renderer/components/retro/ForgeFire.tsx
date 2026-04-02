@@ -1,14 +1,9 @@
-import { useTheme } from '../../contexts/ThemeContext';
-
 interface ForgeFireProps {
   size?: number;
   className?: string;
 }
 
 export default function ForgeFire({ size = 24, className = '' }: ForgeFireProps) {
-  const { theme } = useTheme();
-  if (theme !== 'forge') return null;
-
   return (
     <div
       className={`forge-fire ${className}`}

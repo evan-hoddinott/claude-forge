@@ -1,6 +1,5 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
-import { execFile, spawn } from 'node:child_process';
-import { promisify } from 'node:util';
+import { spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
@@ -21,8 +20,14 @@ import {
   validatePath,
 } from './utils/sanitize';
 import { openUrl } from './utils/open-url';
-
-const execFileAsync = promisify(execFile);
+import {
+  runCommand,
+  runExecFile,
+  spawnCommand,
+  detectPackageManager,
+  getInstallCommand,
+  findTerminalEmulator,
+} from './utils/run-command';
 
 // --- Rate limiting ---
 let activeGitOps = new Set<string>();
@@ -35,23 +40,48 @@ function safeError(err: unknown): string {
   return 'An unexpected error occurred';
 }
 
+/**
+ * Get the effective home directory for config lookups.
+ * On native Windows with WSL, the auth config files live in the WSL home (e.g., /home/user).
+ * When the Electron app runs on Windows, we need to access WSL's home via \\wsl.localhost\...
+ */
+async function getEffectiveHome(): Promise<string> {
+  const { getPlatformMode } = await import('./utils/run-command');
+  const mode = await getPlatformMode();
+  if (mode === 'native-windows-wsl') {
+    // Get the WSL home path and convert to Windows UNC path
+    try {
+      const wslHome = await runCommand('echo $HOME', { timeout: 3000 });
+      const env = await environmentService.detectEnvironment();
+      return environmentService.wslToWindows(wslHome, env.wslDistro)
+        .replace(/\\/g, path.sep === '/' ? '/' : '\\');
+    } catch {
+      return os.homedir();
+    }
+  }
+  return os.homedir();
+}
+
 export function registerIpcHandlers(): void {
   // --- Setup Assistant ---
 
   ipcMain.handle('setup:check-dependencies', async (): Promise<SetupCheckResult> => {
     const deps: DependencyStatus[] = [];
 
-    // Check Node.js
+    // Detect package manager for distro-aware install commands
+    const pm = await detectPackageManager();
+
+    // Check Node.js — via runCommand so it finds tools inside WSL on Windows
     try {
-      const { stdout } = await execFileAsync('node', ['--version'], { timeout: 5000 });
+      const version = await runCommand('node --version', { timeout: 5000 });
       deps.push({
         name: 'Node.js',
         command: 'node',
         installed: true,
-        version: stdout.trim(),
+        version,
         description: 'JavaScript runtime required to run AI coding agents.',
         installUrl: 'https://nodejs.org/',
-        linuxInstallCommand: 'sudo apt install -y nodejs',
+        linuxInstallCommand: getInstallCommand('nodejs', pm),
       });
     } catch {
       deps.push({
@@ -61,21 +91,21 @@ export function registerIpcHandlers(): void {
         version: '',
         description: 'JavaScript runtime required to run AI coding agents.',
         installUrl: 'https://nodejs.org/',
-        linuxInstallCommand: 'sudo apt install -y nodejs',
+        linuxInstallCommand: getInstallCommand('nodejs', pm),
       });
     }
 
     // Check Git
     try {
-      const { stdout } = await execFileAsync('git', ['--version'], { timeout: 5000 });
+      const version = await runCommand('git --version', { timeout: 5000 });
       deps.push({
         name: 'Git',
         command: 'git',
         installed: true,
-        version: stdout.trim(),
+        version,
         description: 'Version control system for tracking code changes.',
         installUrl: 'https://git-scm.com/',
-        linuxInstallCommand: 'sudo apt install -y git',
+        linuxInstallCommand: getInstallCommand('git', pm),
       });
     } catch {
       deps.push({
@@ -85,14 +115,14 @@ export function registerIpcHandlers(): void {
         version: '',
         description: 'Version control system for tracking code changes.',
         installUrl: 'https://git-scm.com/',
-        linuxInstallCommand: 'sudo apt install -y git',
+        linuxInstallCommand: getInstallCommand('git', pm),
       });
     }
 
-    // Check GitHub CLI
+    // Check GitHub CLI (optional)
     try {
-      const { stdout } = await execFileAsync('gh', ['--version'], { timeout: 5000 });
-      const firstLine = stdout.trim().split('\n')[0];
+      const output = await runCommand('gh --version', { timeout: 5000 });
+      const firstLine = output.split('\n')[0];
       deps.push({
         name: 'GitHub CLI',
         command: 'gh',
@@ -100,7 +130,7 @@ export function registerIpcHandlers(): void {
         version: firstLine,
         description: 'Command-line tool for GitHub repo management and authentication.',
         installUrl: 'https://cli.github.com/',
-        linuxInstallCommand: 'sudo apt install -y gh',
+        linuxInstallCommand: getInstallCommand('gh', pm),
       });
     } catch {
       deps.push({
@@ -110,7 +140,7 @@ export function registerIpcHandlers(): void {
         version: '',
         description: 'Command-line tool for GitHub repo management and authentication.',
         installUrl: 'https://cli.github.com/',
-        linuxInstallCommand: 'sudo apt install -y gh',
+        linuxInstallCommand: getInstallCommand('gh', pm),
       });
     }
 
@@ -210,7 +240,7 @@ export function registerIpcHandlers(): void {
     // Check if agent CLI is installed before attempting launch
     const config = AGENTS[agentType];
     try {
-      await execFileAsync(config.command, ['--version'], { timeout: 5000 });
+      await runCommand(`${config.command} --version`, { timeout: 5000 });
     } catch {
       throw new Error(
         `${config.displayName} is not installed. Please install it from the sidebar before launching.`,
@@ -251,9 +281,9 @@ export function registerIpcHandlers(): void {
       authenticated: false,
     };
 
-    // Check Node.js
+    // Check Node.js — via runCommand for cross-platform support
     try {
-      await execFileAsync('node', ['--version'], { timeout: 5000 });
+      await runCommand('node --version', { timeout: 5000 });
       result.nodeInstalled = true;
     } catch {
       return result;
@@ -261,8 +291,7 @@ export function registerIpcHandlers(): void {
 
     // Check if CLI is installed + version
     try {
-      const { stdout, stderr } = await execFileAsync(config.command, ['--version'], { timeout: 10000 });
-      const versionOutput = (stdout || stderr).trim();
+      const versionOutput = await runCommand(`${config.command} --version`, { timeout: 10000 });
       result.installed = true;
       result.version = versionOutput;
     } catch {
@@ -271,8 +300,8 @@ export function registerIpcHandlers(): void {
 
     // Check latest version from npm
     try {
-      const { stdout } = await execFileAsync('npm', ['view', config.npmPackage, 'version'], { timeout: 10000 });
-      result.latestVersion = stdout.trim();
+      const latestVer = await runCommand(`npm view ${config.npmPackage} version`, { timeout: 10000 });
+      result.latestVersion = latestVer;
       if (result.version && result.latestVersion) {
         const installedMatch = result.version.match(/(\d+\.\d+\.\d+)/);
         const installed = installedMatch ? installedMatch[1] : '';
@@ -284,9 +313,10 @@ export function registerIpcHandlers(): void {
       // npm check failed, skip
     }
 
-    // Check authentication
+    // Check authentication — check config dirs in the appropriate home
     try {
-      const configDir = path.join(os.homedir(), `.${config.command}`);
+      const homeDir = await getEffectiveHome();
+      const configDir = path.join(homeDir, `.${config.command}`);
       await fs.access(configDir);
       const files = await fs.readdir(configDir);
       result.authenticated = files.some(f =>
@@ -298,7 +328,8 @@ export function registerIpcHandlers(): void {
 
     if (!result.authenticated) {
       try {
-        const credPath = path.join(os.homedir(), `.${config.command}.json`);
+        const homeDir = await getEffectiveHome();
+        const credPath = path.join(homeDir, `.${config.command}.json`);
         await fs.access(credPath);
         result.authenticated = true;
       } catch {
@@ -313,14 +344,16 @@ export function registerIpcHandlers(): void {
     const types: AgentType[] = ['claude', 'gemini', 'codex'];
     const results: Record<string, AgentStatus> = {};
 
-    // Check node once
+    // Check node once — via runCommand for cross-platform support
     let nodeInstalled = false;
     try {
-      await execFileAsync('node', ['--version'], { timeout: 5000 });
+      await runCommand('node --version', { timeout: 5000 });
       nodeInstalled = true;
     } catch {
       // no node
     }
+
+    const homeDir = await getEffectiveHome();
 
     for (const agentType of types) {
       const config = AGENTS[agentType];
@@ -339,9 +372,9 @@ export function registerIpcHandlers(): void {
       }
 
       try {
-        const { stdout, stderr } = await execFileAsync(config.command, ['--version'], { timeout: 10000 });
+        const versionOutput = await runCommand(`${config.command} --version`, { timeout: 10000 });
         status.installed = true;
-        status.version = (stdout || stderr).trim();
+        status.version = versionOutput;
       } catch {
         results[agentType] = status;
         continue;
@@ -349,8 +382,8 @@ export function registerIpcHandlers(): void {
 
       // npm version check (best effort)
       try {
-        const { stdout } = await execFileAsync('npm', ['view', config.npmPackage, 'version'], { timeout: 10000 });
-        status.latestVersion = stdout.trim();
+        const latestVer = await runCommand(`npm view ${config.npmPackage} version`, { timeout: 10000 });
+        status.latestVersion = latestVer;
         if (status.version && status.latestVersion) {
           const m = status.version.match(/(\d+\.\d+\.\d+)/);
           if (m && m[1] !== status.latestVersion) {
@@ -361,9 +394,9 @@ export function registerIpcHandlers(): void {
         // skip
       }
 
-      // Auth check
+      // Auth check — use effective home (WSL home on Windows+WSL)
       try {
-        const configDir = path.join(os.homedir(), `.${config.command}`);
+        const configDir = path.join(homeDir, `.${config.command}`);
         await fs.access(configDir);
         const files = await fs.readdir(configDir);
         status.authenticated = files.some(f =>
@@ -374,7 +407,7 @@ export function registerIpcHandlers(): void {
       }
       if (!status.authenticated) {
         try {
-          await fs.access(path.join(os.homedir(), `.${config.command}.json`));
+          await fs.access(path.join(homeDir, `.${config.command}.json`));
           status.authenticated = true;
         } catch {
           // not authenticated
@@ -397,19 +430,19 @@ export function registerIpcHandlers(): void {
 
     try {
       return await new Promise<{ success: boolean; error?: string }>((resolve) => {
-        // Use execFile-style args without shell: true
-        const child = spawn('npm', ['install', '-g', config.npmPackage], {
+        // Route through WSL on native Windows so npm installs inside WSL
+        const child = spawnCommand('npm', ['install', '-g', config.npmPackage], {
           env: { ...process.env },
         });
 
         let errorOutput = '';
 
-        child.stdout.on('data', (data: Buffer) => {
+        child.stdout?.on('data', (data: Buffer) => {
           const line = data.toString();
           win?.webContents.send('agent:install-progress', { line });
         });
 
-        child.stderr.on('data', (data: Buffer) => {
+        child.stderr?.on('data', (data: Buffer) => {
           const line = data.toString();
           errorOutput += line;
           win?.webContents.send('agent:install-progress', { line });
@@ -445,17 +478,18 @@ export function registerIpcHandlers(): void {
 
     try {
       return await new Promise<{ success: boolean; error?: string }>((resolve) => {
-        const child = spawn('npm', ['install', '-g', `${config.npmPackage}@latest`], {
+        // Route through WSL on native Windows
+        const child = spawnCommand('npm', ['install', '-g', `${config.npmPackage}@latest`], {
           env: { ...process.env },
         });
 
         let errorOutput = '';
 
-        child.stdout.on('data', (data: Buffer) => {
+        child.stdout?.on('data', (data: Buffer) => {
           win?.webContents.send('agent:install-progress', { line: data.toString() });
         });
 
-        child.stderr.on('data', (data: Buffer) => {
+        child.stderr?.on('data', (data: Buffer) => {
           const line = data.toString();
           errorOutput += line;
           win?.webContents.send('agent:install-progress', { line });
@@ -486,7 +520,8 @@ export function registerIpcHandlers(): void {
 
     const config = AGENTS[agentType];
     return new Promise<{ success: boolean }>((resolve) => {
-      const child = spawn(config.loginCommand, [], {
+      // Route through WSL on native Windows
+      const child = spawnCommand(config.loginCommand, [], {
         detached: true,
         stdio: 'ignore',
       });
@@ -519,13 +554,16 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('system:open-in-terminal', async (_, dirPath: unknown) => {
     const validPath = validateString(dirPath, 'dirPath');
     if (process.platform === 'darwin') {
-      await execFileAsync('open', ['-a', 'Terminal', validPath]);
+      await runExecFile('open', ['-a', 'Terminal', validPath]);
     } else if (process.platform === 'win32') {
-      await execFileAsync('cmd', ['/c', 'start', 'cmd', '/k', 'cd', '/d', validPath]);
+      await runExecFile('cmd', ['/c', 'start', 'cmd', '/k', 'cd', '/d', validPath]);
     } else {
-      spawn('x-terminal-emulator', [], {
+      // Native Linux — detect available terminal emulator
+      const terminal = await findTerminalEmulator();
+      spawn(terminal, [], {
         cwd: validPath,
         detached: true,
+        stdio: 'ignore',
       }).unref();
     }
   });
@@ -533,7 +571,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('system:open-in-editor', async (_, dirPath: unknown) => {
     const validPath = validateString(dirPath, 'dirPath');
     try {
-      await execFileAsync('code', [validPath]);
+      await runExecFile('code', [validPath]);
     } catch {
       openUrl(`file://${validPath}`);
     }
@@ -571,11 +609,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('system:check-gh-auth', async () => {
     try {
-      const { stdout, stderr } = await execFileAsync('gh', [
-        'auth',
-        'status',
-      ]);
-      const output = stdout + stderr;
+      const output = await runCommand('gh auth status 2>&1', { timeout: 10000 });
       const match = output.match(/account (\S+)/);
       return { authenticated: true, username: match?.[1] ?? '' };
     } catch {
@@ -588,17 +622,14 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('github:check-auth', async () => {
     let ghInstalled = false;
     try {
-      await execFileAsync('gh', ['--version'], { timeout: 5000 });
+      await runCommand('gh --version', { timeout: 5000 });
       ghInstalled = true;
     } catch {
       return { authenticated: false, username: '', ghInstalled: false };
     }
 
     try {
-      const { stdout, stderr } = await execFileAsync('gh', [
-        'auth', 'status', '--hostname', 'github.com',
-      ], { timeout: 10000 });
-      const output = stdout + stderr;
+      const output = await runCommand('gh auth status --hostname github.com 2>&1', { timeout: 10000 });
       const match = output.match(/account (\S+)/);
       return { authenticated: true, username: match?.[1] ?? '', ghInstalled };
     } catch {
@@ -608,7 +639,8 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('github:login-start', async () => {
     return new Promise<{ code: string } | { error: string }>((resolve) => {
-      const child = spawn('gh', [
+      // Route gh auth through WSL on native Windows
+      const child = spawnCommand('gh', [
         'auth', 'login',
         '--web',
         '--hostname', 'github.com',
@@ -623,13 +655,13 @@ export function registerIpcHandlers(): void {
         const codeMatch = output.match(/one-time code:\s*([A-Z0-9]{4}-[A-Z0-9]{4})/i);
         if (codeMatch && !resolved) {
           resolved = true;
-          child.stdin.write('\n');
+          child.stdin?.write('\n');
           resolve({ code: codeMatch[1] });
         }
       }
 
-      child.stdout.on('data', handleData);
-      child.stderr.on('data', handleData);
+      child.stdout?.on('data', handleData);
+      child.stderr?.on('data', handleData);
 
       child.on('error', (err) => {
         if (!resolved) {
@@ -650,9 +682,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('github:logout', async () => {
     try {
-      await execFileAsync('gh', [
-        'auth', 'logout', '--hostname', 'github.com',
-      ], { timeout: 10000, env: { ...process.env, GH_PROMPT_DISABLED: '1' } });
+      await runCommand('GH_PROMPT_DISABLED=1 gh auth logout --hostname github.com', { timeout: 10000 });
     } catch {
       // may fail if not logged in
     }
@@ -660,10 +690,8 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('github:repo-count', async () => {
     try {
-      const { stdout: countOut } = await execFileAsync('gh', [
-        'api', 'user', '--jq', '.public_repos + .total_private_repos',
-      ], { timeout: 10000 });
-      const count = parseInt(countOut.trim(), 10);
+      const countOut = await runCommand("gh api user --jq '.public_repos + .total_private_repos'", { timeout: 10000 });
+      const count = parseInt(countOut, 10);
       return isNaN(count) ? 0 : count;
     } catch {
       return 0;

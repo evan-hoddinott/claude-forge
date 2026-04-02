@@ -1,22 +1,21 @@
 @import 'tailwindcss';
 @import './renderer/styles/themes/forge.css';
-@import './renderer/styles/themes/clean.css';
 
 @theme {
-  --color-bg: #0a0a0f;
-  --color-surface: #13131a;
-  --color-surface-hover: #1c1c27;
-  --color-accent: #38bdf8;
-  --color-accent-hover: #0ea5e9;
-  --color-accent-glow: #38bdf833;
-  --color-text-primary: #ededef;
-  --color-text-secondary: #8e8ea0;
-  --color-text-muted: #4e4e62;
-  --color-status-created: #3b82f6;
-  --color-status-in-progress: #f59e0b;
-  --color-status-ready: #10b981;
-  --color-status-error: #f43f5e;
-  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --color-bg: var(--forge-bg-deep, #1a1e14);
+  --color-surface: var(--forge-bg-mid, #232a1c);
+  --color-surface-hover: var(--forge-bg-light, #2d3625);
+  --color-accent: var(--forge-accent-green, #5a7a3a);
+  --color-accent-hover: var(--forge-accent-green-bright, #7a9f54);
+  --color-accent-glow: rgba(90, 122, 58, 0.2);
+  --color-text-primary: var(--forge-text-primary, #d4cba8);
+  --color-text-secondary: var(--forge-text-secondary, #9c9478);
+  --color-text-muted: var(--forge-text-muted, #6b6450);
+  --color-status-created: #5a7a3a;
+  --color-status-in-progress: #b8860b;
+  --color-status-ready: #5a7a3a;
+  --color-status-error: #8b4513;
+  --font-sans: 'IBM Plex Mono', 'Space Mono', monospace;
 }
 
 * {

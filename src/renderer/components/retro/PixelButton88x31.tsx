@@ -1,5 +1,3 @@
-import { useTheme } from '../../contexts/ThemeContext';
-
 interface PixelButton88x31Props {
   label: string;
   color?: 'green' | 'brown' | 'amber';
@@ -15,9 +13,6 @@ export default function PixelButton88x31({
   onClick,
   className = '',
 }: PixelButton88x31Props) {
-  const { theme } = useTheme();
-  if (theme !== 'forge') return null;
-
   const dotColor = dot === 'connected'
     ? 'var(--forge-accent-green-bright)'
     : dot === 'warning'

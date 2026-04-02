@@ -1,6 +1,7 @@
-appId: com.claudeforge.app
+appId: com.evanhoddinott.claudeforge
 productName: Claude Forge
-copyright: Copyright © 2026 evan-hoddinott
+copyright: Copyright © 2026 Evan Hoddinott
+artifactName: Claude-Forge-${version}-${os}-${arch}.${ext}
 
 directories:
   output: release
@@ -13,6 +14,10 @@ extraMetadata:
 files:
   - dist/**/*
   - "!dist/**/*.map"
+  - "!node_modules/**/test/**"
+  - "!node_modules/**/docs/**"
+  - "!node_modules/**/*.md"
+  - "!src/**/*"
 
 extraResources:
   - from: assets/icons/icon.png
@@ -47,28 +52,53 @@ linux:
   icon: assets/icons
   category: Development
   target:
-    - target: deb
+    - target: AppImage
       arch:
         - x64
-    - target: AppImage
+    - target: deb
       arch:
         - x64
   desktop:
     entry:
       Name: Claude Forge
       Comment: AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex
-      Categories: Development;Utility;
+      Categories: Development;IDE;
 
 deb:
   depends:
     - libnotify4
     - libxtst6
     - libnss3
+    - git
+  packageCategory: devel
   priority: optional
   artifactName: claude-forge_${version}_${arch}.${ext}
 
 appImage:
   artifactName: Claude-Forge-${version}.${ext}
+
+# ── macOS ────────────────────────────────────────────────────
+# Note: .dmg can only be built on macOS. From Linux/WSL, build .zip instead.
+mac:
+  icon: assets/icons/icon.icns
+  category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+
+dmg:
+  contents:
+    - x: 130
+      "y": 220
+    - x: 410
+      "y": 220
+      type: link
+      path: /Applications
+  artifactName: Claude-Forge-${version}-mac-${arch}.dmg
 
 # ── Auto-update ─────────────────────────────────────────────
 publish:

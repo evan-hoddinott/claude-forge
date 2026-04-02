@@ -6,7 +6,6 @@ import { AGENTS } from '../../shared/types';
 import { useAPI, useQuery } from '../hooks/useAPI';
 import { setMode as setLanguageMode } from '../utils/language';
 import { useVisibleInterval, useDeferredInit } from '../hooks/usePerformance';
-import { useTheme } from '../contexts/ThemeContext';
 import ForgeFire from './retro/ForgeFire';
 import ForgeCounter from './retro/ForgeCounter';
 import AsciiDivider from './retro/AsciiDivider';
@@ -772,39 +771,6 @@ function AgentsSection({ collapsed, expandedAgent, onToggleAgent }: { collapsed:
   );
 }
 
-// ---------------------------------------------------------------------------
-// Theme toggle
-// ---------------------------------------------------------------------------
-
-function ThemeToggle({ collapsed }: { collapsed: boolean }) {
-  const { theme, toggleTheme } = useTheme();
-  const isForge = theme === 'forge';
-
-  return (
-    <div className="px-3 pb-1 shrink-0">
-      <button
-        onClick={toggleTheme}
-        className={isForge ? 'forge-theme-toggle' : 'clean-theme-toggle'}
-        title={isForge ? 'Switch to Clean theme' : 'Switch to Forge theme'}
-        style={collapsed ? { margin: '0 auto' } : undefined}
-      >
-        {isForge ? (
-          /* Tree icon for forge theme */
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M8 1L4 6h2L3 10h3v4h4v-4h3L10 6h2L8 1z" fill="var(--forge-accent-green, #5a7a3a)" />
-            <rect x="7" y="10" width="2" height="4" fill="var(--forge-accent-brown, #6b4e2e)" />
-          </svg>
-        ) : (
-          /* Clean minimal icon */
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="8" cy="8" r="3" />
-            <path d="M8 2V4M8 12V14M2 8H4M12 8H14M3.8 3.8L5.2 5.2M10.8 10.8L12.2 12.2M3.8 12.2L5.2 10.8M10.8 5.2L12.2 3.8" strokeLinecap="round" />
-          </svg>
-        )}
-      </button>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Mode toggle (Simple / Developer)
@@ -859,8 +825,6 @@ export default function Sidebar({
   onToggleCollapse,
   onNewProject,
 }: SidebarProps) {
-  const { theme } = useTheme();
-
   // Accordion state: only one section expanded at a time
   const [expandedSection, setExpandedSection] = useState<SidebarSection>(() => {
     try {
@@ -885,25 +849,7 @@ export default function Sidebar({
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-14 shrink-0">
-        {theme === 'forge' ? (
-          <ForgeFire size={collapsed ? 28 : 24} className="shrink-0" />
-        ) : (
-          <div className="forge-logo-icon w-8 h-8 rounded-lg bg-accent/12 flex items-center justify-center shrink-0">
-            <svg
-              className="w-4 h-4 text-accent"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-            >
-              <path d="M3 10h10v1.5c0 .83-.67 1.5-1.5 1.5h-7A1.5 1.5 0 013 11.5V10z" />
-              <path d="M2 8.5a.5.5 0 01.5-.5h11a.5.5 0 01.5.5V10H2V8.5z" />
-              <path
-                d="M4.5 5h7a1.5 1.5 0 011.5 1.5V8H3V6.5A1.5 1.5 0 014.5 5z"
-                opacity="0.6"
-              />
-              <rect x="6" y="13" width="4" height="1.5" rx="0.5" />
-            </svg>
-          </div>
-        )}
+        <ForgeFire size={collapsed ? 28 : 24} className="shrink-0" />
         {!collapsed && (
           <span className="forge-logo-text font-semibold text-sm tracking-tight whitespace-nowrap text-text-primary">
             Claude Forge
@@ -982,9 +928,6 @@ export default function Sidebar({
 
       {/* Forge Stats Counter */}
       {!collapsed && <ForgeCounter className="mx-3 mb-2" />}
-
-      {/* Theme toggle */}
-      <ThemeToggle collapsed={collapsed} />
 
       {/* Mode toggle */}
       <ModeToggle collapsed={collapsed} />

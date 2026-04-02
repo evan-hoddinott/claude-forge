@@ -1,5 +1,3 @@
-import { useTheme } from '../../contexts/ThemeContext';
-
 type DividerVariant = 'single' | 'double' | 'vine' | 'forge' | 'leaf';
 
 const DIVIDERS: Record<DividerVariant, string> = {
@@ -17,11 +15,7 @@ interface AsciiDividerProps {
 }
 
 export default function AsciiDivider({ variant = 'forge', label, className = '' }: AsciiDividerProps) {
-  const { theme } = useTheme();
-  if (theme !== 'forge') return <div className={`border-t border-white/6 mx-3 ${className}`} />;
-
   if (label) {
-    // Label centered in divider, e.g. ◆═══ Label ═══◆
     const pad = '\u2550'.repeat(Math.max(2, Math.floor((28 - label.length) / 2)));
     return (
       <div className={`forge-ascii-divider ${className}`}>

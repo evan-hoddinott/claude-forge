@@ -3,7 +3,6 @@ import { useAPI, useMutation } from '../../hooks/useAPI';
 import { useToast } from '../Toast';
 import type { FileTreeNode, FileReadResult, UserPreferences, Project } from '../../../shared/types';
 import { AGENTS } from '../../../shared/types';
-import { useTheme } from '../../contexts/ThemeContext';
 
 // Configure Monaco workers for Electron/Vite
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -303,7 +302,6 @@ function MonacoWithFallback({
   minimap: boolean;
   wordWrap: string;
 }) {
-  const { theme } = useTheme();
   const [timedOut, setTimedOut] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const mountedRef = useRef(false);
@@ -341,7 +339,7 @@ function MonacoWithFallback({
       fallback={
         <div className="h-full flex flex-col">
           {/* Code editor skeleton */}
-          <div className="flex-1 p-4 space-y-2" style={{ backgroundColor: theme === 'forge' ? '#1e2418' : '#0d0d14' }}>
+          <div className="flex-1 p-4 space-y-2" style={{ backgroundColor: '#1e2418' }}>
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-6 h-3 rounded bg-white/[0.04]" />
@@ -361,7 +359,7 @@ function MonacoWithFallback({
         language={language}
         value={value}
         onChange={onChange}
-        theme={theme === 'forge' ? 'claude-forge-retro' : 'claude-forge-dark'}
+        theme="claude-forge-retro"
         onMount={() => { mountedRef.current = true; }}
         options={{
           readOnly: !editMode,
@@ -386,27 +384,6 @@ function MonacoWithFallback({
           },
         }}
         beforeMount={(monaco) => {
-          monaco.editor.defineTheme('claude-forge-dark', {
-            base: 'vs-dark',
-            inherit: true,
-            rules: [],
-            colors: {
-              'editor.background': '#0d0d14',
-              'editor.foreground': '#ededef',
-              'editor.lineHighlightBackground': '#ffffff06',
-              'editor.selectionBackground': '#38bdf830',
-              'editor.inactiveSelectionBackground': '#38bdf815',
-              'editorLineNumber.foreground': '#4e4e62',
-              'editorLineNumber.activeForeground': '#8e8ea0',
-              'editorCursor.foreground': '#38bdf8',
-              'editorIndentGuide.background': '#ffffff08',
-              'editorIndentGuide.activeBackground': '#ffffff15',
-              'editor.selectionHighlightBackground': '#38bdf815',
-              'editorWidget.background': '#13131a',
-              'editorWidget.border': '#ffffff10',
-              'minimap.background': '#0a0a0f',
-            },
-          });
           monaco.editor.defineTheme('claude-forge-retro', {
             base: 'vs-dark',
             inherit: true,

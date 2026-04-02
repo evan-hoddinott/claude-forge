@@ -1,14 +1,61 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react';
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useCachedQuery } from '../hooks/usePerformance';
 import { useToast } from '../components/Toast';
-import { useTheme, type ThemeName } from '../contexts/ThemeContext';
 import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import { rawLabel } from '../utils/language';
 import { useUpdateStatus } from '../components/UpdateNotification';
 
+class SettingsErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Settings render error:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="h-full overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-8 py-8 space-y-4">
+            <h1 className="text-xl font-bold text-status-error">Settings failed to load</h1>
+            <p className="text-sm text-text-secondary">
+              {this.state.error.message}
+            </p>
+            <pre className="text-xs text-text-muted bg-white/[0.03] rounded-lg p-4 overflow-auto max-h-60">
+              {this.state.error.stack}
+            </pre>
+            <button
+              onClick={() => this.setState({ error: null })}
+              className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-text-secondary transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function Settings() {
+  return (
+    <SettingsErrorBoundary>
+      <SettingsInner />
+    </SettingsErrorBoundary>
+  );
+}
+
+function SettingsInner() {
   const api = useAPI();
   const {
     data: prefs,
@@ -392,47 +439,33 @@ function ThemeSection({
   api: API;
   refetch: () => void;
 }) {
-  const { theme, setTheme } = useTheme();
-
   return (
     <>
       <div>
         <FieldLabel>Theme</FieldLabel>
-        <SegmentedControl
-          value={theme}
-          options={[
-            { value: 'forge' as ThemeName, label: 'Forge (retro)' },
-            { value: 'clean' as ThemeName, label: 'Clean (modern)' },
-          ]}
-          onChange={(v) => setTheme(v)}
-        />
         <FieldHint>
-          {theme === 'forge'
-            ? 'Retro neocities-inspired theme with pixel fonts, earthy greens, and warm amber accents.'
-            : 'Clean, modern dark theme inspired by Linear and Raycast.'}
+          Retro neocities-inspired theme with pixel fonts, earthy greens, and warm amber accents.
         </FieldHint>
       </div>
 
-      {theme === 'forge' && (
-        <div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={prefs.showSplash !== false}
-              onChange={(e) =>
-                updatePref(api, refetch, { showSplash: e.target.checked })
-              }
-              className="rounded border-white/20 bg-white/5 text-accent focus:ring-accent/25"
-            />
-            <span className="text-sm text-text-secondary">
-              Show splash screen on launch
-            </span>
-          </label>
-          <FieldHint>
-            Shows a brief retro boot-up animation when the app starts.
-          </FieldHint>
-        </div>
-      )}
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={prefs.showSplash !== false}
+            onChange={(e) =>
+              updatePref(api, refetch, { showSplash: e.target.checked })
+            }
+            className="rounded border-white/20 bg-white/5 text-accent focus:ring-accent/25"
+          />
+          <span className="text-sm text-text-secondary">
+            Show splash screen on launch
+          </span>
+        </label>
+        <FieldHint>
+          Shows a brief retro boot-up animation when the app starts.
+        </FieldHint>
+      </div>
     </>
   );
 }
