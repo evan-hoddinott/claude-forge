@@ -1,4 +1,8 @@
-export default function TitleBar() {
+interface TitleBarProps {
+  onToggleChat?: () => void;
+}
+
+export default function TitleBar({ onToggleChat }: TitleBarProps) {
   const api = window.electronAPI;
 
   return (
@@ -6,6 +10,17 @@ export default function TitleBar() {
       <div className="flex-1" />
 
       <div className="titlebar-no-drag flex items-center h-full">
+        {onToggleChat && (
+          <button
+            onClick={onToggleChat}
+            title="AI Chat (Ctrl+Shift+C)"
+            className="w-10 h-full flex items-center justify-center text-text-muted hover:bg-white/[0.06] hover:text-text-secondary transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 2h12v9H9l-3 3v-3H2z" />
+            </svg>
+          </button>
+        )}
         <button
           onClick={() => api.window.minimize()}
           className="w-12 h-full flex items-center justify-center text-text-muted hover:bg-white/[0.06] hover:text-text-secondary transition-colors"

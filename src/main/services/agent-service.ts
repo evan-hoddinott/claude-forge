@@ -18,7 +18,14 @@ async function resolveAgentBinary(command: string): Promise<string> {
   try {
     return await runCommand(`which ${command}`, { timeout: 5000 });
   } catch {
-    return command;
+    // Try ~/.npm-global/bin as fallback for Linux installs without root
+    try {
+      const npmGlobalBin = `${process.env.HOME ?? '~'}/.npm-global/bin/${command}`;
+      await runCommand(`test -x "${npmGlobalBin}"`, { timeout: 2000 });
+      return npmGlobalBin;
+    } catch {
+      return command;
+    }
   }
 }
 
@@ -79,8 +86,8 @@ export async function startAgent(
   fsSync.mkdirSync(projectPath, { recursive: true });
 
   const config = AGENTS[agentType];
-  // Resolve full binary path so it works even without full PATH in the terminal
-  const agentCmd = await resolveAgentBinary(config.command);
+  // Use launchCommand (multi-word, e.g. "gh copilot suggest") or resolve binary
+  const agentCmd = config.launchCommand ?? await resolveAgentBinary(config.command);
 
   let child: ChildProcess;
 

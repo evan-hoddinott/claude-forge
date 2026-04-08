@@ -1,6 +1,6 @@
 export type ProjectStatus = 'created' | 'in-progress' | 'ready' | 'error';
 
-export type AgentType = 'claude' | 'gemini' | 'codex';
+export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot';
 
 export interface AgentConfig {
   type: AgentType;
@@ -15,6 +15,8 @@ export interface AgentConfig {
   docsUrl: string;
   iconName: string;
   color: string;
+  installMethod?: 'npm' | 'gh-extension';
+  launchCommand?: string;
 }
 
 export const AGENTS: Record<AgentType, AgentConfig> = {
@@ -59,6 +61,22 @@ export const AGENTS: Record<AgentType, AgentConfig> = {
     docsUrl: 'https://github.com/openai/codex',
     iconName: 'openai',
     color: '#10A37F',
+  },
+  copilot: {
+    type: 'copilot',
+    displayName: 'GitHub Copilot',
+    npmPackage: '',
+    command: 'gh',
+    contextFileName: '.github/copilot-instructions.md',
+    authCheckCommand: 'gh auth status',
+    loginCommand: 'gh',
+    versionCommand: 'gh copilot --version',
+    subscriptionUrl: 'https://github.com/features/copilot',
+    docsUrl: 'https://docs.github.com/en/copilot',
+    iconName: 'copilot',
+    color: '#6e40c9',
+    installMethod: 'gh-extension',
+    launchCommand: 'gh copilot suggest',
   },
 };
 
@@ -125,6 +143,10 @@ export interface UserPreferences {
   reduceAnimations: boolean;
   highContrast: boolean;
   showSplash: boolean;
+  chatPanelOpen: boolean;
+  chatPanelWidth: number;
+  chatLastModel: string;
+  chatLastProvider: string;
 }
 
 export interface DependencyStatus {
@@ -202,6 +224,33 @@ export interface AgentStatus {
   latestVersion: string;
   updateAvailable: boolean;
   authenticated: boolean;
+}
+
+// --- Chat Types ---
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  model?: string;
+}
+
+export interface ChatModelInfo {
+  id: string;
+  displayName: string;
+  providerId: string;
+  isFree: boolean;
+  isAvailable: boolean;
+}
+
+export interface ChatProviderInfo {
+  id: string;
+  name: string;
+  isFree: boolean;
+  hasKey: boolean;
+  isAvailable: boolean;
+  models: ChatModelInfo[];
 }
 
 export interface UpdateStatus {
@@ -293,6 +342,16 @@ export interface ElectronAPI {
     minimize: () => Promise<void>;
     maximize: () => Promise<void>;
     close: () => Promise<void>;
+  };
+  chat: {
+    send: (projectId: string | null, model: string, providerId: string, messages: ChatMessage[]) => Promise<void>;
+    getProviders: () => Promise<ChatProviderInfo[]>;
+    getHistory: (projectId: string | null) => Promise<ChatMessage[]>;
+    clearHistory: (projectId: string | null) => Promise<void>;
+    setApiKey: (providerId: string, key: string) => Promise<void>;
+    testConnection: (providerId: string) => Promise<{ success: boolean; error?: string }>;
+    onToken: (callback: (data: { token: string; done: boolean; messageId: string }) => void) => void;
+    offToken: () => void;
   };
 }
 

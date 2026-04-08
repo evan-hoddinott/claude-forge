@@ -129,6 +129,7 @@ function SettingsInner() {
           refetch={refetch}
           agentStatuses={agentStatuses}
         />
+        <AiProvidersSection />
         <FileExplorerSection prefs={prefs} api={api} refetch={refetch} />
         <AccessibilitySection prefs={prefs} api={api} refetch={refetch} />
         <UpdatesSection prefs={prefs} />
@@ -1040,6 +1041,117 @@ function SetupSection() {
 }
 
 // --- Data ---
+
+function AiProvidersSection() {
+  const api = useAPI();
+  const { toast } = useToast();
+  const [providers, setProviders] = useState<import('../../shared/types').ChatProviderInfo[]>([]);
+  const [keys, setKeys] = useState<Record<string, string>>({ openai: '', anthropic: '', google: '' });
+  const [showKey, setShowKey] = useState<Record<string, boolean>>({});
+  const [testing, setTesting] = useState<Record<string, boolean>>({});
+  const [testResult, setTestResult] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    api.chat.getProviders().then(setProviders).catch(console.error);
+  }, [api]);
+
+  async function handleSaveKey(providerId: string) {
+    await api.chat.setApiKey(providerId, keys[providerId] ?? '');
+    toast(`${providerId} API key saved`);
+    const updated = await api.chat.getProviders();
+    setProviders(updated);
+  }
+
+  async function handleTestConnection(providerId: string) {
+    setTesting(t => ({ ...t, [providerId]: true }));
+    setTestResult(r => ({ ...r, [providerId]: '' }));
+    try {
+      const result = await api.chat.testConnection(providerId);
+      setTestResult(r => ({
+        ...r,
+        [providerId]: result.success ? '✓ Connected' : `✗ ${result.error ?? 'Failed'}`,
+      }));
+    } catch (err) {
+      setTestResult(r => ({ ...r, [providerId]: '✗ Error' }));
+    } finally {
+      setTesting(t => ({ ...t, [providerId]: false }));
+    }
+  }
+
+  const providerDocs: Record<string, string> = {
+    openai: 'platform.openai.com',
+    anthropic: 'console.anthropic.com',
+    google: 'aistudio.google.com',
+  };
+
+  return (
+    <SectionCard title="AI Chat Providers">
+      <div className="space-y-5">
+        {providers.map(provider => (
+          <div key={provider.id} className="border border-white/[0.06] p-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold text-text-primary">{provider.name}</h3>
+              <span className={`text-[10px] font-mono ${provider.isAvailable ? 'text-status-ready' : 'text-text-muted'}`}>
+                {provider.isAvailable ? '✓ CONNECTED' : provider.isFree ? 'NOT CONNECTED' : 'NOT CONFIGURED'}
+              </span>
+            </div>
+
+            {provider.isFree ? (
+              <p className="text-xs text-text-muted">
+                {provider.isAvailable
+                  ? `Connected via GitHub — ${provider.models.length} models available`
+                  : 'Connect GitHub in the sidebar to enable free AI models.'}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[10px] text-text-muted">
+                  Get an API key at {providerDocs[provider.id]}
+                </p>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showKey[provider.id] ? 'text' : 'password'}
+                      value={keys[provider.id] ?? ''}
+                      onChange={e => setKeys(k => ({ ...k, [provider.id]: e.target.value }))}
+                      placeholder="sk-..."
+                      className={`${inputClass} pr-16 font-mono text-xs`}
+                    />
+                    <button
+                      onClick={() => setShowKey(s => ({ ...s, [provider.id]: !s[provider.id] }))}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-muted hover:text-text-secondary"
+                    >
+                      {showKey[provider.id] ? 'HIDE' : 'SHOW'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => handleSaveKey(provider.id)}
+                    className="px-3 py-2 text-xs bg-white/5 hover:bg-white/10 border border-white/[0.08] text-text-secondary transition-colors"
+                  >
+                    Save
+                  </button>
+                  {provider.hasKey && (
+                    <button
+                      onClick={() => handleTestConnection(provider.id)}
+                      disabled={testing[provider.id]}
+                      className="px-3 py-2 text-xs bg-white/5 hover:bg-white/10 border border-white/[0.08] text-text-secondary transition-colors disabled:opacity-50"
+                    >
+                      {testing[provider.id] ? 'Testing…' : 'Test'}
+                    </button>
+                  )}
+                </div>
+                {testResult[provider.id] && (
+                  <p className={`text-[10px] font-mono ${testResult[provider.id].startsWith('✓') ? 'text-status-ready' : 'text-status-error'}`}>
+                    {testResult[provider.id]}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
 
 function DataSection({
   api,

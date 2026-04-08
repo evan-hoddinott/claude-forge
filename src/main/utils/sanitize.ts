@@ -141,8 +141,8 @@ export function sanitizeErrorMessage(message: string): string {
 /**
  * Validates that a value is one of the allowed AgentType values.
  */
-export function isValidAgentType(value: unknown): value is 'claude' | 'gemini' | 'codex' {
-  return value === 'claude' || value === 'gemini' || value === 'codex';
+export function isValidAgentType(value: unknown): value is 'claude' | 'gemini' | 'codex' | 'copilot' {
+  return value === 'claude' || value === 'gemini' || value === 'codex' || value === 'copilot';
 }
 
 /**

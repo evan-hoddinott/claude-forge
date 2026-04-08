@@ -52,7 +52,9 @@ export function generateContextContent(project: Project, _agentType: AgentType):
 export async function writeContextFile(project: Project, agentType: AgentType): Promise<void> {
   const config = AGENTS[agentType];
   const content = generateContextContent(project, agentType);
-  await fs.writeFile(path.join(project.path, config.contextFileName), content, 'utf-8');
+  const filePath = path.join(project.path, config.contextFileName);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, content, 'utf-8');
 }
 
 export async function writeContextFiles(project: Project): Promise<void> {

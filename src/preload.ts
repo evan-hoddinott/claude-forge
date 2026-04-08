@@ -118,4 +118,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     maximize: () => ipcRenderer.invoke('window:maximize'),
     close: () => ipcRenderer.invoke('window:close'),
   },
+  chat: {
+    send: (projectId: string | null, model: string, providerId: string, messages: unknown[]) =>
+      ipcRenderer.invoke('chat:send', projectId, model, providerId, messages),
+    getProviders: () => ipcRenderer.invoke('chat:get-providers'),
+    getHistory: (projectId: string | null) => ipcRenderer.invoke('chat:get-history', projectId),
+    clearHistory: (projectId: string | null) => ipcRenderer.invoke('chat:clear-history', projectId),
+    setApiKey: (providerId: string, key: string) => ipcRenderer.invoke('chat:set-api-key', providerId, key),
+    testConnection: (providerId: string) => ipcRenderer.invoke('chat:test-connection', providerId),
+    onToken: (callback: (data: { token: string; done: boolean; messageId: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { token: string; done: boolean; messageId: string }) => callback(data);
+      ipcRenderer.on('chat:token', handler);
+    },
+    offToken: () => {
+      ipcRenderer.removeAllListeners('chat:token');
+    },
+  },
 });

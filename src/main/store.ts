@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
-import type { Project, CreateProjectInput, UserPreferences } from '../shared/types';
+import type { Project, CreateProjectInput, UserPreferences, ChatMessage } from '../shared/types';
 
 // electron-store is ESM; when Node.js requires it at runtime the default export
 // may land on `.default`. This handles both CJS interop shapes.
@@ -14,6 +14,8 @@ const StoreClass = (_Store as unknown as { default?: typeof _Store }).default ??
 interface StoreSchema {
   projects: Project[];
   preferences: UserPreferences;
+  chatHistory: Record<string, ChatMessage[]>;
+  apiKeys: Record<string, string>;
 }
 
 let _store: Store<StoreSchema> | null = null;
@@ -41,6 +43,10 @@ function preferenceDefaults(): UserPreferences {
     reduceAnimations: false,
     highContrast: false,
     showSplash: true,
+    chatPanelOpen: false,
+    chatPanelWidth: 400,
+    chatLastModel: 'gpt-4o',
+    chatLastProvider: 'github',
   };
 }
 
@@ -79,6 +85,8 @@ function getStore(): Store<StoreSchema> {
       defaults: {
         projects: [],
         preferences: preferenceDefaults(),
+        chatHistory: {},
+        apiKeys: {},
       },
     });
   }
@@ -180,6 +188,45 @@ export function importProjects(projects: Project[]): number {
 
 export function resetAll(): void {
   getStore().clear();
+}
+
+// --- Chat History ---
+
+function chatKey(projectId: string | null): string {
+  return projectId ?? '__global';
+}
+
+export function getChatHistory(projectId: string | null): ChatMessage[] {
+  const history = getStore().get('chatHistory');
+  return history[chatKey(projectId)] ?? [];
+}
+
+export function saveChatHistory(projectId: string | null, messages: ChatMessage[]): void {
+  const store = getStore();
+  const history = store.get('chatHistory');
+  history[chatKey(projectId)] = messages.slice(-50); // keep last 50
+  store.set('chatHistory', history);
+}
+
+export function clearChatHistory(projectId: string | null): void {
+  const store = getStore();
+  const history = store.get('chatHistory');
+  delete history[chatKey(projectId)];
+  store.set('chatHistory', history);
+}
+
+// --- API Keys ---
+
+export function getApiKey(providerId: string): string | null {
+  const keys = getStore().get('apiKeys');
+  return keys[providerId] ?? null;
+}
+
+export function setApiKey(providerId: string, key: string): void {
+  const store = getStore();
+  const keys = store.get('apiKeys');
+  keys[providerId] = key;
+  store.set('apiKeys', keys);
 }
 
 export function getEncryptionStatus(): 'active' | 'fallback' {

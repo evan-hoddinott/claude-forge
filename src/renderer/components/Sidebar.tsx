@@ -90,6 +90,12 @@ function AgentIcon({ agentType, className }: { agentType: AgentType; className?:
           <circle cx="8" cy="8" r="2.5" />
         </svg>
       );
+    case 'copilot':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="#6e40c9">
+          <path d="M8 1L9.5 6.5H15L10.5 9.5L12 15L8 12L4 15L5.5 9.5L1 6.5H6.5Z" />
+        </svg>
+      );
   }
 }
 

@@ -18,6 +18,7 @@ const SetupAssistant = lazy(() => import('./components/SetupAssistant'));
 const OnboardingTutorial = lazy(() => import('./components/OnboardingTutorial'));
 const Settings = lazy(() => import('./pages/Settings'));
 const SplashScreen = lazy(() => import('./components/SplashScreen'));
+const ChatPanel = lazy(() => import('./components/ChatPanel'));
 
 export type Page = 'dashboard' | 'settings';
 
@@ -60,6 +61,7 @@ function AppInner() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('simple');
   const [showSplash, setShowSplash] = useState(false);
+  const [chatPanelOpen, setChatPanelOpen] = useState(false);
 
   // Check if setup has been completed on first load
   useEffect(() => {
@@ -183,6 +185,13 @@ function AppInner() {
         return;
       }
 
+      // Ctrl+Shift+C → Toggle chat panel
+      if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        setChatPanelOpen((v) => !v);
+        return;
+      }
+
       // Cmd+F → Focus search
       if (mod && e.key === 'f') {
         e.preventDefault();
@@ -214,9 +223,9 @@ function AppInner() {
 
   return (
     <div className="flex flex-col h-screen bg-bg overflow-hidden">
-      <TitleBar />
+      <TitleBar onToggleChat={() => setChatPanelOpen((v) => !v)} />
       <UpdateNotification mode={appMode} />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         <Sidebar
           activePage={activePage}
           onNavigate={handleNavigate}
@@ -271,6 +280,14 @@ function AppInner() {
             )}
           </AnimatePresence>
         </main>
+
+        <Suspense fallback={null}>
+          <ChatPanel
+            open={chatPanelOpen}
+            onClose={() => setChatPanelOpen(false)}
+            projectId={selectedProjectId}
+          />
+        </Suspense>
       </div>
 
       <Suspense fallback={null}>

@@ -55,6 +55,9 @@ function getIcon(name: string): { paths: string; fill: string; stroke?: string }
     case 'agent-codex':
       // Hexagon
       return { paths: 'M8 1L14 4.5V11.5L8 15L2 11.5V4.5Z', fill: 'none', stroke: COLORS.greenBright };
+    case 'agent-copilot':
+      // Sparkle / wings shape
+      return { paths: 'M8 1L9.5 6.5H15L10.5 9.5L12 15L8 12L4 15L5.5 9.5L1 6.5H6.5Z', fill: '#6e40c9' };
 
     // Status
     case 'status-connected':

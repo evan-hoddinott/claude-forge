@@ -12,6 +12,7 @@ import * as agentService from './services/agent-service';
 import * as environmentService from './services/environment-service';
 import * as fileService from './services/file-service';
 import * as contextGenerator from './services/context-generator';
+import * as chatService from './services/chat-service';
 import {
   validateString,
   isValidAgentType,
@@ -240,7 +241,7 @@ export function registerIpcHandlers(): void {
     // Check if agent CLI is installed before attempting launch
     const config = AGENTS[agentType];
     try {
-      await runCommand(`${config.command} --version`, { timeout: 5000 });
+      await runCommand(config.versionCommand, { timeout: 5000 });
     } catch {
       throw new Error(
         `${config.displayName} is not installed. Please install it from the sidebar before launching.`,
@@ -341,7 +342,7 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('agent:check-all-statuses', async () => {
-    const types: AgentType[] = ['claude', 'gemini', 'codex'];
+    const types: AgentType[] = ['claude', 'gemini', 'codex', 'copilot'];
     const results: Record<string, AgentStatus> = {};
 
     // Check node once — via runCommand for cross-platform support
@@ -365,6 +366,27 @@ export function registerIpcHandlers(): void {
         updateAvailable: false,
         authenticated: false,
       };
+
+      // Copilot uses gh CLI extension — special handling
+      if (agentType === 'copilot') {
+        try {
+          const versionOutput = await runCommand('gh copilot --version', { timeout: 10000 });
+          status.installed = true;
+          status.version = versionOutput;
+        } catch {
+          results[agentType] = status;
+          continue;
+        }
+        // Auth for copilot = gh auth status
+        try {
+          await runCommand('gh auth status', { timeout: 5000 });
+          status.authenticated = true;
+        } catch {
+          // not authenticated
+        }
+        results[agentType] = status;
+        continue;
+      }
 
       if (!nodeInstalled) {
         results[agentType] = status;
@@ -428,6 +450,41 @@ export function registerIpcHandlers(): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     activeInstalls++;
 
+    // GitHub Copilot installs via gh extension
+    if (config.installMethod === 'gh-extension') {
+      try {
+        return await new Promise<{ success: boolean; error?: string }>((resolve) => {
+          const child = spawnCommand('gh', ['extension', 'install', 'github/gh-copilot'], {
+            env: { ...process.env },
+          });
+          let errorOutput = '';
+          child.stdout?.on('data', (data: Buffer) => {
+            win?.webContents.send('agent:install-progress', { line: data.toString() });
+          });
+          child.stderr?.on('data', (data: Buffer) => {
+            const line = data.toString();
+            errorOutput += line;
+            win?.webContents.send('agent:install-progress', { line });
+          });
+          child.on('close', (code) => {
+            activeInstalls--;
+            if (code === 0) {
+              resolve({ success: true });
+            } else {
+              resolve({ success: false, error: sanitizeErrorMessage(errorOutput.slice(-500)) });
+            }
+          });
+          child.on('error', (err) => {
+            activeInstalls--;
+            resolve({ success: false, error: sanitizeErrorMessage(err.message) });
+          });
+        });
+      } catch {
+        activeInstalls--;
+        return { success: false, error: 'Install failed' };
+      }
+    }
+
     try {
       return await new Promise<{ success: boolean; error?: string }>((resolve) => {
         // Route through WSL on native Windows so npm installs inside WSL
@@ -448,11 +505,60 @@ export function registerIpcHandlers(): void {
           win?.webContents.send('agent:install-progress', { line });
         });
 
-        child.on('close', (code) => {
-          activeInstalls--;
+        child.on('close', async (code) => {
           if (code === 0) {
+            activeInstalls--;
             resolve({ success: true });
+          } else if (
+            errorOutput.toLowerCase().includes('eacces') ||
+            errorOutput.toLowerCase().includes('permission denied')
+          ) {
+            // Try ~/.npm-global fallback
+            win?.webContents.send('agent:install-progress', {
+              line: '\n⚠ Permission error. Setting up ~/.npm-global prefix...\n',
+            });
+            try {
+              await new Promise<void>((res, rej) => {
+                const setup = spawnCommand('bash', [
+                  '-c',
+                  'mkdir -p ~/.npm-global && npm config set prefix ~/.npm-global',
+                ], { env: { ...process.env } });
+                setup.on('close', (c) => c === 0 ? res() : rej(new Error('Setup failed')));
+                setup.on('error', rej);
+              });
+              // Retry install with the new prefix
+              const retry = spawnCommand('npm', ['install', '-g', config.npmPackage], {
+                env: { ...process.env, npm_config_prefix: `${os.homedir()}/.npm-global` },
+              });
+              let retryError = '';
+              retry.stdout?.on('data', (d: Buffer) => {
+                win?.webContents.send('agent:install-progress', { line: d.toString() });
+              });
+              retry.stderr?.on('data', (d: Buffer) => {
+                retryError += d.toString();
+                win?.webContents.send('agent:install-progress', { line: d.toString() });
+              });
+              retry.on('close', (rc) => {
+                activeInstalls--;
+                if (rc === 0) {
+                  win?.webContents.send('agent:install-progress', {
+                    line: '\n✓ Installed to ~/.npm-global. Add to PATH: export PATH=~/.npm-global/bin:$PATH\n  (fish: fish_add_path ~/.npm-global/bin)\n',
+                  });
+                  resolve({ success: true });
+                } else {
+                  resolve({ success: false, error: sanitizeErrorMessage(retryError.slice(-500)) });
+                }
+              });
+              retry.on('error', (err) => {
+                activeInstalls--;
+                resolve({ success: false, error: sanitizeErrorMessage(err.message) });
+              });
+            } catch {
+              activeInstalls--;
+              resolve({ success: false, error: sanitizeErrorMessage(errorOutput.slice(-500)) });
+            }
           } else {
+            activeInstalls--;
             resolve({ success: false, error: sanitizeErrorMessage(errorOutput.slice(-500)) });
           }
         });
@@ -475,6 +581,37 @@ export function registerIpcHandlers(): void {
     const config = AGENTS[agentType];
     const win = BrowserWindow.fromWebContents(event.sender);
     activeInstalls++;
+
+    // Copilot updates via gh extension upgrade
+    if (config.installMethod === 'gh-extension') {
+      try {
+        return await new Promise<{ success: boolean; error?: string }>((resolve) => {
+          const child = spawnCommand('gh', ['extension', 'upgrade', 'copilot'], {
+            env: { ...process.env },
+          });
+          let errorOutput = '';
+          child.stdout?.on('data', (d: Buffer) => {
+            win?.webContents.send('agent:install-progress', { line: d.toString() });
+          });
+          child.stderr?.on('data', (d: Buffer) => {
+            errorOutput += d.toString();
+            win?.webContents.send('agent:install-progress', { line: d.toString() });
+          });
+          child.on('close', (code) => {
+            activeInstalls--;
+            if (code === 0) resolve({ success: true });
+            else resolve({ success: false, error: sanitizeErrorMessage(errorOutput.slice(-500)) });
+          });
+          child.on('error', (err) => {
+            activeInstalls--;
+            resolve({ success: false, error: sanitizeErrorMessage(err.message) });
+          });
+        });
+      } catch {
+        activeInstalls--;
+        return { success: false, error: 'Update failed' };
+      }
+    }
 
     try {
       return await new Promise<{ success: boolean; error?: string }>((resolve) => {
@@ -842,5 +979,96 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('system:encryption-status', () => {
     return store.getEncryptionStatus();
+  });
+
+  // --- Chat ---
+
+  ipcMain.handle('chat:get-providers', () => {
+    const apiKeys = {
+      openai: store.getApiKey('openai'),
+      anthropic: store.getApiKey('anthropic'),
+      google: store.getApiKey('google'),
+    };
+    return chatService.getProviders(apiKeys);
+  });
+
+  ipcMain.handle('chat:send', async (event, projectId: unknown, model: unknown, providerId: unknown, messages: unknown) => {
+    const validModel = validateString(model, 'model', 200);
+    const validProvider = validateString(providerId, 'providerId', 50);
+    const validProjectId = projectId === null ? null : validateString(projectId, 'projectId');
+    if (!Array.isArray(messages)) throw new Error('Invalid messages');
+
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const apiKeys = {
+      openai: store.getApiKey('openai'),
+      anthropic: store.getApiKey('anthropic'),
+      google: store.getApiKey('google'),
+    };
+
+    const { v4: uuidv4 } = await import('uuid');
+    const messageId = uuidv4();
+    let fullContent = '';
+
+    await chatService.sendChatMessage(
+      validProvider,
+      validModel,
+      messages as import('../shared/types').ChatMessage[],
+      {
+        onToken: (token) => {
+          fullContent += token;
+          win?.webContents.send('chat:token', { token, done: false, messageId });
+        },
+        onDone: () => {
+          win?.webContents.send('chat:token', { token: '', done: true, messageId });
+          // Save completed response to history
+          const history = store.getChatHistory(validProjectId);
+          const assistantMsg: import('../shared/types').ChatMessage = {
+            id: messageId,
+            role: 'assistant',
+            content: fullContent,
+            timestamp: new Date().toISOString(),
+            model: validModel,
+          };
+          store.saveChatHistory(validProjectId, [
+            ...(messages as import('../shared/types').ChatMessage[]),
+            assistantMsg,
+          ]);
+        },
+        onError: (err) => {
+          win?.webContents.send('chat:token', {
+            token: `\n\n*Error: ${sanitizeErrorMessage(err.message)}*`,
+            done: true,
+            messageId,
+          });
+        },
+      },
+      apiKeys,
+    );
+  });
+
+  ipcMain.handle('chat:get-history', (_, projectId: unknown) => {
+    const validId = projectId === null ? null : validateString(projectId, 'projectId');
+    return store.getChatHistory(validId);
+  });
+
+  ipcMain.handle('chat:clear-history', (_, projectId: unknown) => {
+    const validId = projectId === null ? null : validateString(projectId, 'projectId');
+    store.clearChatHistory(validId);
+  });
+
+  ipcMain.handle('chat:set-api-key', (_, providerId: unknown, key: unknown) => {
+    const validProvider = validateString(providerId, 'providerId', 50);
+    const validKey = validateString(key, 'key', 500);
+    store.setApiKey(validProvider, validKey);
+  });
+
+  ipcMain.handle('chat:test-connection', async (_, providerId: unknown) => {
+    const validProvider = validateString(providerId, 'providerId', 50);
+    const apiKeys = {
+      openai: store.getApiKey('openai'),
+      anthropic: store.getApiKey('anthropic'),
+      google: store.getApiKey('google'),
+    };
+    return chatService.testConnection(validProvider, apiKeys);
   });
 }
