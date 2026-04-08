@@ -1,10 +1,15 @@
-import Store from 'electron-store';
+import _Store from 'electron-store';
+import type Store from 'electron-store';
 import { app } from 'electron';
 import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
 import type { Project, CreateProjectInput, UserPreferences } from '../shared/types';
+
+// electron-store is ESM; when Node.js requires it at runtime the default export
+// may land on `.default`. This handles both CJS interop shapes.
+const StoreClass = (_Store as unknown as { default?: typeof _Store }).default ?? _Store;
 
 interface StoreSchema {
   projects: Project[];
@@ -68,7 +73,7 @@ function getEncryptionKey(): string {
 
 function getStore(): Store<StoreSchema> {
   if (!_store) {
-    _store = new Store<StoreSchema>({
+    _store = new StoreClass<StoreSchema>({
       encryptionKey: getEncryptionKey(),
       clearInvalidConfig: true,
       defaults: {

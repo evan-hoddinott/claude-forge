@@ -105,18 +105,20 @@ export function initAutoUpdater(win: BrowserWindow): void {
   });
 
   // --- Auto-check schedule ---
-
-  // Check after a 10-second delay so the app loads first
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch((err) => {
-      log.error('Startup update check failed:', err);
-    });
-  }, 10_000);
-
-  // Check every 4 hours
-  setInterval(() => {
-    autoUpdater.checkForUpdates().catch((err) => {
-      log.error('Periodic update check failed:', err);
-    });
-  }, 4 * 60 * 60 * 1000);
+  // Disabled until the GitHub repo is public and has published releases.
+  // Uncomment the blocks below once releases are available.
+  //
+  // // Check after a 10-second delay so the app loads first
+  // setTimeout(() => {
+  //   autoUpdater.checkForUpdates().catch((err) => {
+  //     log.error('Startup update check failed:', err);
+  //   });
+  // }, 10_000);
+  //
+  // // Check every 4 hours
+  // setInterval(() => {
+  //   autoUpdater.checkForUpdates().catch((err) => {
+  //     log.error('Periodic update check failed:', err);
+  //   });
+  // }, 4 * 60 * 60 * 1000);
 }
