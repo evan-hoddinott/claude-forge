@@ -70,6 +70,7 @@ function getStore(): Store<StoreSchema> {
   if (!_store) {
     _store = new Store<StoreSchema>({
       encryptionKey: getEncryptionKey(),
+      clearInvalidConfig: true,
       defaults: {
         projects: [],
         preferences: preferenceDefaults(),

@@ -60,6 +60,7 @@ function SettingsInner() {
   const {
     data: prefs,
     loading,
+    error: prefsError,
     refetch,
   } = useQuery(() => api.preferences.get());
   // Cache agent statuses for 60s — expensive IPC call (checks 3 CLIs + npm)
@@ -67,7 +68,7 @@ function SettingsInner() {
   const { data: agentStatuses } = useCachedQuery('agent-statuses', () => api.agent.checkAllStatuses(), 60_000);
   const { data: envInfo } = useCachedQuery('environment', () => api.system.getEnvironment(), 300_000);
 
-  if (loading || !prefs) {
+  if (loading) {
     return (
       <div className="p-8 space-y-4">
         {Array.from({ length: 4 }, (_, i) => (
@@ -77,6 +78,28 @@ function SettingsInner() {
             style={{ animationDelay: `${i * 100}ms` }}
           />
         ))}
+      </div>
+    );
+  }
+
+  if (!prefs) {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-8 py-8 space-y-4">
+          <h1 className="text-xl font-bold text-text-primary">Settings</h1>
+          <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 space-y-3">
+            <p className="text-sm font-medium text-status-error">Failed to load settings</p>
+            {prefsError && (
+              <p className="text-xs text-text-muted font-mono">{prefsError}</p>
+            )}
+            <button
+              onClick={refetch}
+              className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm font-medium text-text-secondary transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
