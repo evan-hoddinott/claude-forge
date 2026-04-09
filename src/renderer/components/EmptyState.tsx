@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 export default function EmptyState({
   onCreateProject,
   onImportProject,
+  onImportBundle,
 }: {
   onCreateProject?: () => void;
   onImportProject?: (mode: 'local' | 'clone') => void;
+  onImportBundle?: () => void;
 }) {
   return (
     <motion.div
@@ -109,6 +111,25 @@ export default function EmptyState({
             </svg>
             Clone from GitHub
           </button>
+          {onImportBundle && (
+            <button
+              onClick={onImportBundle}
+              className="flex items-center gap-1.5 px-4 py-2 rounded text-text-secondary hover:text-text-primary transition-colors"
+              style={{
+                fontFamily: "var(--forge-font-body, 'IBM Plex Mono', monospace)",
+                fontSize: 12,
+                border: '1px solid var(--forge-border)',
+                backgroundColor: 'transparent',
+              }}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="5" width="14" height="10" rx="1.5" />
+                <path d="M5 5V3.5A1.5 1.5 0 016.5 2h3A1.5 1.5 0 0111 3.5V5" />
+                <path d="M1 9h14" />
+              </svg>
+              Import Bundle
+            </button>
+          )}
         </div>
       )}
     </motion.div>

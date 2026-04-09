@@ -174,4 +174,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeAllListeners('deploy:done');
     },
   },
+  vibe: {
+    export: (options: unknown) => ipcRenderer.invoke('vibe:export', options),
+    pickAndPreview: () => ipcRenderer.invoke('vibe:pick-and-preview'),
+    import: (filePath: string, mode: string, projectPath: string, projectId?: string, projectName?: string) =>
+      ipcRenderer.invoke('vibe:import', filePath, mode, projectPath, projectId, projectName),
+  },
 });

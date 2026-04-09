@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import type { CreateProjectInput, ImportProjectInput, Project, AgentType, AgentStatus, SetupCheckResult, DependencyStatus, VaultEntry, VaultEntryMasked, DeployOptions } from '../shared/types';
+import type { CreateProjectInput, ImportProjectInput, Project, AgentType, AgentStatus, SetupCheckResult, DependencyStatus, VaultEntry, VaultEntryMasked, DeployOptions, VibeExportOptions } from '../shared/types';
 import { AGENTS } from '../shared/types';
 import * as store from './store';
 import * as projectService from './services/project-service';
@@ -16,6 +16,7 @@ import * as projectDetector from './services/project-detector';
 import * as chatService from './services/chat-service';
 import * as vaultService from './services/vault-service';
 import * as deployService from './services/deploy-service';
+import * as vibeService from './services/vibe-service';
 import {
   validateString,
   isValidAgentType,
@@ -1260,5 +1261,33 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('deploy:force-push', async (_, projectPath: unknown): Promise<{ success: boolean; repoUrl?: string; error?: string }> => {
     const validPath = validateString(projectPath, 'projectPath');
     return deployService.forcePush(validPath);
+  });
+
+  // --- Vibe Bundles ---
+
+  ipcMain.handle('vibe:export', async (_, options: unknown) => {
+    if (!options || typeof options !== 'object') throw new Error('Invalid options');
+    return vibeService.exportVibe(options as VibeExportOptions);
+  });
+
+  ipcMain.handle('vibe:pick-and-preview', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Open .vibe Bundle',
+      filters: [{ name: 'Vibe Bundle', extensions: ['vibe'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled || !result.filePaths[0]) return null;
+    const filePath = result.filePaths[0];
+    const preview = await vibeService.previewVibe(filePath);
+    return { filePath, preview };
+  });
+
+  ipcMain.handle('vibe:import', async (_, filePath: unknown, mode: unknown, projectPath: unknown, projectId: unknown, projectName: unknown) => {
+    const vFilePath = validateString(filePath, 'filePath');
+    const vMode = validateString(mode, 'mode') as 'new' | 'merge';
+    const vProjectPath = validateString(projectPath, 'projectPath');
+    const vProjectId = projectId ? validateString(projectId, 'projectId') : undefined;
+    const vProjectName = projectName ? validateString(projectName, 'projectName', 100) : undefined;
+    return vibeService.importVibe(vFilePath, vMode, vProjectPath, vProjectId, vProjectName);
   });
 }

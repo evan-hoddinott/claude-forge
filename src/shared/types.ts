@@ -450,6 +450,54 @@ export interface ElectronAPI {
     onDone: (callback: (result: DeployResult) => void) => void;
     offDone: () => void;
   };
+  vibe: {
+    export: (options: VibeExportOptions) => Promise<string | null>;
+    pickAndPreview: () => Promise<{ filePath: string; preview: VibeImportPreview } | null>;
+    import: (filePath: string, mode: 'new' | 'merge', projectPath: string, projectId?: string, projectName?: string) => Promise<Project | null>;
+  };
+}
+
+// --- Vibe Bundle Types ---
+
+export interface VibeManifest {
+  name: string;
+  version: string;
+  vibeVersion: '1';
+  description: string;
+  author: string;
+  created: string;
+  forgeVersion: string;
+  tags: string[];
+  category: string;
+  constraints: {
+    hardware: string | null;
+    os: string[];
+    minNodeVersion: string;
+    requiredTools: string[];
+  };
+}
+
+export interface VibeExportOptions {
+  projectId: string;
+  name: string;
+  description: string;
+  tags: string[];
+  author: string;
+  includeContextFiles: boolean;
+  includeProjectConfig: boolean;
+  includeDecisionFiles: boolean;
+  includeChatHistory: boolean;
+  includeConstraints: boolean;
+}
+
+export interface VibeImportPreview {
+  manifest: VibeManifest;
+  hasContextFiles: boolean;
+  contextFileCount: number;
+  hasProjectConfig: boolean;
+  hasDecisions: boolean;
+  hasConstraints: boolean;
+  hasChatHistory: boolean;
 }
 
 declare global {

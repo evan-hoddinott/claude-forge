@@ -10,6 +10,7 @@ interface ContextMenuProps {
   project: Project;
   onClose: () => void;
   onDelete: (id: string) => void;
+  onExportVibe?: (project: Project) => void;
 }
 
 export default function ContextMenu({
@@ -18,6 +19,7 @@ export default function ContextMenu({
   project,
   onClose,
   onDelete,
+  onExportVibe,
 }: ContextMenuProps) {
   const api = useAPI();
   const { toast } = useToast();
@@ -85,7 +87,17 @@ export default function ContextMenu({
         onClose();
       },
     },
-    'separator',
+    ...(onExportVibe
+      ? [{
+          label: 'Export Bundle',
+          icon: <BundleIcon />,
+          action: () => {
+            onExportVibe(project);
+            onClose();
+          },
+        }]
+      : []),
+    'separator' as const,
     {
       label: 'Delete Project',
       icon: <TrashIcon />,
@@ -167,6 +179,16 @@ function TrashIcon() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4M12.667 4v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4" />
+    </svg>
+  );
+}
+
+function BundleIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="5" width="14" height="10" rx="1.5" />
+      <path d="M5 5V3.5A1.5 1.5 0 016.5 2h3A1.5 1.5 0 0111 3.5V5" />
+      <path d="M1 9h14" />
     </svg>
   );
 }

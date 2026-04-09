@@ -7,6 +7,8 @@ import { AGENTS } from '../../shared/types';
 import StatusBadge from '../components/StatusBadge';
 import DeployDialog from '../components/DeployDialog';
 
+const ExportVibeDialog = lazy(() => import('../components/ExportVibeDialog'));
+
 // Lazy-load FileExplorer (includes Monaco Editor) — only when Files tab is opened
 const FileExplorer = lazy(() => import('../components/FileExplorer'));
 
@@ -113,6 +115,7 @@ export default function ProjectDetail({
   } = useQuery(() => api.projects.get(projectId), [projectId]);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [deployOpen, setDeployOpen] = useState(false);
+  const [exportVibeOpen, setExportVibeOpen] = useState(false);
 
   if (loading) return <LoadingSkeleton />;
 
@@ -175,6 +178,9 @@ export default function ProjectDetail({
               onClick={() => api.system.openInEditor(project.path)}
             >
               <CodeIcon /> Editor
+            </HeaderButton>
+            <HeaderButton onClick={() => setExportVibeOpen(true)}>
+              <BundleIcon /> Bundle
             </HeaderButton>
             <button
               onClick={() => setDeployOpen(true)}
@@ -261,6 +267,16 @@ export default function ProjectDetail({
           />
         )}
       </AnimatePresence>
+
+      {/* Export vibe dialog */}
+      <Suspense fallback={null}>
+        {exportVibeOpen && (
+          <ExportVibeDialog
+            project={project}
+            onClose={() => setExportVibeOpen(false)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }
@@ -1064,6 +1080,16 @@ function CodeIcon() {
     >
       <polyline points="5 3 1.5 8 5 13" />
       <polyline points="11 3 14.5 8 11 13" />
+    </svg>
+  );
+}
+
+function BundleIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="5" width="14" height="10" rx="1.5" />
+      <path d="M5 5V3.5A1.5 1.5 0 016.5 2h3A1.5 1.5 0 0111 3.5V5" />
+      <path d="M1 9h14" />
     </svg>
   );
 }

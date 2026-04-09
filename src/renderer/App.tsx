@@ -20,6 +20,8 @@ const OnboardingTutorial = lazy(() => import('./components/OnboardingTutorial'))
 const Settings = lazy(() => import('./pages/Settings'));
 const SplashScreen = lazy(() => import('./components/SplashScreen'));
 const ChatPanel = lazy(() => import('./components/ChatPanel'));
+const ExportVibeDialog = lazy(() => import('./components/ExportVibeDialog'));
+const ImportVibeDialog = lazy(() => import('./components/ImportVibeDialog'));
 
 export type Page = 'dashboard' | 'settings';
 
@@ -64,6 +66,8 @@ function AppInner() {
   const [appMode, setAppMode] = useState<AppMode>('simple');
   const [showSplash, setShowSplash] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
+  const [exportVibeProject, setExportVibeProject] = useState<Project | null>(null);
+  const [showImportVibe, setShowImportVibe] = useState(false);
 
   // Check if setup has been completed on first load
   useEffect(() => {
@@ -127,6 +131,11 @@ function AppInner() {
 
   const handleContextMenu = useCallback((x: number, y: number, project: Project) => {
     setContextMenu({ x, y, project });
+  }, []);
+
+  const handleContextMenuExportVibe = useCallback((project: Project) => {
+    setExportVibeProject(project);
+    setContextMenu(null);
   }, []);
 
   const handleContextMenuDelete = useCallback(async (id: string) => {
@@ -264,6 +273,7 @@ function AppInner() {
                 <Dashboard
                   onNewProject={handleNewProject}
                   onImportProject={(mode) => setShowImport(mode)}
+                  onImportBundle={() => setShowImportVibe(true)}
                   onOpenProject={setSelectedProjectId}
                   onContextMenu={handleContextMenu}
                 />
@@ -338,6 +348,7 @@ function AppInner() {
           project={contextMenu.project}
           onClose={() => setContextMenu(null)}
           onDelete={handleContextMenuDelete}
+          onExportVibe={handleContextMenuExportVibe}
         />
       )}
 
@@ -360,6 +371,30 @@ function AppInner() {
       <Suspense fallback={null}>
         {showSplash && (
           <SplashScreen onComplete={() => setShowSplash(false)} />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {exportVibeProject && (
+          <ExportVibeDialog
+            project={exportVibeProject}
+            onClose={() => setExportVibeProject(null)}
+          />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {showImportVibe && (
+          <ImportVibeDialog
+            onClose={() => setShowImportVibe(false)}
+            onImported={(project) => {
+              setShowImportVibe(false);
+              if (project) {
+                setRefreshKey((k) => k + 1);
+                setSelectedProjectId(project.id);
+              }
+            }}
+          />
         )}
       </Suspense>
     </div>

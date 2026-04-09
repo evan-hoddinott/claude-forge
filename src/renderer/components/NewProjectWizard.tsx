@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { ProjectInput, GitHubRepo, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import { TEMPLATES, type ProjectTemplate } from '../../shared/templates';
+import { BUILT_IN_BUNDLES, type BundleTemplate } from '../../shared/bundle-templates';
 import { useAPI } from '../hooks/useAPI';
 import { useToast } from './Toast';
 
@@ -431,30 +432,96 @@ function TemplateCard({
 function StepTemplates({
   mode,
   onSelect,
+  onBundleSelect,
 }: {
   mode: AppMode;
   onSelect: (template: ProjectTemplate) => void;
+  onBundleSelect: (bundle: BundleTemplate) => void;
 }) {
+  const [showBundles, setShowBundles] = useState(false);
+
   return (
     <div data-tutorial="wizard-templates" className="p-6 space-y-4">
-      <div>
-        <h3 className="text-base font-semibold text-text-primary">Choose a template</h3>
-        <p className="text-xs text-text-muted mt-1">
-          Pick a starting point, or skip to build from scratch.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-text-primary">
+            {showBundles ? 'Start from Bundle' : 'Choose a template'}
+          </h3>
+          <p className="text-xs text-text-muted mt-1">
+            {showBundles
+              ? 'Pre-made context bundles with patterns, conventions, and constraints.'
+              : 'Pick a starting point, or skip to build from scratch.'}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowBundles((v) => !v)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.08] text-xs text-text-secondary hover:text-text-primary transition-colors border border-white/[0.08]"
+        >
+          {showBundles ? (
+            <>
+              <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M10 3L4 8l6 5" />
+              </svg>
+              Back to templates
+            </>
+          ) : (
+            <>
+              <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="5" width="14" height="10" rx="1.5" />
+                <path d="M5 5V3.5A1.5 1.5 0 016.5 2h3A1.5 1.5 0 0111 3.5V5" />
+                <path d="M1 9h14" />
+              </svg>
+              Start from Bundle
+            </>
+          )}
+        </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {TEMPLATES.map((template) => (
-          <TemplateCard
-            key={template.id}
-            template={template}
-            mode={mode}
-            onSelect={onSelect}
-          />
+      {showBundles ? (
+        <div className="grid grid-cols-2 gap-3">
+          {BUILT_IN_BUNDLES.map((bundle) => (
+            <BundleCard key={bundle.id} bundle={bundle} onSelect={onBundleSelect} />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {TEMPLATES.map((template) => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              mode={mode}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BundleCard({
+  bundle,
+  onSelect,
+}: {
+  bundle: BundleTemplate;
+  onSelect: (bundle: BundleTemplate) => void;
+}) {
+  return (
+    <motion.button
+      type="button"
+      onClick={() => onSelect(bundle)}
+      whileHover={{ y: -2 }}
+      className="relative flex flex-col items-start text-left p-4 rounded-xl border border-white/[0.08] bg-white/[0.02] hover:border-white/[0.15] hover:bg-white/[0.05] transition-colors"
+    >
+      <div className="text-2xl mb-2">{bundle.icon}</div>
+      <p className="text-sm font-semibold text-text-primary">{bundle.name}</p>
+      <p className="text-xs text-text-muted mt-0.5 leading-relaxed">{bundle.description}</p>
+      <div className="flex flex-wrap gap-1 mt-2">
+        {bundle.tags.slice(0, 3).map((tag) => (
+          <span key={tag} className="px-1.5 py-0.5 rounded text-[10px] bg-white/[0.05] text-text-muted">{tag}</span>
         ))}
       </div>
-    </div>
+    </motion.button>
   );
 }
 
@@ -1640,6 +1707,22 @@ export default function NewProjectWizard({
     return Object.keys(e).length === 0;
   }
 
+  function handleBundleSelect(bundle: BundleTemplate) {
+    const bundleInputs: ProjectInput[] = bundle.suggestedInputs.map((si) => ({
+      id: uuidv4(),
+      label: si.label,
+      type: 'textarea' as const,
+      value: si.value,
+      options: [],
+      selectedOptions: [],
+    }));
+    setData((d) => ({ ...d, inputs: bundleInputs }));
+    selectedTemplateRef.current = bundle.id;
+    toast(`"${bundle.name}" bundle loaded! Customize the details.`);
+    setDirection(1);
+    setStep(2);
+  }
+
   function handleTemplateSelect(template: ProjectTemplate) {
     if (template.id === 'scratch') {
       // Skip to context step with empty inputs
@@ -1882,6 +1965,7 @@ export default function NewProjectWizard({
                   <StepTemplates
                     mode={appMode}
                     onSelect={handleTemplateSelect}
+                    onBundleSelect={handleBundleSelect}
                   />
                 )}
                 {step === 2 && (
