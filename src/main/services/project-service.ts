@@ -1,7 +1,9 @@
 import * as fs from 'node:fs/promises';
-import type { CreateProjectInput, Project } from '../../shared/types';
+import * as path from 'node:path';
+import type { CreateProjectInput, ImportProjectInput, Project, AgentType } from '../../shared/types';
+import { AGENTS } from '../../shared/types';
 import * as store from '../store';
-import { writeContextFiles } from './context-generator';
+import { writeContextFiles, writeContextFile } from './context-generator';
 import { sanitizeProjectName } from '../utils/sanitize';
 import { runExecFile } from '../utils/run-command';
 
@@ -43,6 +45,36 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
     await writeContextFiles(project);
   } catch {
     // context file generation is best-effort
+  }
+
+  return project;
+}
+
+export async function importProject(input: ImportProjectInput): Promise<Project> {
+  // Create the store entry pointing at the existing folder — no mkdir, no git init
+  const project = store.createProject({
+    name: input.name,
+    description: input.description,
+    path: input.path,
+    inputs: input.inputs,
+    tags: [],
+    preferredAgent: input.preferredAgent,
+    agents: [input.preferredAgent],
+  });
+
+  // Optionally generate / overwrite context files (best-effort)
+  if (input.generateMissingContextFiles || input.overwriteExistingContextFiles) {
+    for (const agentType of project.agents as AgentType[]) {
+      const ctxPath = path.join(input.path, AGENTS[agentType].contextFileName);
+      let fileAlreadyExists = false;
+      try {
+        await fs.access(ctxPath);
+        fileAlreadyExists = true;
+      } catch { /* doesn't exist */ }
+      if (!fileAlreadyExists || input.overwriteExistingContextFiles) {
+        await writeContextFile(project, agentType).catch(() => { /* best-effort */ });
+      }
+    }
   }
 
   return project;

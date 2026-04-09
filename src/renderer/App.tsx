@@ -13,6 +13,7 @@ import type { Project, AppMode } from '../shared/types';
 
 // Lazy-load heavy components that aren't needed on initial render
 const NewProjectWizard = lazy(() => import('./components/NewProjectWizard'));
+const ImportProjectDialog = lazy(() => import('./components/ImportProjectDialog'));
 const CommandPalette = lazy(() => import('./components/CommandPalette'));
 const SetupAssistant = lazy(() => import('./components/SetupAssistant'));
 const OnboardingTutorial = lazy(() => import('./components/OnboardingTutorial'));
@@ -54,6 +55,7 @@ function AppInner() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [showImport, setShowImport] = useState<'local' | 'clone' | null>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showSetup, setShowSetup] = useState(false);
@@ -232,6 +234,7 @@ function AppInner() {
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed((c) => !c)}
           onNewProject={handleNewProject}
+          onImportProject={(mode) => setShowImport(mode)}
         />
         <main className="flex-1 overflow-hidden">
           <AnimatePresence mode="wait">
@@ -260,6 +263,7 @@ function AppInner() {
               >
                 <Dashboard
                   onNewProject={handleNewProject}
+                  onImportProject={(mode) => setShowImport(mode)}
                   onOpenProject={setSelectedProjectId}
                   onContextMenu={handleContextMenu}
                 />
@@ -296,6 +300,21 @@ function AppInner() {
             open={showWizard}
             onClose={() => setShowWizard(false)}
             onCreated={handleProjectCreated}
+          />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {showImport && (
+          <ImportProjectDialog
+            mode={showImport}
+            onClose={() => setShowImport(null)}
+            onImported={(project) => {
+              setShowImport(null);
+              setRefreshKey((k) => k + 1);
+              setSelectedProjectId(project.id);
+              toast(`"${project.name}" imported successfully`);
+            }}
           />
         )}
       </Suspense>

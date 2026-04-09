@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import type { CreateProjectInput, Project, AgentType, AgentStatus, SetupCheckResult, DependencyStatus } from '../shared/types';
+import type { CreateProjectInput, ImportProjectInput, Project, AgentType, AgentStatus, SetupCheckResult, DependencyStatus } from '../shared/types';
 import { AGENTS } from '../shared/types';
 import * as store from './store';
 import * as projectService from './services/project-service';
@@ -12,6 +12,7 @@ import * as agentService from './services/agent-service';
 import * as environmentService from './services/environment-service';
 import * as fileService from './services/file-service';
 import * as contextGenerator from './services/context-generator';
+import * as projectDetector from './services/project-detector';
 import * as chatService from './services/chat-service';
 import {
   validateString,
@@ -196,6 +197,18 @@ export function registerIpcHandlers(): void {
     },
   );
 
+  ipcMain.handle('projects:scan-folder', async (_, folderPath: unknown) => {
+    const validPath = validateString(String(folderPath), 'folderPath');
+    return projectDetector.detectProject(validPath);
+  });
+
+  ipcMain.handle('projects:import', async (_, input: unknown) => {
+    const data = input as ImportProjectInput;
+    if (!data?.name || !data?.path) throw new Error('name and path are required');
+    const safePath = validateString(data.path, 'path');
+    return projectService.importProject({ ...data, path: safePath });
+  });
+
   // --- GitHub ---
 
   ipcMain.handle(
@@ -281,6 +294,25 @@ export function registerIpcHandlers(): void {
       updateAvailable: false,
       authenticated: false,
     };
+
+    // Copilot installs as a gh extension — special path
+    if (agentType === 'copilot') {
+      result.nodeInstalled = true; // not Node-based
+      try {
+        const versionOutput = await runCommand('gh copilot --version', { timeout: 10000 });
+        result.installed = true;
+        result.version = versionOutput;
+      } catch {
+        return result;
+      }
+      try {
+        await runCommand('gh auth status', { timeout: 5000 });
+        result.authenticated = true;
+      } catch {
+        // not authenticated
+      }
+      return result;
+    }
 
     // Check Node.js — via runCommand for cross-platform support
     try {
@@ -833,6 +865,18 @@ export function registerIpcHandlers(): void {
     } catch {
       return 0;
     }
+  });
+
+  ipcMain.handle('github:clone-repo', async (event, url: unknown, destination: unknown) => {
+    const validUrl = validateString(String(url), 'url');
+    if (!isValidUrl(validUrl) && !/^git@[\w.-]+:[\w./-]+/.test(validUrl)) {
+      throw new Error('Invalid repository URL');
+    }
+    const validDest = validateString(String(destination), 'destination');
+    const win = BrowserWindow.fromWebContents(event.sender);
+    await githubService.cloneRepo(validUrl, validDest, (data) => {
+      win?.webContents.send('github:clone-progress', data);
+    });
   });
 
   // --- Files ---

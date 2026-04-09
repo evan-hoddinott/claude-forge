@@ -211,6 +211,31 @@ export interface GitHubRepo {
   fullName: string;
 }
 
+// ── Import / Detection types ──────────────────────────────────────────────
+
+export interface DetectedProject {
+  name: string;
+  path: string;
+  description: string;
+  languages: string[];
+  framework: string | null;
+  packageManager: string | null;
+  hasGit: boolean;
+  gitRemote: string | null;
+  existingContextFiles: string[];
+  detectedInputs: ProjectInput[];
+}
+
+export interface ImportProjectInput {
+  name: string;
+  description: string;
+  path: string;
+  inputs: ProjectInput[];
+  preferredAgent: AgentType;
+  generateMissingContextFiles: boolean;
+  overwriteExistingContextFiles: boolean;
+}
+
 export interface GhAuthStatus {
   authenticated: boolean;
   username: string;
@@ -274,6 +299,8 @@ export interface ElectronAPI {
     create: (input: CreateProjectInput) => Promise<Project>;
     update: (id: string, updates: Partial<Project>) => Promise<Project>;
     delete: (id: string, deleteFromDisk?: boolean) => Promise<void>;
+    scanFolder: (folderPath: string) => Promise<DetectedProject>;
+    import: (input: ImportProjectInput) => Promise<Project>;
   };
   github: {
     createRepo: (name: string, isPrivate: boolean, description: string, projectPath: string) => Promise<GitHubRepo>;
@@ -283,6 +310,9 @@ export interface ElectronAPI {
     loginStart: () => Promise<{ code: string } | { error: string }>;
     logout: () => Promise<void>;
     repoCount: () => Promise<number>;
+    cloneRepo: (url: string, destination: string) => Promise<void>;
+    onCloneProgress: (callback: (data: { message: string; done: boolean; error?: string }) => void) => void;
+    offCloneProgress: () => void;
   };
   agent: {
     start: (projectId: string, agentType: AgentType) => Promise<void>;

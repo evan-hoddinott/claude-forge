@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import type { GitHubRepo } from '../../shared/types';
 import { isValidRepoName, sanitizeDescription, isValidUrl } from '../utils/sanitize';
 import { runExecFile } from '../utils/run-command';
@@ -68,6 +69,39 @@ export async function listRepos(): Promise<GitHubRepo[]> {
     url: r.url,
     fullName: r.nameWithOwner,
   }));
+}
+
+export async function cloneRepo(
+  url: string,
+  destination: string,
+  onProgress: (data: { message: string; done: boolean; error?: string }) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // git clone --progress emits progress info on stderr
+    const child = spawn('git', ['clone', '--progress', url, destination], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    child.stdout?.on('data', (d: Buffer) => {
+      onProgress({ message: d.toString(), done: false });
+    });
+    child.stderr?.on('data', (d: Buffer) => {
+      onProgress({ message: d.toString(), done: false });
+    });
+    child.on('close', (code) => {
+      if (code === 0) {
+        onProgress({ message: 'Clone complete.\n', done: true });
+        resolve();
+      } else {
+        const err = `git clone exited with code ${code}`;
+        onProgress({ message: err, done: true, error: err });
+        reject(new Error(err));
+      }
+    });
+    child.on('error', (err) => {
+      onProgress({ message: err.message, done: true, error: err.message });
+      reject(err);
+    });
+  });
 }
 
 export async function linkExistingRepo(

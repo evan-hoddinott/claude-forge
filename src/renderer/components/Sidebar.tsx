@@ -16,6 +16,7 @@ interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   onNewProject: () => void;
+  onImportProject?: (mode: 'local' | 'clone') => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -761,7 +762,7 @@ function AgentsSection({ collapsed, expandedAgent, onToggleAgent }: { collapsed:
           <RefreshButton onClick={checkAll} spinning={refreshing} />
         </div>
       )}
-      {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => (
+      {(['claude', 'gemini', 'codex', 'copilot'] as AgentType[]).map((agentType) => (
         <AgentCard
           key={agentType}
           agentType={agentType}
@@ -830,6 +831,7 @@ export default function Sidebar({
   collapsed,
   onToggleCollapse,
   onNewProject,
+  onImportProject,
 }: SidebarProps) {
   // Accordion state: only one section expanded at a time
   const [expandedSection, setExpandedSection] = useState<SidebarSection>(() => {
@@ -921,7 +923,7 @@ export default function Sidebar({
       <div className="px-2 py-2 relative overflow-y-auto flex-shrink min-h-0">
         <AgentsSection
           collapsed={collapsed}
-          expandedAgent={expandedSection === 'claude' || expandedSection === 'gemini' || expandedSection === 'codex' ? expandedSection as AgentType : null}
+          expandedAgent={expandedSection === 'claude' || expandedSection === 'gemini' || expandedSection === 'codex' || expandedSection === 'copilot' ? expandedSection as AgentType : null}
           onToggleAgent={(agentType) => toggleSection(agentType)}
         />
       </div>
@@ -938,8 +940,8 @@ export default function Sidebar({
       {/* Mode toggle */}
       <ModeToggle collapsed={collapsed} />
 
-      {/* New Project Button */}
-      <div data-tutorial="new-project" className="px-2 py-2 shrink-0">
+      {/* New Project Button + Import/Clone */}
+      <div data-tutorial="new-project" className="px-2 py-2 shrink-0 space-y-1">
         <button
           onClick={onNewProject}
           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-bg text-sm font-semibold transition-all hover:shadow-[0_0_20px_var(--color-accent-glow)]"
@@ -956,6 +958,31 @@ export default function Sidebar({
           </svg>
           {!collapsed && <span className="whitespace-nowrap">New Project</span>}
         </button>
+        {!collapsed && (
+          <div className="flex gap-1">
+            <button
+              onClick={() => onImportProject?.('local')}
+              title="Import local folder"
+              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md bg-white/5 hover:bg-white/8 text-text-muted hover:text-text-secondary text-[11px] font-medium transition-colors"
+            >
+              <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M8 10V3M5 6l3-3 3 3" />
+                <path d="M2 13h12" />
+              </svg>
+              Import
+            </button>
+            <button
+              onClick={() => onImportProject?.('clone')}
+              title="Clone from GitHub"
+              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md bg-white/5 hover:bg-white/8 text-text-muted hover:text-text-secondary text-[11px] font-medium transition-colors"
+            >
+              <svg className="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
+              </svg>
+              Clone
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Collapse Toggle */}

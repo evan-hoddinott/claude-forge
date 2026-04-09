@@ -12,6 +12,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('projects:update', id, updates),
     delete: (id: string, deleteFromDisk?: boolean) =>
       ipcRenderer.invoke('projects:delete', id, deleteFromDisk),
+    scanFolder: (folderPath: string) =>
+      ipcRenderer.invoke('projects:scan-folder', folderPath),
+    import: (input: unknown) =>
+      ipcRenderer.invoke('projects:import', input),
   },
   github: {
     createRepo: (name: string, isPrivate: boolean, description: string, projectPath: string) =>
@@ -23,6 +27,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     loginStart: () => ipcRenderer.invoke('github:login-start'),
     logout: () => ipcRenderer.invoke('github:logout'),
     repoCount: () => ipcRenderer.invoke('github:repo-count'),
+    cloneRepo: (url: string, destination: string) =>
+      ipcRenderer.invoke('github:clone-repo', url, destination),
+    onCloneProgress: (callback: (data: { message: string; done: boolean; error?: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { message: string; done: boolean; error?: string }) =>
+        callback(data);
+      ipcRenderer.on('github:clone-progress', handler);
+    },
+    offCloneProgress: () => {
+      ipcRenderer.removeAllListeners('github:clone-progress');
+    },
   },
   agent: {
     start: (projectId: string, agentType: string) =>
