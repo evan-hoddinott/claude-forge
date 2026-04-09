@@ -2,7 +2,7 @@ import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from '
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useCachedQuery } from '../hooks/usePerformance';
 import { useToast } from '../components/Toast';
-import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode } from '../../shared/types';
+import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode, VaultEntryMasked } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import { rawLabel } from '../utils/language';
 import { useUpdateStatus } from '../components/UpdateNotification';
@@ -129,7 +129,7 @@ function SettingsInner() {
           refetch={refetch}
           agentStatuses={agentStatuses}
         />
-        <AiProvidersSection />
+        <VaultSection ghAuth={ghAuth} agentStatuses={agentStatuses} />
         <FileExplorerSection prefs={prefs} api={api} refetch={refetch} />
         <AccessibilitySection prefs={prefs} api={api} refetch={refetch} />
         <UpdatesSection prefs={prefs} />
@@ -1042,115 +1042,529 @@ function SetupSection() {
 
 // --- Data ---
 
-function AiProvidersSection() {
+// ─── Vault Section ────────────────────────────────────────────────────────────
+
+function VaultSection({
+  ghAuth,
+  agentStatuses,
+}: {
+  ghAuth?: { authenticated: boolean; username: string } | null;
+  agentStatuses?: Record<AgentType, AgentStatus> | null;
+}) {
   const api = useAPI();
   const { toast } = useToast();
-  const [providers, setProviders] = useState<import('../../shared/types').ChatProviderInfo[]>([]);
-  const [keys, setKeys] = useState<Record<string, string>>({ openai: '', anthropic: '', google: '' });
+  const [entries, setEntries] = useState<VaultEntryMasked[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [keyInput, setKeyInput] = useState<Record<string, string>>({});
   const [showKey, setShowKey] = useState<Record<string, boolean>>({});
   const [testing, setTesting] = useState<Record<string, boolean>>({});
-  const [testResult, setTestResult] = useState<Record<string, string>>({});
+  const [testResult, setTestResult] = useState<Record<string, { ok: boolean; msg: string }>>({});
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customKey, setCustomKey] = useState('');
+  const [customUrl, setCustomUrl] = useState('');
+  const [savingCustom, setSavingCustom] = useState(false);
 
-  useEffect(() => {
-    api.chat.getProviders().then(setProviders).catch(console.error);
-  }, [api]);
+  const claudeConnected = agentStatuses?.claude?.authenticated ?? false;
+  const githubConnected = ghAuth?.authenticated ?? false;
+  const githubUsername = ghAuth?.username ?? '';
 
-  async function handleSaveKey(providerId: string) {
-    await api.chat.setApiKey(providerId, keys[providerId] ?? '');
-    toast(`${providerId} API key saved`);
-    const updated = await api.chat.getProviders();
-    setProviders(updated);
-  }
-
-  async function handleTestConnection(providerId: string) {
-    setTesting(t => ({ ...t, [providerId]: true }));
-    setTestResult(r => ({ ...r, [providerId]: '' }));
+  const loadEntries = async () => {
     try {
-      const result = await api.chat.testConnection(providerId);
-      setTestResult(r => ({
-        ...r,
-        [providerId]: result.success ? '✓ Connected' : `✗ ${result.error ?? 'Failed'}`,
-      }));
+      const list = await api.vault.list();
+      setEntries(list);
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => { loadEntries(); }, []);
+
+  const entryFor = (provider: string) => entries.find((e) => e.provider === provider);
+
+  async function handleSave(provider: string, displayName: string, baseUrl?: string) {
+    const key = keyInput[provider] ?? '';
+    if (!key.trim()) { toast('Please enter an API key', 'info'); return; }
+    try {
+      await api.vault.save({ id: entryFor(provider)?.id, provider, displayName, apiKey: key, baseUrl });
+      toast(`${displayName} key saved`);
+      setKeyInput(k => ({ ...k, [provider]: '' }));
+      setEditingId(null);
+      await loadEntries();
     } catch (err) {
-      setTestResult(r => ({ ...r, [providerId]: '✗ Error' }));
-    } finally {
-      setTesting(t => ({ ...t, [providerId]: false }));
+      toast(err instanceof Error ? err.message : 'Save failed', 'error');
     }
   }
 
-  const providerDocs: Record<string, string> = {
-    openai: 'platform.openai.com',
-    anthropic: 'console.anthropic.com',
-    google: 'aistudio.google.com',
-  };
+  async function handleDelete(id: string) {
+    try {
+      await api.vault.delete(id);
+      setDeleteConfirm(null);
+      await loadEntries();
+      toast('Key removed');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Delete failed', 'error');
+    }
+  }
+
+  async function handleTest(provider: string, apiKey?: string, baseUrl?: string) {
+    setTesting(t => ({ ...t, [provider]: true }));
+    setTestResult(r => ({ ...r, [provider]: { ok: false, msg: '' } }));
+    try {
+      const result = await api.vault.test(provider, apiKey, baseUrl);
+      const modelList = result.models?.slice(0, 3).join(', ');
+      setTestResult(r => ({
+        ...r,
+        [provider]: {
+          ok: result.success,
+          msg: result.success
+            ? `Connected${modelList ? ` — ${modelList}` : ''}`
+            : (result.error ?? 'Failed'),
+        },
+      }));
+      if (result.success) await loadEntries();
+    } catch {
+      setTestResult(r => ({ ...r, [provider]: { ok: false, msg: 'Error' } }));
+    } finally {
+      setTesting(t => ({ ...t, [provider]: false }));
+    }
+  }
+
+  async function handleSaveCustom() {
+    if (!customName.trim() || !customKey.trim()) {
+      toast('Name and API key are required', 'info'); return;
+    }
+    setSavingCustom(true);
+    try {
+      await api.vault.save({
+        provider: 'custom',
+        displayName: customName.trim(),
+        apiKey: customKey.trim(),
+        baseUrl: customUrl.trim() || undefined,
+      });
+      toast(`${customName} added to vault`);
+      setCustomName(''); setCustomKey(''); setCustomUrl('');
+      setShowCustomForm(false);
+      await loadEntries();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Save failed', 'error');
+    } finally {
+      setSavingCustom(false);
+    }
+  }
+
+  const customEntries = entries.filter((e) => e.provider === 'custom');
 
   return (
-    <SectionCard title="AI Chat Providers">
-      <div className="space-y-5">
-        {providers.map(provider => (
-          <div key={provider.id} className="border border-white/[0.06] p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-semibold text-text-primary">{provider.name}</h3>
-              <span className={`text-[10px] font-mono ${provider.isAvailable ? 'text-status-ready' : 'text-text-muted'}`}>
-                {provider.isAvailable ? '✓ CONNECTED' : provider.isFree ? 'NOT CONNECTED' : 'NOT CONFIGURED'}
-              </span>
-            </div>
+    <SectionCard title="API Key Vault">
+      <p className="text-xs text-text-muted -mt-2 mb-1">
+        Your keys are encrypted and stored locally. They never leave your machine.
+      </p>
 
-            {provider.isFree ? (
-              <p className="text-xs text-text-muted">
-                {provider.isAvailable
-                  ? `Connected via GitHub — ${provider.models.length} models available`
-                  : 'Connect GitHub in the sidebar to enable free AI models.'}
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-[10px] text-text-muted">
-                  Get an API key at {providerDocs[provider.id]}
-                </p>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type={showKey[provider.id] ? 'text' : 'password'}
-                      value={keys[provider.id] ?? ''}
-                      onChange={e => setKeys(k => ({ ...k, [provider.id]: e.target.value }))}
-                      placeholder="sk-..."
-                      className={`${inputClass} pr-16 font-mono text-xs`}
-                    />
-                    <button
-                      onClick={() => setShowKey(s => ({ ...s, [provider.id]: !s[provider.id] }))}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-muted hover:text-text-secondary"
-                    >
-                      {showKey[provider.id] ? 'HIDE' : 'SHOW'}
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => handleSaveKey(provider.id)}
-                    className="px-3 py-2 text-xs bg-white/5 hover:bg-white/10 border border-white/[0.08] text-text-secondary transition-colors"
-                  >
-                    Save
-                  </button>
-                  {provider.hasKey && (
-                    <button
-                      onClick={() => handleTestConnection(provider.id)}
-                      disabled={testing[provider.id]}
-                      className="px-3 py-2 text-xs bg-white/5 hover:bg-white/10 border border-white/[0.08] text-text-secondary transition-colors disabled:opacity-50"
-                    >
-                      {testing[provider.id] ? 'Testing…' : 'Test'}
-                    </button>
-                  )}
-                </div>
-                {testResult[provider.id] && (
-                  <p className={`text-[10px] font-mono ${testResult[provider.id].startsWith('✓') ? 'text-status-ready' : 'text-status-error'}`}>
-                    {testResult[provider.id]}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+      <div className="space-y-3">
+
+        {/* Anthropic — free via Claude Code login */}
+        <VaultCard
+          icon="🤖"
+          name="Anthropic (Claude)"
+          badge="FREE"
+          connected={claudeConnected}
+          connectedLabel="Connected via Claude Code login"
+          notConnectedLabel="Login via the Agents sidebar"
+          usedBy="Claude Code CLI, Chat Panel"
+        />
+
+        {/* OpenAI */}
+        <VaultKeyCard
+          icon="🟢"
+          provider="openai"
+          name="OpenAI"
+          entry={entryFor('openai')}
+          keyInput={keyInput['openai'] ?? ''}
+          onKeyInput={(v) => setKeyInput(k => ({ ...k, openai: v }))}
+          showKey={showKey['openai'] ?? false}
+          onToggleShow={() => setShowKey(s => ({ ...s, openai: !s['openai'] }))}
+          editing={editingId === 'openai'}
+          onEdit={() => { setEditingId('openai'); setKeyInput(k => ({ ...k, openai: '' })); }}
+          onSave={() => handleSave('openai', 'OpenAI')}
+          onCancelEdit={() => setEditingId(null)}
+          testing={testing['openai'] ?? false}
+          testResult={testResult['openai']}
+          onTest={() => handleTest('openai')}
+          onDelete={() => setDeleteConfirm(entryFor('openai')?.id ?? '')}
+          deleteConfirm={deleteConfirm === (entryFor('openai')?.id ?? '__none')}
+          onConfirmDelete={() => handleDelete(entryFor('openai')!.id)}
+          onCancelDelete={() => setDeleteConfirm(null)}
+          usedBy="Codex CLI, Chat Panel"
+          docsUrl="platform.openai.com/api-keys"
+          placeholder="sk-..."
+        />
+
+        {/* Google AI */}
+        <VaultKeyCard
+          icon="🔵"
+          provider="google"
+          name="Google AI"
+          entry={entryFor('google')}
+          keyInput={keyInput['google'] ?? ''}
+          onKeyInput={(v) => setKeyInput(k => ({ ...k, google: v }))}
+          showKey={showKey['google'] ?? false}
+          onToggleShow={() => setShowKey(s => ({ ...s, google: !s['google'] }))}
+          editing={editingId === 'google'}
+          onEdit={() => { setEditingId('google'); setKeyInput(k => ({ ...k, google: '' })); }}
+          onSave={() => handleSave('google', 'Google AI')}
+          onCancelEdit={() => setEditingId(null)}
+          testing={testing['google'] ?? false}
+          testResult={testResult['google']}
+          onTest={() => handleTest('google')}
+          onDelete={() => setDeleteConfirm(entryFor('google')?.id ?? '')}
+          deleteConfirm={deleteConfirm === (entryFor('google')?.id ?? '__none')}
+          onConfirmDelete={() => handleDelete(entryFor('google')!.id)}
+          onCancelDelete={() => setDeleteConfirm(null)}
+          usedBy="Gemini CLI, Chat Panel"
+          docsUrl="aistudio.google.com/apikey"
+          placeholder="AIza..."
+        />
+
+        {/* GitHub — free via gh auth */}
+        <VaultCard
+          icon="🐙"
+          name="GitHub"
+          badge="FREE"
+          connected={githubConnected}
+          connectedLabel={githubUsername ? `Connected as @${githubUsername}` : 'Connected via GitHub CLI'}
+          notConnectedLabel="Connect via the Agents sidebar"
+          usedBy="Copilot CLI, GitHub Models (Chat)"
+        />
+
+        {/* Custom providers */}
+        {customEntries.map((entry) => (
+          <VaultKeyCard
+            key={entry.id}
+            icon="⚡"
+            provider="custom"
+            name={entry.displayName}
+            entry={entry}
+            keyInput={keyInput[entry.id] ?? ''}
+            onKeyInput={(v) => setKeyInput(k => ({ ...k, [entry.id]: v }))}
+            showKey={showKey[entry.id] ?? false}
+            onToggleShow={() => setShowKey(s => ({ ...s, [entry.id]: !s[entry.id] }))}
+            editing={editingId === entry.id}
+            onEdit={() => { setEditingId(entry.id); setKeyInput(k => ({ ...k, [entry.id]: '' })); }}
+            onSave={async () => {
+              const key = keyInput[entry.id] ?? '';
+              if (!key.trim()) return;
+              await api.vault.save({ id: entry.id, provider: 'custom', displayName: entry.displayName, apiKey: key, baseUrl: entry.baseUrl });
+              toast(`${entry.displayName} key updated`);
+              setEditingId(null);
+              await loadEntries();
+            }}
+            onCancelEdit={() => setEditingId(null)}
+            testing={testing[entry.id] ?? false}
+            testResult={testResult[entry.id]}
+            onTest={() => handleTest('custom', undefined, entry.baseUrl)}
+            onDelete={() => setDeleteConfirm(entry.id)}
+            deleteConfirm={deleteConfirm === entry.id}
+            onConfirmDelete={() => handleDelete(entry.id)}
+            onCancelDelete={() => setDeleteConfirm(null)}
+            usedBy={entry.baseUrl ? entry.baseUrl : 'Custom provider'}
+            docsUrl=""
+            placeholder="API key..."
+          />
         ))}
+
+        {/* Add Custom Provider */}
+        {!showCustomForm ? (
+          <button
+            onClick={() => setShowCustomForm(true)}
+            className="w-full flex items-center gap-2 rounded-xl border border-dashed border-white/[0.08] px-4 py-3 text-sm text-text-muted hover:text-text-secondary hover:border-white/20 transition-all"
+          >
+            <span className="text-base">➕</span>
+            Add Custom Provider
+            <span className="text-xs text-text-muted ml-auto">OpenAI-compatible APIs, Ollama, Groq…</span>
+          </button>
+        ) : (
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+            <h3 className="text-xs font-semibold text-text-primary">Add Custom Provider</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <FieldLabel>Name</FieldLabel>
+                <input
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="Groq, Ollama, Fireworks…"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <FieldLabel>Base URL</FieldLabel>
+                <input
+                  value={customUrl}
+                  onChange={(e) => setCustomUrl(e.target.value)}
+                  placeholder="http://localhost:11434/v1"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div>
+              <FieldLabel>API Key</FieldLabel>
+              <input
+                value={customKey}
+                onChange={(e) => setCustomKey(e.target.value)}
+                placeholder="API key (leave blank for Ollama)"
+                className={inputClass}
+              />
+            </div>
+            <p className="text-[10px] text-text-muted">
+              Works with any OpenAI-compatible API — Ollama, Together AI, Groq, Fireworks, etc.
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSaveCustom}
+                disabled={savingCustom}
+                className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-50 text-bg text-xs font-semibold transition-all"
+              >
+                {savingCustom ? 'Saving…' : 'Add Provider'}
+              </button>
+              <button
+                onClick={() => { setShowCustomForm(false); setCustomName(''); setCustomKey(''); setCustomUrl(''); }}
+                className="px-3 py-2 rounded-lg text-xs text-text-muted hover:text-text-secondary transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </SectionCard>
   );
+}
+
+function VaultCard({
+  icon,
+  name,
+  badge,
+  connected,
+  connectedLabel,
+  notConnectedLabel,
+  usedBy,
+}: {
+  icon: string;
+  name: string;
+  badge?: string;
+  connected: boolean;
+  connectedLabel: string;
+  notConnectedLabel: string;
+  usedBy: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-base">{icon}</span>
+          <span className="text-sm font-medium text-text-primary">{name}</span>
+          {badge && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-status-ready/15 text-status-ready tracking-wider">
+              {badge}
+            </span>
+          )}
+        </div>
+        <span className={`text-[10px] font-mono ${connected ? 'text-status-ready' : 'text-text-muted'}`}>
+          {connected ? '✓ CONNECTED' : '○ NOT CONNECTED'}
+        </span>
+      </div>
+      <p className="text-xs text-text-secondary mb-1">
+        {connected ? connectedLabel : notConnectedLabel}
+      </p>
+      <p className="text-[10px] text-text-muted">Used by: {usedBy}</p>
+    </div>
+  );
+}
+
+function VaultKeyCard({
+  icon,
+  name,
+  entry,
+  keyInput,
+  onKeyInput,
+  showKey,
+  onToggleShow,
+  editing,
+  onEdit,
+  onSave,
+  onCancelEdit,
+  testing,
+  testResult,
+  onTest,
+  onDelete,
+  deleteConfirm,
+  onConfirmDelete,
+  onCancelDelete,
+  usedBy,
+  docsUrl,
+  placeholder,
+}: {
+  icon: string;
+  provider: string;
+  name: string;
+  entry: VaultEntryMasked | undefined;
+  keyInput: string;
+  onKeyInput: (v: string) => void;
+  showKey: boolean;
+  onToggleShow: () => void;
+  editing: boolean;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancelEdit: () => void;
+  testing: boolean;
+  testResult?: { ok: boolean; msg: string };
+  onTest: () => void;
+  onDelete: () => void;
+  deleteConfirm: boolean;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+  usedBy: string;
+  docsUrl: string;
+  placeholder: string;
+}) {
+  const hasKey = entry?.hasKey ?? false;
+  const isValid = entry?.isValid ?? null;
+  const lastTested = entry?.lastTested ? new Date(entry.lastTested) : null;
+  const relTime = lastTested ? relativeTime(lastTested.toISOString()) : null;
+
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-base">{icon}</span>
+          <span className="text-sm font-medium text-text-primary">{name}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {isValid === true && (
+            <span className="text-[10px] font-mono text-status-ready">✓ VALID</span>
+          )}
+          {isValid === false && (
+            <span className="text-[10px] font-mono text-status-error">✗ INVALID</span>
+          )}
+          {isValid === null && hasKey && (
+            <span className="text-[10px] font-mono text-text-muted">○ NOT TESTED</span>
+          )}
+          {!hasKey && (
+            <span className="text-[10px] font-mono text-text-muted">○ NOT CONFIGURED</span>
+          )}
+        </div>
+      </div>
+
+      {hasKey && !editing ? (
+        <div className="space-y-2">
+          {/* Masked key row */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2">
+              <span className="font-mono text-xs text-text-secondary flex-1">
+                {showKey ? entry!.maskedKey : '••••••••••••••••'}
+              </span>
+              <button onClick={onToggleShow} className="text-[10px] text-text-muted hover:text-text-secondary">
+                {showKey ? 'HIDE' : 'SHOW'}
+              </button>
+            </div>
+            <button
+              onClick={onEdit}
+              className="p-2 rounded-lg text-text-muted hover:text-text-secondary hover:bg-white/5 transition-colors"
+              title="Edit key"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M11.5 2.5l2 2-9 9H2.5v-2l9-9z" />
+              </svg>
+            </button>
+            {!deleteConfirm ? (
+              <button
+                onClick={onDelete}
+                className="p-2 rounded-lg text-text-muted hover:text-status-error hover:bg-status-error/10 transition-colors"
+                title="Remove key"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9h8l1-9" />
+                </svg>
+              </button>
+            ) : (
+              <div className="flex items-center gap-1">
+                <button onClick={onConfirmDelete} className="text-[10px] px-2 py-1 rounded bg-status-error/20 text-status-error hover:bg-status-error/30">
+                  Remove
+                </button>
+                <button onClick={onCancelDelete} className="text-[10px] px-2 py-1 text-text-muted hover:text-text-secondary">
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Test & status */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onTest}
+              disabled={testing}
+              className="text-xs text-text-muted hover:text-text-secondary disabled:opacity-50 transition-colors"
+            >
+              {testing ? 'Testing…' : 'Test connection'}
+            </button>
+            {relTime && isValid !== null && (
+              <span className="text-[10px] text-text-muted">Last tested: {relTime}</span>
+            )}
+          </div>
+          {testResult?.msg && (
+            <p className={`text-[10px] font-mono ${testResult.ok ? 'text-status-ready' : 'text-status-error'}`}>
+              {testResult.ok ? '✓' : '✗'} {testResult.msg}
+            </p>
+          )}
+          <p className="text-[10px] text-text-muted">Used by: {usedBy}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {docsUrl && (
+            <p className="text-[10px] text-text-muted">
+              Get a key at <span className="font-mono text-text-secondary">{docsUrl}</span>
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              type="password"
+              value={keyInput}
+              onChange={(e) => onKeyInput(e.target.value)}
+              placeholder={placeholder}
+              onKeyDown={(e) => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancelEdit(); }}
+              className={`${inputClass} font-mono flex-1`}
+              autoFocus={editing}
+            />
+            <button
+              onClick={onSave}
+              disabled={!keyInput.trim()}
+              className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-40 text-bg text-xs font-semibold transition-all"
+            >
+              Save
+            </button>
+            {editing && (
+              <button onClick={onCancelEdit} className="px-2 py-2 text-xs text-text-muted hover:text-text-secondary">
+                Cancel
+              </button>
+            )}
+          </div>
+          <p className="text-[10px] text-text-muted">Used by: {usedBy}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
 }
 
 function DataSection({

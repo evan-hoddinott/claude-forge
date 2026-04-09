@@ -105,6 +105,7 @@ export interface Project {
   lastClaudeSession: string | null;
   preferredAgent: AgentType;
   agents: AgentType[];
+  autoPushToGitHub?: boolean;
 }
 
 export interface CreateProjectInput {
@@ -147,6 +148,7 @@ export interface UserPreferences {
   chatPanelWidth: number;
   chatLastModel: string;
   chatLastProvider: string;
+  autoPushToGitHub: boolean;
 }
 
 export interface DependencyStatus {
@@ -249,6 +251,57 @@ export interface AgentStatus {
   latestVersion: string;
   updateAvailable: boolean;
   authenticated: boolean;
+}
+
+// --- Vault Types ---
+
+export interface VaultEntry {
+  id: string;
+  provider: string; // 'openai' | 'google' | 'anthropic' | 'github' | 'custom'
+  displayName: string;
+  apiKey: string;
+  baseUrl?: string; // for custom OpenAI-compatible providers
+  isValid: boolean | null; // null = not tested
+  lastTested: string | null; // ISO date string
+  models: string[];
+}
+
+export interface VaultEntryMasked extends Omit<VaultEntry, 'apiKey'> {
+  maskedKey: string; // e.g. "sk-••••••••••••3kF2" — empty string if no key
+  hasKey: boolean;
+}
+
+// --- Deploy Types ---
+
+export type DeployStepStatus = 'pending' | 'running' | 'done' | 'error';
+
+export interface DeployStep {
+  id: string;
+  label: string;
+  status: DeployStepStatus;
+  detail?: string;
+}
+
+export interface DeployOptions {
+  projectPath: string;
+  projectId: string;
+  mode: 'create' | 'push';
+  // create-new
+  repoName?: string;
+  isPrivate?: boolean;
+  description?: string;
+  // push-existing
+  repoUrl?: string;
+  // options
+  includeContextFiles: boolean;
+  includeEnvFiles: boolean;
+  commitMessage: string;
+}
+
+export interface DeployResult {
+  success: boolean;
+  repoUrl?: string;
+  error?: string;
 }
 
 // --- Chat Types ---
@@ -382,6 +435,20 @@ export interface ElectronAPI {
     testConnection: (providerId: string) => Promise<{ success: boolean; error?: string }>;
     onToken: (callback: (data: { token: string; done: boolean; messageId: string }) => void) => void;
     offToken: () => void;
+  };
+  vault: {
+    list: () => Promise<VaultEntryMasked[]>;
+    save: (entry: { id?: string; provider: string; displayName: string; apiKey: string; baseUrl?: string }) => Promise<VaultEntryMasked>;
+    delete: (id: string) => Promise<void>;
+    test: (provider: string, apiKey?: string, baseUrl?: string) => Promise<{ success: boolean; error?: string; models?: string[] }>;
+  };
+  deploy: {
+    start: (options: DeployOptions) => Promise<void>;
+    forcePush: (projectPath: string) => Promise<DeployResult>;
+    onProgress: (callback: (data: DeployStep) => void) => void;
+    offProgress: () => void;
+    onDone: (callback: (result: DeployResult) => void) => void;
+    offDone: () => void;
   };
 }
 

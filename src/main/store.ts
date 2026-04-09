@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
-import type { Project, CreateProjectInput, UserPreferences, ChatMessage } from '../shared/types';
+import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry } from '../shared/types';
 
 // electron-store is ESM; when Node.js requires it at runtime the default export
 // may land on `.default`. This handles both CJS interop shapes.
@@ -16,6 +16,7 @@ interface StoreSchema {
   preferences: UserPreferences;
   chatHistory: Record<string, ChatMessage[]>;
   apiKeys: Record<string, string>;
+  vaultEntries: VaultEntry[];
 }
 
 let _store: Store<StoreSchema> | null = null;
@@ -47,6 +48,7 @@ function preferenceDefaults(): UserPreferences {
     chatPanelWidth: 400,
     chatLastModel: 'gpt-4o',
     chatLastProvider: 'github',
+    autoPushToGitHub: false,
   };
 }
 
@@ -87,6 +89,7 @@ function getStore(): Store<StoreSchema> {
         preferences: preferenceDefaults(),
         chatHistory: {},
         apiKeys: {},
+        vaultEntries: [],
       },
     });
   }
@@ -227,6 +230,44 @@ export function setApiKey(providerId: string, key: string): void {
   const keys = store.get('apiKeys');
   keys[providerId] = key;
   store.set('apiKeys', keys);
+}
+
+// --- Vault ---
+
+export function getVaultEntries(): VaultEntry[] {
+  return getStore().get('vaultEntries');
+}
+
+export function saveVaultEntry(entry: VaultEntry): VaultEntry {
+  const store = getStore();
+  const entries = store.get('vaultEntries');
+  const idx = entries.findIndex((e) => e.id === entry.id);
+  if (idx !== -1) {
+    entries[idx] = entry;
+  } else {
+    entries.push(entry);
+  }
+  store.set('vaultEntries', entries);
+  // Sync built-in provider keys to apiKeys for chat panel compatibility
+  if (['openai', 'google', 'anthropic'].includes(entry.provider) && entry.apiKey) {
+    const keys = store.get('apiKeys');
+    keys[entry.provider] = entry.apiKey;
+    store.set('apiKeys', keys);
+  }
+  return entry;
+}
+
+export function deleteVaultEntry(id: string): void {
+  const store = getStore();
+  const entries = store.get('vaultEntries');
+  const entry = entries.find((e) => e.id === id);
+  store.set('vaultEntries', entries.filter((e) => e.id !== id));
+  // Clear apiKey for built-in providers
+  if (entry && ['openai', 'google', 'anthropic'].includes(entry.provider)) {
+    const keys = store.get('apiKeys');
+    delete keys[entry.provider];
+    store.set('apiKeys', keys);
+  }
 }
 
 export function getEncryptionStatus(): 'active' | 'fallback' {

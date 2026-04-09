@@ -148,4 +148,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeAllListeners('chat:token');
     },
   },
+  vault: {
+    list: () => ipcRenderer.invoke('vault:list'),
+    save: (entry: { id?: string; provider: string; displayName: string; apiKey: string; baseUrl?: string }) =>
+      ipcRenderer.invoke('vault:save', entry),
+    delete: (id: string) => ipcRenderer.invoke('vault:delete', id),
+    test: (provider: string, apiKey?: string, baseUrl?: string) =>
+      ipcRenderer.invoke('vault:test', provider, apiKey, baseUrl),
+  },
+  deploy: {
+    start: (options: unknown) => ipcRenderer.invoke('deploy:start', options),
+    forcePush: (projectPath: string) => ipcRenderer.invoke('deploy:force-push', projectPath),
+    onProgress: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('deploy:progress', handler);
+    },
+    offProgress: () => {
+      ipcRenderer.removeAllListeners('deploy:progress');
+    },
+    onDone: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('deploy:done', handler);
+    },
+    offDone: () => {
+      ipcRenderer.removeAllListeners('deploy:done');
+    },
+  },
 });

@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import type { Project, ProjectInput, AgentType } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import StatusBadge from '../components/StatusBadge';
+import DeployDialog from '../components/DeployDialog';
 
 // Lazy-load FileExplorer (includes Monaco Editor) — only when Files tab is opened
 const FileExplorer = lazy(() => import('../components/FileExplorer'));
@@ -111,6 +112,7 @@ export default function ProjectDetail({
     refetch,
   } = useQuery(() => api.projects.get(projectId), [projectId]);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [deployOpen, setDeployOpen] = useState(false);
 
   if (loading) return <LoadingSkeleton />;
 
@@ -174,6 +176,15 @@ export default function ProjectDetail({
             >
               <CodeIcon /> Editor
             </HeaderButton>
+            <button
+              onClick={() => setDeployOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/15 hover:bg-accent/25 border border-accent/30 text-accent text-xs font-semibold transition-all"
+            >
+              <svg className="w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+              </svg>
+              Deploy
+            </button>
           </div>
         </div>
 
@@ -236,6 +247,20 @@ export default function ProjectDetail({
           </AnimatePresence>
         )}
       </div>
+
+      {/* Deploy dialog */}
+      <AnimatePresence>
+        {deployOpen && (
+          <DeployDialog
+            project={project}
+            onClose={() => setDeployOpen(false)}
+            onSuccess={(repoUrl) => {
+              if (repoUrl) refetch();
+              setTimeout(() => setDeployOpen(false), 1500);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -655,18 +680,20 @@ function SettingsTab({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [agents, setAgents] = useState<AgentType[]>(project.agents || ['claude']);
   const [preferredAgent, setPreferredAgent] = useState<AgentType>(project.preferredAgent || 'claude');
+  const [autoPush, setAutoPush] = useState(project.autoPushToGitHub ?? false);
 
   const hasChanges =
     name !== project.name ||
     description !== project.description ||
     JSON.stringify(inputs) !== JSON.stringify(project.inputs) ||
     JSON.stringify(agents) !== JSON.stringify(project.agents || ['claude']) ||
-    preferredAgent !== (project.preferredAgent || 'claude');
+    preferredAgent !== (project.preferredAgent || 'claude') ||
+    autoPush !== (project.autoPushToGitHub ?? false);
 
   const { toast } = useToast();
 
   const save = useMutation(async () => {
-    await api.projects.update(project.id, { name, description, inputs, agents, preferredAgent });
+    await api.projects.update(project.id, { name, description, inputs, agents, preferredAgent, autoPushToGitHub: autoPush });
     toast('Changes saved');
     onUpdate();
   });
@@ -808,6 +835,25 @@ function SettingsTab({
           </div>
         </SectionCard>
       )}
+
+      {/* GitHub */}
+      <SectionCard title="GitHub">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoPush}
+            onChange={(e) => setAutoPush(e.target.checked)}
+            className="mt-0.5 rounded border-white/20 bg-white/5 accent-accent"
+          />
+          <div>
+            <span className="text-sm text-text-primary block">Auto-push to GitHub when agents make changes</span>
+            <span className="text-xs text-text-muted block mt-0.5">
+              After each agent session, automatically commit all changes and push to the linked repository.
+              Requires a connected GitHub repo.
+            </span>
+          </div>
+        </label>
+      </SectionCard>
 
       {/* Save */}
       {hasChanges && (

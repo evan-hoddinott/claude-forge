@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import type { CreateProjectInput, ImportProjectInput, Project, AgentType, AgentStatus, SetupCheckResult, DependencyStatus } from '../shared/types';
+import type { CreateProjectInput, ImportProjectInput, Project, AgentType, AgentStatus, SetupCheckResult, DependencyStatus, VaultEntry, VaultEntryMasked, DeployOptions } from '../shared/types';
 import { AGENTS } from '../shared/types';
 import * as store from './store';
 import * as projectService from './services/project-service';
@@ -14,6 +14,8 @@ import * as fileService from './services/file-service';
 import * as contextGenerator from './services/context-generator';
 import * as projectDetector from './services/project-detector';
 import * as chatService from './services/chat-service';
+import * as vaultService from './services/vault-service';
+import * as deployService from './services/deploy-service';
 import {
   validateString,
   isValidAgentType,
@@ -1114,5 +1116,149 @@ export function registerIpcHandlers(): void {
       google: store.getApiKey('google'),
     };
     return chatService.testConnection(validProvider, apiKeys);
+  });
+
+  // --- Vault ---
+
+  function maskKey(apiKey: string): string {
+    if (!apiKey) return '';
+    if (apiKey.length <= 8) return '••••••••';
+    return apiKey.slice(0, 4) + '••••••••••••' + apiKey.slice(-4);
+  }
+
+  function toMasked(entry: VaultEntry): VaultEntryMasked {
+    const { apiKey, ...rest } = entry;
+    return { ...rest, maskedKey: maskKey(apiKey), hasKey: !!apiKey };
+  }
+
+  ipcMain.handle('vault:list', (): VaultEntryMasked[] => {
+    return store.getVaultEntries().map(toMasked);
+  });
+
+  ipcMain.handle('vault:save', async (_, input: unknown): Promise<VaultEntryMasked> => {
+    if (!input || typeof input !== 'object') throw new Error('Invalid input');
+    const data = input as {
+      id?: string;
+      provider: string;
+      displayName: string;
+      apiKey: string;
+      baseUrl?: string;
+    };
+
+    const validProvider = validateString(data.provider, 'provider', 50);
+    const validName = validateString(data.displayName, 'displayName', 100);
+    const validKey = validateString(data.apiKey, 'apiKey', 500);
+    const validBaseUrl = data.baseUrl ? validateString(data.baseUrl, 'baseUrl', 500) : undefined;
+
+    const { v4: uuidv4 } = await import('uuid');
+
+    // If updating, preserve existing metadata
+    let existing: VaultEntry | undefined;
+    if (data.id) {
+      existing = store.getVaultEntries().find((e) => e.id === data.id);
+    }
+
+    const entry: VaultEntry = {
+      id: data.id ?? uuidv4(),
+      provider: validProvider,
+      displayName: validName,
+      apiKey: validKey,
+      baseUrl: validBaseUrl,
+      isValid: existing?.isValid ?? null,
+      lastTested: existing?.lastTested ?? null,
+      models: existing?.models ?? [],
+    };
+
+    const saved = store.saveVaultEntry(entry);
+    return toMasked(saved);
+  });
+
+  ipcMain.handle('vault:delete', (_, id: unknown): void => {
+    const validId = validateString(id, 'id');
+    store.deleteVaultEntry(validId);
+  });
+
+  ipcMain.handle('vault:test', async (_, provider: unknown, apiKey?: unknown, baseUrl?: unknown): Promise<{ success: boolean; error?: string; models?: string[] }> => {
+    const validProvider = validateString(provider, 'provider', 50);
+
+    // If apiKey provided directly (for unsaved entries), use it;
+    // otherwise look up from vault
+    let keyToTest = '';
+    if (apiKey && typeof apiKey === 'string') {
+      keyToTest = validateString(apiKey, 'apiKey', 500);
+    } else {
+      const entries = store.getVaultEntries();
+      const entry = entries.find((e) => e.provider === validProvider);
+      keyToTest = entry?.apiKey ?? store.getApiKey(validProvider) ?? '';
+    }
+
+    const validBaseUrl = baseUrl && typeof baseUrl === 'string'
+      ? validateString(baseUrl, 'baseUrl', 500)
+      : undefined;
+
+    const result = await vaultService.testConnection(validProvider, keyToTest, validBaseUrl);
+
+    // Update isValid / lastTested in vault if entry exists
+    const entries = store.getVaultEntries();
+    const entry = entries.find((e) => e.provider === validProvider);
+    if (entry) {
+      store.saveVaultEntry({
+        ...entry,
+        isValid: result.success,
+        lastTested: new Date().toISOString(),
+        models: result.models ?? entry.models,
+      });
+    }
+
+    return result;
+  });
+
+  // --- Deploy ---
+
+  ipcMain.handle('deploy:start', async (event, options: unknown): Promise<void> => {
+    if (!options || typeof options !== 'object') throw new Error('Invalid options');
+    const opts = options as DeployOptions;
+    const validPath = validateString(opts.projectPath, 'projectPath');
+    const validMessage = validateString(opts.commitMessage || 'Initial commit from Claude Forge', 'commitMessage', 500);
+
+    const win = BrowserWindow.fromWebContents(event.sender);
+
+    const deployOpts: DeployOptions = {
+      ...opts,
+      projectPath: validPath,
+      commitMessage: validMessage,
+    };
+
+    // Run deploy in background, streaming progress events
+    deployService.deployToGitHub(deployOpts, (stepData) => {
+      win?.webContents.send('deploy:progress', stepData);
+    }).then((result) => {
+      // Update project GitHub URL on success
+      if (result.success && result.repoUrl && opts.projectId) {
+        try {
+          const project = store.getProjectById(opts.projectId);
+          if (project) {
+            const urlMatch = result.repoUrl.match(/github\.com\/([^/]+\/[^/]+)/);
+            store.updateProject(opts.projectId, {
+              githubUrl: result.repoUrl,
+              githubRepo: urlMatch ? urlMatch[1] : project.githubRepo,
+            });
+          }
+        } catch {
+          // Non-fatal
+        }
+      }
+      win?.webContents.send('deploy:done', result);
+    }).catch((err) => {
+      win?.webContents.send('deploy:done', {
+        success: false,
+        error: err instanceof Error ? sanitizeErrorMessage(err.message) : 'Deploy failed',
+      });
+    });
+  });
+
+  ipcMain.handle('deploy:force-push', async (_, projectPath: unknown): Promise<{ success: boolean; repoUrl?: string; error?: string }> => {
+    const validPath = validateString(projectPath, 'projectPath');
+    return deployService.forcePush(validPath);
   });
 }
