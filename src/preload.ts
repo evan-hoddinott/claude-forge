@@ -180,4 +180,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     import: (filePath: string, mode: string, projectPath: string, projectId?: string, projectName?: string) =>
       ipcRenderer.invoke('vibe:import', filePath, mode, projectPath, projectId, projectName),
   },
+  snapshot: {
+    export: (options: unknown) => ipcRenderer.invoke('snapshot:export', options),
+    estimateSize: (projectId: string, includeSource: boolean, includeGit: boolean) =>
+      ipcRenderer.invoke('snapshot:estimate-size', projectId, includeSource, includeGit),
+    pickAndPreview: () => ipcRenderer.invoke('snapshot:pick-and-preview'),
+    import: (filePath: string, projectPath: string, projectName?: string) =>
+      ipcRenderer.invoke('snapshot:import', filePath, projectPath, projectName),
+  },
 });

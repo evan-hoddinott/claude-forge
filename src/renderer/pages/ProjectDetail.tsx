@@ -8,6 +8,7 @@ import StatusBadge from '../components/StatusBadge';
 import DeployDialog from '../components/DeployDialog';
 
 const ExportVibeDialog = lazy(() => import('../components/ExportVibeDialog'));
+const ExportSnapshotDialog = lazy(() => import('../components/ExportSnapshotDialog'));
 
 // Lazy-load FileExplorer (includes Monaco Editor) — only when Files tab is opened
 const FileExplorer = lazy(() => import('../components/FileExplorer'));
@@ -116,6 +117,7 @@ export default function ProjectDetail({
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [deployOpen, setDeployOpen] = useState(false);
   const [exportVibeOpen, setExportVibeOpen] = useState(false);
+  const [exportSnapshotOpen, setExportSnapshotOpen] = useState(false);
 
   if (loading) return <LoadingSkeleton />;
 
@@ -181,6 +183,9 @@ export default function ProjectDetail({
             </HeaderButton>
             <HeaderButton onClick={() => setExportVibeOpen(true)}>
               <BundleIcon /> Bundle
+            </HeaderButton>
+            <HeaderButton onClick={() => setExportSnapshotOpen(true)}>
+              <SnapshotButtonIcon /> Snapshot
             </HeaderButton>
             <button
               onClick={() => setDeployOpen(true)}
@@ -274,6 +279,16 @@ export default function ProjectDetail({
           <ExportVibeDialog
             project={project}
             onClose={() => setExportVibeOpen(false)}
+          />
+        )}
+      </Suspense>
+
+      {/* Export snapshot dialog */}
+      <Suspense fallback={null}>
+        {exportSnapshotOpen && (
+          <ExportSnapshotDialog
+            project={project}
+            onClose={() => setExportSnapshotOpen(false)}
           />
         )}
       </Suspense>
@@ -1090,6 +1105,16 @@ function BundleIcon() {
       <rect x="1" y="5" width="14" height="10" rx="1.5" />
       <path d="M5 5V3.5A1.5 1.5 0 016.5 2h3A1.5 1.5 0 0111 3.5V5" />
       <path d="M1 9h14" />
+    </svg>
+  );
+}
+
+function SnapshotButtonIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="8" r="3" />
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2" />
+      <path d="M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M11.1 4.9l1.4-1.4M3.5 12.5l1.4-1.4" />
     </svg>
   );
 }

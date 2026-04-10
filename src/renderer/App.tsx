@@ -22,6 +22,8 @@ const SplashScreen = lazy(() => import('./components/SplashScreen'));
 const ChatPanel = lazy(() => import('./components/ChatPanel'));
 const ExportVibeDialog = lazy(() => import('./components/ExportVibeDialog'));
 const ImportVibeDialog = lazy(() => import('./components/ImportVibeDialog'));
+const ExportSnapshotDialog = lazy(() => import('./components/ExportSnapshotDialog'));
+const ImportSnapshotDialog = lazy(() => import('./components/ImportSnapshotDialog'));
 
 export type Page = 'dashboard' | 'settings';
 
@@ -68,6 +70,8 @@ function AppInner() {
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
   const [exportVibeProject, setExportVibeProject] = useState<Project | null>(null);
   const [showImportVibe, setShowImportVibe] = useState(false);
+  const [exportSnapshotProject, setExportSnapshotProject] = useState<Project | null>(null);
+  const [showImportSnapshot, setShowImportSnapshot] = useState(false);
 
   // Check if setup has been completed on first load
   useEffect(() => {
@@ -135,6 +139,11 @@ function AppInner() {
 
   const handleContextMenuExportVibe = useCallback((project: Project) => {
     setExportVibeProject(project);
+    setContextMenu(null);
+  }, []);
+
+  const handleContextMenuExportSnapshot = useCallback((project: Project) => {
+    setExportSnapshotProject(project);
     setContextMenu(null);
   }, []);
 
@@ -274,6 +283,7 @@ function AppInner() {
                   onNewProject={handleNewProject}
                   onImportProject={(mode) => setShowImport(mode)}
                   onImportBundle={() => setShowImportVibe(true)}
+                  onImportSnapshot={() => setShowImportSnapshot(true)}
                   onOpenProject={setSelectedProjectId}
                   onContextMenu={handleContextMenu}
                 />
@@ -349,6 +359,7 @@ function AppInner() {
           onClose={() => setContextMenu(null)}
           onDelete={handleContextMenuDelete}
           onExportVibe={handleContextMenuExportVibe}
+          onExportSnapshot={handleContextMenuExportSnapshot}
         />
       )}
 
@@ -393,6 +404,28 @@ function AppInner() {
                 setRefreshKey((k) => k + 1);
                 setSelectedProjectId(project.id);
               }
+            }}
+          />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {exportSnapshotProject && (
+          <ExportSnapshotDialog
+            project={exportSnapshotProject}
+            onClose={() => setExportSnapshotProject(null)}
+          />
+        )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        {showImportSnapshot && (
+          <ImportSnapshotDialog
+            onClose={() => setShowImportSnapshot(false)}
+            onImported={(project) => {
+              setShowImportSnapshot(false);
+              setRefreshKey((k) => k + 1);
+              setSelectedProjectId(project.id);
             }}
           />
         )}

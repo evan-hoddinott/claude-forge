@@ -17,6 +17,7 @@ import * as chatService from './services/chat-service';
 import * as vaultService from './services/vault-service';
 import * as deployService from './services/deploy-service';
 import * as vibeService from './services/vibe-service';
+import * as snapshotService from './services/snapshot-service';
 import {
   validateString,
   isValidAgentType,
@@ -1289,5 +1290,38 @@ export function registerIpcHandlers(): void {
     const vProjectId = projectId ? validateString(projectId, 'projectId') : undefined;
     const vProjectName = projectName ? validateString(projectName, 'projectName', 100) : undefined;
     return vibeService.importVibe(vFilePath, vMode, vProjectPath, vProjectId, vProjectName);
+  });
+
+  // --- Snapshots ---
+
+  ipcMain.handle('snapshot:export', async (_, options: unknown) => {
+    if (!options || typeof options !== 'object') throw new Error('Invalid options');
+    const opts = options as import('../shared/types').SnapshotExportOptions;
+    const validId = validateString(opts.projectId, 'projectId');
+    return snapshotService.exportSnapshot({ ...opts, projectId: validId });
+  });
+
+  ipcMain.handle('snapshot:estimate-size', async (_, projectId: unknown, includeSource: unknown, includeGit: unknown) => {
+    const validId = validateString(projectId, 'projectId');
+    return snapshotService.estimateSize(validId, Boolean(includeSource), Boolean(includeGit));
+  });
+
+  ipcMain.handle('snapshot:pick-and-preview', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Open .cfsnap Snapshot',
+      filters: [{ name: 'Claude Forge Snapshot', extensions: ['cfsnap'] }],
+      properties: ['openFile'],
+    });
+    if (result.canceled || !result.filePaths[0]) return null;
+    const filePath = result.filePaths[0];
+    const preview = await snapshotService.previewSnapshot(filePath);
+    return { filePath, preview };
+  });
+
+  ipcMain.handle('snapshot:import', async (_, filePath: unknown, projectPath: unknown, projectName: unknown) => {
+    const vFilePath = validateString(filePath, 'filePath');
+    const vProjectPath = validateString(projectPath, 'projectPath');
+    const vProjectName = projectName ? validateString(projectName, 'projectName', 100) : undefined;
+    return snapshotService.importSnapshot(vFilePath, vProjectPath, vProjectName);
   });
 }

@@ -23,11 +23,12 @@ interface DashboardProps {
   onNewProject?: () => void;
   onImportProject?: (mode: 'local' | 'clone') => void;
   onImportBundle?: () => void;
+  onImportSnapshot?: () => void;
   onOpenProject?: (id: string) => void;
   onContextMenu?: (x: number, y: number, project: Project) => void;
 }
 
-export default function Dashboard({ onNewProject, onImportProject, onImportBundle, onOpenProject, onContextMenu }: DashboardProps) {
+export default function Dashboard({ onNewProject, onImportProject, onImportBundle, onImportSnapshot, onOpenProject, onContextMenu }: DashboardProps) {
   const api = useAPI();
   const { data: projects, loading } = useQuery(() => api.projects.list());
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,7 +69,7 @@ export default function Dashboard({ onNewProject, onImportProject, onImportBundl
         {loading ? (
           <LoadingSkeleton />
         ) : !hasProjects ? (
-          <EmptyState onCreateProject={onNewProject} onImportProject={onImportProject} onImportBundle={onImportBundle} />
+          <EmptyState onCreateProject={onNewProject} onImportProject={onImportProject} onImportBundle={onImportBundle} onImportSnapshot={onImportSnapshot} />
         ) : filtered.length === 0 ? (
           <NoResults query={searchQuery} onClear={() => setSearchQuery('')} />
         ) : viewMode === 'grid' ? (

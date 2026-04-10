@@ -4,10 +4,12 @@ export default function EmptyState({
   onCreateProject,
   onImportProject,
   onImportBundle,
+  onImportSnapshot,
 }: {
   onCreateProject?: () => void;
   onImportProject?: (mode: 'local' | 'clone') => void;
   onImportBundle?: () => void;
+  onImportSnapshot?: () => void;
 }) {
   return (
     <motion.div
@@ -128,6 +130,25 @@ export default function EmptyState({
                 <path d="M1 9h14" />
               </svg>
               Import Bundle
+            </button>
+          )}
+          {onImportSnapshot && (
+            <button
+              onClick={onImportSnapshot}
+              className="flex items-center gap-1.5 px-4 py-2 rounded text-text-secondary hover:text-text-primary transition-colors"
+              style={{
+                fontFamily: "var(--forge-font-body, 'IBM Plex Mono', monospace)",
+                fontSize: 12,
+                border: '1px solid var(--forge-border)',
+                backgroundColor: 'transparent',
+              }}
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="8" cy="8" r="3" />
+                <path d="M8 1v2M8 13v2M1 8h2M13 8h2" />
+                <path d="M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M11.1 4.9l1.4-1.4M3.5 12.5l1.4-1.4" />
+              </svg>
+              Import Snapshot
             </button>
           )}
         </div>

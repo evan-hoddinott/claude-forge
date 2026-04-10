@@ -455,6 +455,12 @@ export interface ElectronAPI {
     pickAndPreview: () => Promise<{ filePath: string; preview: VibeImportPreview } | null>;
     import: (filePath: string, mode: 'new' | 'merge', projectPath: string, projectId?: string, projectName?: string) => Promise<Project | null>;
   };
+  snapshot: {
+    export: (options: SnapshotExportOptions) => Promise<string | null>;
+    estimateSize: (projectId: string, includeSource: boolean, includeGit: boolean) => Promise<number>;
+    pickAndPreview: () => Promise<{ filePath: string; preview: SnapshotImportPreview } | null>;
+    import: (filePath: string, projectPath: string, projectName?: string) => Promise<Project | null>;
+  };
 }
 
 // --- Vibe Bundle Types ---
@@ -498,6 +504,44 @@ export interface VibeImportPreview {
   hasDecisions: boolean;
   hasConstraints: boolean;
   hasChatHistory: boolean;
+}
+
+// --- Snapshot Types ---
+
+export interface SnapshotManifest {
+  name: string;
+  description: string;
+  snapshotVersion: '1';
+  created: string;
+  forgeVersion: string;
+  projectId: string;
+  includes: {
+    source: boolean;
+    git: boolean;
+    vibe: boolean;
+    chatHistory: boolean;
+    apiKeys: boolean;
+  };
+  warnings?: string[];
+}
+
+export interface SnapshotExportOptions {
+  projectId: string;
+  includeSource: boolean;
+  includeGit: boolean;
+  includeVibe: boolean;
+  includeChatHistory: boolean;
+  includeApiKeys: boolean;
+}
+
+export interface SnapshotImportPreview {
+  manifest: SnapshotManifest;
+  hasSource: boolean;
+  sourceFileCount: number;
+  hasGit: boolean;
+  hasVibe: boolean;
+  hasChatHistory: boolean;
+  fileSizeBytes: number;
 }
 
 declare global {
