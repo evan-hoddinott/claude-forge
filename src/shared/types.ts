@@ -122,6 +122,35 @@ export type ProjectLocationMode = 'wsl' | 'windows';
 
 export type AppMode = 'simple' | 'developer';
 
+// --- Skill Store Types ---
+
+export type SkillCategory = 'personality' | 'starter' | 'constraint';
+
+export interface SkillEntry {
+  id: string;
+  name: string;
+  author: string;
+  version: string;
+  category: SkillCategory;
+  description: string;
+  longDescription?: string;
+  icon: string;
+  rating: number;
+  ratingCount: number;
+  size: number;
+  tags: string[];
+  agents: AgentType[];
+  downloadUrl: string | null;
+  builtIn: boolean;
+}
+
+export interface InstalledSkillRecord {
+  skillId: string;
+  name: string;
+  version: string;
+  installedAt: string;
+}
+
 export interface UserPreferences {
   defaultProjectDir: string;
   projectLocationMode: ProjectLocationMode;
@@ -522,6 +551,13 @@ export interface ElectronAPI {
     offProgress: () => void;
     onAutoResult: (callback: (data: { projectId: string; result: GhostTestResult }) => void) => void;
     offAutoResult: () => void;
+  };
+  skills: {
+    fetchCatalog: () => Promise<SkillEntry[]>;
+    getInstalled: (projectId: string) => Promise<InstalledSkillRecord[]>;
+    install: (skillId: string, projectId: string) => Promise<void>;
+    uninstall: (skillId: string, projectId: string) => Promise<void>;
+    saveAs: (skillId: string) => Promise<void>;
   };
 }
 

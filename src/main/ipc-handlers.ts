@@ -20,6 +20,7 @@ import * as vibeService from './services/vibe-service';
 import * as snapshotService from './services/snapshot-service';
 import * as ghostTestService from './services/ghost-test-service';
 import * as reasoningMapService from './services/reasoning-map-service';
+import * as skillService from './services/skill-service';
 import {
   validateString,
   isValidAgentType,
@@ -1454,5 +1455,48 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('reasoningmap:get-attribution', (_, projectId: unknown) => {
     const vId = validateString(projectId, 'projectId');
     return store.getFileAttribution(vId);
+  });
+
+  // --- Skills ---
+
+  ipcMain.handle('skills:fetch-catalog', async () => {
+    return skillService.fetchCatalog();
+  });
+
+  ipcMain.handle('skills:get-installed', (_, projectId: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    return store.getInstalledSkills(vId);
+  });
+
+  ipcMain.handle('skills:install', async (_, skillId: unknown, projectId: unknown) => {
+    const vSkillId = validateString(skillId, 'skillId');
+    const vProjectId = validateString(projectId, 'projectId');
+    const project = store.getProjectById(vProjectId);
+    if (!project) throw new Error('Project not found');
+    await skillService.installSkill(vSkillId, project);
+  });
+
+  ipcMain.handle('skills:uninstall', async (_, skillId: unknown, projectId: unknown) => {
+    const vSkillId = validateString(skillId, 'skillId');
+    const vProjectId = validateString(projectId, 'projectId');
+    const project = store.getProjectById(vProjectId);
+    if (!project) throw new Error('Project not found');
+    await skillService.uninstallSkill(vSkillId, project);
+  });
+
+  ipcMain.handle('skills:save-as', async (_, skillId: unknown) => {
+    const vSkillId = validateString(skillId, 'skillId');
+    const win = BrowserWindow.getFocusedWindow();
+    const catalog = await skillService.fetchCatalog();
+    const skill = catalog.find((s) => s.id === vSkillId);
+    if (!skill) throw new Error('Skill not found');
+    const result = await dialog.showSaveDialog(win ?? BrowserWindow.getAllWindows()[0], {
+      title: 'Save Skill Bundle',
+      defaultPath: `${vSkillId}.vibe`,
+      filters: [{ name: 'Vibe Bundle', extensions: ['vibe'] }],
+    });
+    if (!result.filePath) return;
+    const { writeFile } = await import('node:fs/promises');
+    await writeFile(result.filePath, JSON.stringify(skill, null, 2), 'utf-8');
   });
 }

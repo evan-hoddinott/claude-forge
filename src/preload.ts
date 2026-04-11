@@ -232,4 +232,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeAllListeners('ghost-test:auto-result');
     },
   },
+  skills: {
+    fetchCatalog: () => ipcRenderer.invoke('skills:fetch-catalog'),
+    getInstalled: (projectId: string) => ipcRenderer.invoke('skills:get-installed', projectId),
+    install: (skillId: string, projectId: string) =>
+      ipcRenderer.invoke('skills:install', skillId, projectId),
+    uninstall: (skillId: string, projectId: string) =>
+      ipcRenderer.invoke('skills:uninstall', skillId, projectId),
+    saveAs: (skillId: string) => ipcRenderer.invoke('skills:save-as', skillId),
+  },
 });

@@ -7,7 +7,7 @@ import UpdateNotification from './components/UpdateNotification';
 import Dashboard from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
 import { useToast } from './components/Toast';
-import { useAPI } from './hooks/useAPI';
+import { useAPI, useQuery } from './hooks/useAPI';
 import { useReduceMotion } from './hooks/usePerformance';
 import type { Project, AppMode } from '../shared/types';
 
@@ -18,6 +18,7 @@ const CommandPalette = lazy(() => import('./components/CommandPalette'));
 const SetupAssistant = lazy(() => import('./components/SetupAssistant'));
 const OnboardingTutorial = lazy(() => import('./components/OnboardingTutorial'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Store = lazy(() => import('./pages/Store'));
 const SplashScreen = lazy(() => import('./components/SplashScreen'));
 const ChatPanel = lazy(() => import('./components/ChatPanel'));
 const ExportVibeDialog = lazy(() => import('./components/ExportVibeDialog'));
@@ -25,7 +26,7 @@ const ImportVibeDialog = lazy(() => import('./components/ImportVibeDialog'));
 const ExportSnapshotDialog = lazy(() => import('./components/ExportSnapshotDialog'));
 const ImportSnapshotDialog = lazy(() => import('./components/ImportSnapshotDialog'));
 
-export type Page = 'dashboard' | 'settings';
+export type Page = 'dashboard' | 'settings' | 'store';
 
 const pageVariantsAnimated = {
   initial: { opacity: 0, y: 6 },
@@ -72,6 +73,9 @@ function AppInner() {
   const [showImportVibe, setShowImportVibe] = useState(false);
   const [exportSnapshotProject, setExportSnapshotProject] = useState<Project | null>(null);
   const [showImportSnapshot, setShowImportSnapshot] = useState(false);
+
+  // Projects list used by the Store page
+  const { data: allProjects } = useQuery(() => api.projects.list(), [refreshKey]);
 
   // Check if setup has been completed on first load
   useEffect(() => {
@@ -305,6 +309,19 @@ function AppInner() {
                   onOpenProject={setSelectedProjectId}
                   onContextMenu={handleContextMenu}
                 />
+              </motion.div>
+            ) : activePage === 'store' ? (
+              <motion.div
+                key="store"
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="h-full"
+              >
+                <Suspense fallback={LazyFallback}>
+                  <Store projects={allProjects ?? []} />
+                </Suspense>
               </motion.div>
             ) : (
               <motion.div

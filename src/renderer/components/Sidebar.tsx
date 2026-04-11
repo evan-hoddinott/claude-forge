@@ -883,6 +883,20 @@ export default function Sidebar({
         />
         <NavItem
           icon={
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <path d="M2 3h12l-1.5 7H3.5L2 3z" />
+              <circle cx="5.5" cy="13" r="1" fill="currentColor" stroke="none" />
+              <circle cx="10.5" cy="13" r="1" fill="currentColor" stroke="none" />
+              <path d="M1 1h1.5l.5 2" />
+            </svg>
+          }
+          label="Skill Store"
+          active={activePage === 'store'}
+          onClick={() => onNavigate('store')}
+          collapsed={collapsed}
+        />
+        <NavItem
+          icon={
             <svg
               viewBox="0 0 16 16"
               fill="none"
