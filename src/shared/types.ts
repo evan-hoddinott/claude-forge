@@ -495,6 +495,8 @@ export interface ElectronAPI {
     getAllLastResults: () => Promise<Record<string, GhostTestResult | null>>;
     onProgress: (callback: (data: { projectId: string; message: string }) => void) => void;
     offProgress: () => void;
+    onAutoResult: (callback: (data: { projectId: string; result: GhostTestResult }) => void) => void;
+    offAutoResult: () => void;
   };
 }
 

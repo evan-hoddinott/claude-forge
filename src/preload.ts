@@ -209,5 +209,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     offProgress: () => {
       ipcRenderer.removeAllListeners('ghost-test:progress');
     },
+    onAutoResult: (callback: (data: { projectId: string; result: import('./shared/types').GhostTestResult }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { projectId: string; result: import('./shared/types').GhostTestResult }) =>
+        callback(data);
+      ipcRenderer.on('ghost-test:auto-result', handler);
+    },
+    offAutoResult: () => {
+      ipcRenderer.removeAllListeners('ghost-test:auto-result');
+    },
   },
 });

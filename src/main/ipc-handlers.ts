@@ -278,6 +278,30 @@ export function registerIpcHandlers(): void {
       lastClaudeSession: new Date().toISOString(),
       status: 'in-progress',
     });
+
+    // Start auto-trigger: watch for file changes after the agent session,
+    // then silently run a ghost test when editing stops.
+    const gtSettings = store.getGhostTestSettings(validId);
+    if (gtSettings.enabled) {
+      ghostTestService.startAutoTrigger(
+        validId,
+        project.path,
+        agentType as import('../shared/types').AgentType,
+        gtSettings,
+        (result) => {
+          const win = BrowserWindow.getAllWindows()[0];
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('ghost-test:auto-result', { projectId: validId, result });
+          }
+        },
+        (message) => {
+          const win = BrowserWindow.getAllWindows()[0];
+          if (win && !win.isDestroyed()) {
+            win.webContents.send('ghost-test:progress', { projectId: validId, message });
+          }
+        },
+      ).catch(() => {/* ignore watcher init errors */});
+    }
   });
 
   ipcMain.handle('agent:status', async (_, projectId: unknown) => {

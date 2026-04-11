@@ -106,6 +106,24 @@ function AppInner() {
     };
   }, []);
 
+  // Listen for auto ghost test results (triggered after agent sessions)
+  useEffect(() => {
+    api.ghostTest.onAutoResult(({ result }) => {
+      if (result.status === 'passed') {
+        toast('Ghost test passed — all clear', 'success');
+      } else if (result.status === 'auto-fixed') {
+        toast(`Ghost test passed — ${result.fixDescription ?? 'auto-fixed'}`, 'success');
+      } else if (result.status === 'timeout') {
+        toast('Ghost test timed out — code may have a long-running process', 'info');
+      } else {
+        toast('Ghost test found issues — open the project to see details', 'error');
+      }
+    });
+    return () => {
+      api.ghostTest.offAutoResult();
+    };
+  }, [api, toast]);
+
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     x: number;

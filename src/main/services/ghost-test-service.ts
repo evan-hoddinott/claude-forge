@@ -9,6 +9,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { spawn } from 'node:child_process';
 import { v4 as uuidv4 } from 'uuid';
+import type { FSWatcher } from 'chokidar';
 import type { GhostTestResult, GhostTestSettings, AgentType } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import * as store from '../store';
@@ -297,4 +298,134 @@ export async function runGhostTestWithRetry(
   result.fixAttempts = fixAttempts;
   store.saveGhostTestResult(projectId, result);
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Auto-trigger (file-change-based, fires after agent session ends)
+// ---------------------------------------------------------------------------
+
+interface AutoTriggerState {
+  watcher: FSWatcher;
+  debounceTimer: ReturnType<typeof setTimeout> | null;
+  maxTimer: ReturnType<typeof setTimeout>;
+  changed: boolean;
+}
+
+const autoTriggers = new Map<string, AutoTriggerState>();
+
+/**
+ * Start watching a project directory for file changes.
+ * After DEBOUNCE_MS of inactivity (following at least one change),
+ * automatically runs a ghost test and calls onResult with the outcome.
+ *
+ * Stops itself after MAX_WATCH_MS regardless (prevents indefinite watching).
+ */
+export async function startAutoTrigger(
+  projectId: string,
+  projectPath: string,
+  agentType: AgentType,
+  settings: GhostTestSettings,
+  onResult: (result: GhostTestResult) => void,
+  onProgress: (msg: string) => void,
+): Promise<void> {
+  if (!settings.enabled) return;
+
+  // Cancel any existing trigger for this project first
+  stopAutoTrigger(projectId);
+
+  const DEBOUNCE_MS = 30_000; // 30s of no changes → test
+  const MAX_WATCH_MS = 15 * 60 * 1000; // 15 min max watch window
+
+  const chokidar = await import('chokidar');
+  const watcher = chokidar.watch(projectPath, {
+    ignored: [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/dist/**',
+      '**/out/**',
+      '**/build/**',
+      '**/.next/**',
+      '**/.vite/**',
+      '**/__pycache__/**',
+      '**/.claude/**', // agent history/session files
+      '**/.cache/**',
+      '**/coverage/**',
+    ],
+    persistent: true,
+    ignoreInitial: true,
+    depth: 4,
+    followSymlinks: false,
+    usePolling: false,
+  });
+
+  const state: AutoTriggerState = {
+    watcher,
+    debounceTimer: null,
+    maxTimer: setTimeout(() => {
+      // Max watch time reached — clean up without running test
+      stopAutoTrigger(projectId);
+    }, MAX_WATCH_MS),
+    changed: false,
+  };
+
+  autoTriggers.set(projectId, state);
+
+  async function triggerTest() {
+    // Avoid double-triggering
+    if (!autoTriggers.has(projectId)) return;
+    stopAutoTrigger(projectId);
+
+    let command = settings.customCommand.trim();
+    if (!command) {
+      try {
+        command = await detectTestCommand(projectPath);
+      } catch {
+        return; // can't detect command
+      }
+    }
+    if (!command) return;
+
+    onProgress('Auto-running ghost test…');
+    try {
+      const result = await runGhostTestWithRetry(
+        projectId,
+        projectPath,
+        command,
+        settings,
+        agentType,
+        onProgress,
+      );
+      onResult(result);
+    } catch {
+      // Silently ignore auto-trigger errors
+    }
+  }
+
+  function onFileChange() {
+    state.changed = true;
+    if (state.debounceTimer) clearTimeout(state.debounceTimer);
+    state.debounceTimer = setTimeout(() => {
+      if (state.changed) {
+        triggerTest().catch(() => {/* ignore */});
+      }
+    }, DEBOUNCE_MS);
+  }
+
+  watcher.on('add', onFileChange);
+  watcher.on('change', onFileChange);
+  watcher.on('unlink', onFileChange);
+  watcher.on('addDir', onFileChange);
+  watcher.on('unlinkDir', onFileChange);
+}
+
+/**
+ * Stop any pending auto-trigger for a project (cancels watcher and timers).
+ */
+export function stopAutoTrigger(projectId: string): void {
+  const state = autoTriggers.get(projectId);
+  if (!state) return;
+  autoTriggers.delete(projectId);
+  if (state.debounceTimer) clearTimeout(state.debounceTimer);
+  clearTimeout(state.maxTimer);
+  state.watcher.close().catch(() => {/* ignore */});
 }
