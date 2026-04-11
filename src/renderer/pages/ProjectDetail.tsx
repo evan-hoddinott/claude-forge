@@ -14,11 +14,15 @@ const ExportSnapshotDialog = lazy(() => import('../components/ExportSnapshotDial
 // Lazy-load FileExplorer (includes Monaco Editor) — only when Files tab is opened
 const FileExplorer = lazy(() => import('../components/FileExplorer'));
 
-type Tab = 'overview' | 'files' | 'github' | 'agents' | 'settings';
+// Lazy-load ReasoningMap — only when Map tab is opened
+const ReasoningMap = lazy(() => import('../components/ReasoningMap'));
+
+type Tab = 'overview' | 'files' | 'map' | 'github' | 'agents' | 'settings';
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'files', label: 'Files' },
+  { id: 'map', label: 'Map' },
   { id: 'github', label: 'GitHub' },
   { id: 'agents', label: 'AI Agents' },
   { id: 'settings', label: 'Settings' },
@@ -237,6 +241,12 @@ export default function ProjectDetail({
           <div className="h-full">
             <Suspense fallback={<FileExplorerSkeleton />}>
               <FileExplorer project={project} />
+            </Suspense>
+          </div>
+        ) : activeTab === 'map' ? (
+          <div className="h-full">
+            <Suspense fallback={<MapSkeleton />}>
+              <ReasoningMap project={project} />
             </Suspense>
           </div>
         ) : (
@@ -1042,6 +1052,16 @@ function FileExplorerSkeleton() {
       <div className="flex-1 flex items-center justify-center text-text-muted text-sm">
         Loading file explorer...
       </div>
+    </div>
+  );
+}
+
+function MapSkeleton() {
+  return (
+    <div className="h-full flex flex-col items-center justify-center text-text-muted gap-3">
+      <div className="w-48 h-3 rounded bg-white/[0.05] animate-pulse" />
+      <div className="w-32 h-3 rounded bg-white/[0.03] animate-pulse" />
+      <div className="text-xs text-text-muted mt-2">Loading map...</div>
     </div>
   );
 }

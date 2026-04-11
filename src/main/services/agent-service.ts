@@ -8,6 +8,18 @@ import { sanitizeProjectName, sanitizeDescription } from '../utils/sanitize';
 import { runCommand, findTerminalEmulator, getPlatformMode } from '../utils/run-command';
 
 const activeProcesses = new Map<string, ChildProcess>();
+const exitCallbacks = new Map<string, Array<(projectPath: string, agentType: AgentType) => void>>();
+
+export function registerExitCallback(
+  projectId: string,
+  agentType: AgentType,
+  callback: (projectPath: string, agentType: AgentType) => void,
+): void {
+  const key = `${projectId}:${agentType}`;
+  const existing = exitCallbacks.get(key) ?? [];
+  existing.push(callback);
+  exitCallbacks.set(key, existing);
+}
 
 /**
  * Resolves the full binary path for an agent command using a login shell,
@@ -141,7 +153,12 @@ export async function startAgent(
 
   child.unref();
   activeProcesses.set(processKey, child);
-  child.on('exit', () => activeProcesses.delete(processKey));
+  child.on('exit', () => {
+    activeProcesses.delete(processKey);
+    const callbacks = exitCallbacks.get(processKey) ?? [];
+    callbacks.forEach((cb) => cb(projectPath, agentType));
+    exitCallbacks.delete(processKey);
+  });
 }
 
 export async function getStatus(

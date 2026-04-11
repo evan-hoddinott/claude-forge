@@ -19,6 +19,7 @@ import * as deployService from './services/deploy-service';
 import * as vibeService from './services/vibe-service';
 import * as snapshotService from './services/snapshot-service';
 import * as ghostTestService from './services/ghost-test-service';
+import * as reasoningMapService from './services/reasoning-map-service';
 import {
   validateString,
   isValidAgentType,
@@ -277,6 +278,23 @@ export function registerIpcHandlers(): void {
     store.updateProject(validId, {
       lastClaudeSession: new Date().toISOString(),
       status: 'in-progress',
+    });
+
+    // Register exit callback for agent attribution tracking
+    agentService.registerExitCallback(validId, agentType as import('../shared/types').AgentType, async (projPath, agType) => {
+      try {
+        const diff = await runCommand('git diff --name-only HEAD', { cwd: projPath, timeout: 5000 });
+        const files = diff.split('\n').filter(Boolean);
+        if (files.length > 0) {
+          store.updateFileAttribution(validId, files, agType);
+        }
+      } catch {
+        // not a git repo or no changes — ignore
+      }
+      const win = BrowserWindow.getAllWindows()[0];
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('reasoningmap:files-changed', { projectId: validId });
+      }
     });
 
     // Start auto-trigger: watch for file changes after the agent session,
@@ -1408,5 +1426,33 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('ghost-test:get-all-last-results', () => {
     return store.getAllLastGhostTestResults();
+  });
+
+  // --- Reasoning Map ---
+
+  ipcMain.handle('reasoningmap:generate', async (_, projectId: unknown, projectPath: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    const vPath = validateString(projectPath, 'projectPath');
+    const map = await reasoningMapService.generateReasoningMap(vId, vPath);
+    store.setReasoningMap(vId, map);
+    return map;
+  });
+
+  ipcMain.handle('reasoningmap:get', async (_, projectId: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    const cached = store.getReasoningMap(vId);
+    if (!cached) return null;
+    // Check staleness against project path
+    const project = store.getProjectById(vId);
+    if (project) {
+      const stale = await reasoningMapService.isStale(project.path, cached.lastGenerated);
+      if (stale) return null; // caller will regenerate
+    }
+    return cached;
+  });
+
+  ipcMain.handle('reasoningmap:get-attribution', (_, projectId: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    return store.getFileAttribution(vId);
   });
 }

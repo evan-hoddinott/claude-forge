@@ -188,6 +188,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     import: (filePath: string, projectPath: string, projectName?: string) =>
       ipcRenderer.invoke('snapshot:import', filePath, projectPath, projectName),
   },
+  reasoningMap: {
+    generate: (projectId: string, projectPath: string) =>
+      ipcRenderer.invoke('reasoningmap:generate', projectId, projectPath),
+    get: (projectId: string) =>
+      ipcRenderer.invoke('reasoningmap:get', projectId),
+    getAttribution: (projectId: string) =>
+      ipcRenderer.invoke('reasoningmap:get-attribution', projectId),
+    onFilesChanged: (callback: (data: { projectId: string }) => void) => {
+      ipcRenderer.on('reasoningmap:files-changed', (_event, data) => callback(data));
+    },
+    offFilesChanged: () => {
+      ipcRenderer.removeAllListeners('reasoningmap:files-changed');
+    },
+  },
   ghostTest: {
     run: (projectId: string, projectPath: string, agentType: string) =>
       ipcRenderer.invoke('ghost-test:run', projectId, projectPath, agentType),

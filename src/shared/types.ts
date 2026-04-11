@@ -304,6 +304,24 @@ export interface DeployResult {
   error?: string;
 }
 
+// --- Reasoning Map Types ---
+
+export interface MapNode {
+  id: string;
+  label: string;
+  type: 'page' | 'component' | 'api' | 'model' | 'service' | 'database' | 'test' | 'config';
+  files: string[];
+  lastModifiedBy?: AgentType | 'user';
+  lastModified?: string;
+}
+
+export interface ReasoningMap {
+  mermaidCode: string;
+  nodes: MapNode[];
+  lastGenerated: string;
+  lastModifiedBy: string;
+}
+
 // --- Chat Types ---
 
 export interface ChatMessage {
@@ -485,6 +503,13 @@ export interface ElectronAPI {
     estimateSize: (projectId: string, includeSource: boolean, includeGit: boolean) => Promise<number>;
     pickAndPreview: () => Promise<{ filePath: string; preview: SnapshotImportPreview } | null>;
     import: (filePath: string, projectPath: string, projectName?: string) => Promise<Project | null>;
+  };
+  reasoningMap: {
+    generate: (projectId: string, projectPath: string) => Promise<ReasoningMap>;
+    get: (projectId: string) => Promise<ReasoningMap | null>;
+    getAttribution: (projectId: string) => Promise<Record<string, { agent: AgentType | 'user'; date: string }>>;
+    onFilesChanged: (callback: (data: { projectId: string }) => void) => void;
+    offFilesChanged: () => void;
   };
   ghostTest: {
     run: (projectId: string, projectPath: string, agentType: AgentType) => Promise<GhostTestResult>;
