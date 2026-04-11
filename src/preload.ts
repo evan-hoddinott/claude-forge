@@ -188,4 +188,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     import: (filePath: string, projectPath: string, projectName?: string) =>
       ipcRenderer.invoke('snapshot:import', filePath, projectPath, projectName),
   },
+  ghostTest: {
+    run: (projectId: string, projectPath: string, agentType: string) =>
+      ipcRenderer.invoke('ghost-test:run', projectId, projectPath, agentType),
+    getHistory: (projectId: string) =>
+      ipcRenderer.invoke('ghost-test:get-history', projectId),
+    getSettings: (projectId: string) =>
+      ipcRenderer.invoke('ghost-test:get-settings', projectId),
+    updateSettings: (projectId: string, settings: unknown) =>
+      ipcRenderer.invoke('ghost-test:update-settings', projectId, settings),
+    detectCommand: (projectPath: string) =>
+      ipcRenderer.invoke('ghost-test:detect-command', projectPath),
+    getAllLastResults: () =>
+      ipcRenderer.invoke('ghost-test:get-all-last-results'),
+    onProgress: (callback: (data: { projectId: string; message: string }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { projectId: string; message: string }) =>
+        callback(data);
+      ipcRenderer.on('ghost-test:progress', handler);
+    },
+    offProgress: () => {
+      ipcRenderer.removeAllListeners('ghost-test:progress');
+    },
+  },
 });

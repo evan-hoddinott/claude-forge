@@ -2,9 +2,10 @@ import { memo } from 'react';
 import { motion } from 'framer-motion';
 import type { Project } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
-import { useAPI } from '../hooks/useAPI';
+import { useAPI, useQuery } from '../hooks/useAPI';
 import { useToast } from './Toast';
 import StatusBadge from './StatusBadge';
+import { GhostTestBadge } from './GhostTestPanel';
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -53,6 +54,11 @@ export default memo(function ProjectCard({
 }) {
   const api = useAPI();
   const { toast } = useToast();
+  const { data: ghostHistory } = useQuery(
+    () => api.ghostTest.getHistory(project.id),
+    [project.id],
+  );
+  const lastGhostResult = ghostHistory?.[0] ?? null;
 
   const handleOpenTerminal = () => api.system.openInTerminal(project.path);
   const handleOpenEditor = () => api.system.openInEditor(project.path);
@@ -74,11 +80,12 @@ export default memo(function ProjectCard({
         className="flex items-center gap-4 px-4 py-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] hover:border-white/[0.08] transition-all cursor-pointer group"
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-semibold text-text-primary truncate">
               {project.name}
             </h3>
             <StatusBadge status={project.status} />
+            <GhostTestBadge result={lastGhostResult} />
           </div>
           {project.description && (
             <p className="text-xs text-text-muted truncate mt-0.5">
@@ -134,7 +141,10 @@ export default memo(function ProjectCard({
           <h3 className="text-sm font-semibold text-text-primary truncate">
             {project.name}
           </h3>
-          <StatusBadge status={project.status} />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <GhostTestBadge result={lastGhostResult} />
+            <StatusBadge status={project.status} />
+          </div>
         </div>
 
         {/* Description */}

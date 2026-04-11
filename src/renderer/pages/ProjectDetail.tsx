@@ -6,6 +6,7 @@ import type { Project, ProjectInput, AgentType } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import StatusBadge from '../components/StatusBadge';
 import DeployDialog from '../components/DeployDialog';
+import GhostTestPanel from '../components/GhostTestPanel';
 
 const ExportVibeDialog = lazy(() => import('../components/ExportVibeDialog'));
 const ExportSnapshotDialog = lazy(() => import('../components/ExportSnapshotDialog'));
@@ -360,6 +361,9 @@ function OverviewTab({ project }: { project: Project }) {
           ))}
         </div>
       )}
+
+      {/* Ghost Tests */}
+      <GhostTestPanel project={project} />
 
       {/* Context file preview */}
       <SectionCard title={`Context Files (${contextFiles.join(', ')})`}>

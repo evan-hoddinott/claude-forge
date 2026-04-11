@@ -342,6 +342,31 @@ export interface UpdateStatus {
   message?: string;
 }
 
+// --- Ghost Test Types ---
+
+export type GhostTestStatus = 'passed' | 'failed' | 'timeout' | 'auto-fixed';
+
+export interface GhostTestResult {
+  id: string;
+  timestamp: string; // ISO date
+  command: string;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  duration: number; // ms
+  status: GhostTestStatus;
+  fixAttempts: number;
+  fixDescription?: string;
+}
+
+export interface GhostTestSettings {
+  enabled: boolean;
+  customCommand: string; // empty = auto-detect
+  timeoutSeconds: number;
+  maxRetries: number;
+  useDocker: boolean;
+}
+
 export interface ElectronAPI {
   setup: {
     checkDependencies: () => Promise<SetupCheckResult>;
@@ -460,6 +485,16 @@ export interface ElectronAPI {
     estimateSize: (projectId: string, includeSource: boolean, includeGit: boolean) => Promise<number>;
     pickAndPreview: () => Promise<{ filePath: string; preview: SnapshotImportPreview } | null>;
     import: (filePath: string, projectPath: string, projectName?: string) => Promise<Project | null>;
+  };
+  ghostTest: {
+    run: (projectId: string, projectPath: string, agentType: AgentType) => Promise<GhostTestResult>;
+    getHistory: (projectId: string) => Promise<GhostTestResult[]>;
+    getSettings: (projectId: string) => Promise<GhostTestSettings>;
+    updateSettings: (projectId: string, settings: Partial<GhostTestSettings>) => Promise<GhostTestSettings>;
+    detectCommand: (projectPath: string) => Promise<string>;
+    getAllLastResults: () => Promise<Record<string, GhostTestResult | null>>;
+    onProgress: (callback: (data: { projectId: string; message: string }) => void) => void;
+    offProgress: () => void;
   };
 }
 

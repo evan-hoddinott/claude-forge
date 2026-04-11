@@ -18,6 +18,7 @@ import * as vaultService from './services/vault-service';
 import * as deployService from './services/deploy-service';
 import * as vibeService from './services/vibe-service';
 import * as snapshotService from './services/snapshot-service';
+import * as ghostTestService from './services/ghost-test-service';
 import {
   validateString,
   isValidAgentType,
@@ -1323,5 +1324,65 @@ export function registerIpcHandlers(): void {
     const vProjectPath = validateString(projectPath, 'projectPath');
     const vProjectName = projectName ? validateString(projectName, 'projectName', 100) : undefined;
     return snapshotService.importSnapshot(vFilePath, vProjectPath, vProjectName);
+  });
+
+  // --- Ghost Tests ---
+
+  ipcMain.handle('ghost-test:run', async (event, projectId: unknown, projectPath: unknown, agentType: unknown) => {
+    const vProjectId = validateString(projectId, 'projectId');
+    const vProjectPath = validateString(projectPath, 'projectPath');
+    if (!isValidAgentType(agentType)) throw new Error('Invalid agent type');
+
+    const settings = store.getGhostTestSettings(vProjectId);
+
+    let command = settings.customCommand.trim();
+    if (!command) {
+      command = await ghostTestService.detectTestCommand(vProjectPath);
+    }
+    if (!command) {
+      throw new Error('No test command detected. Set one in Ghost Test settings.');
+    }
+
+    const onProgress = (message: string) => {
+      event.sender.send('ghost-test:progress', { projectId: vProjectId, message });
+    };
+
+    try {
+      return await ghostTestService.runGhostTestWithRetry(
+        vProjectId,
+        vProjectPath,
+        command,
+        settings,
+        agentType as import('../shared/types').AgentType,
+        onProgress,
+      );
+    } catch (err) {
+      throw new Error(safeError(err));
+    }
+  });
+
+  ipcMain.handle('ghost-test:get-history', (_, projectId: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    return store.getGhostTestHistory(vId);
+  });
+
+  ipcMain.handle('ghost-test:get-settings', (_, projectId: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    return store.getGhostTestSettings(vId);
+  });
+
+  ipcMain.handle('ghost-test:update-settings', (_, projectId: unknown, settings: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    if (!settings || typeof settings !== 'object') throw new Error('Invalid settings');
+    return store.saveGhostTestSettings(vId, settings as Partial<import('../shared/types').GhostTestSettings>);
+  });
+
+  ipcMain.handle('ghost-test:detect-command', async (_, projectPath: unknown) => {
+    const vPath = validateString(projectPath, 'projectPath');
+    return ghostTestService.detectTestCommand(vPath);
+  });
+
+  ipcMain.handle('ghost-test:get-all-last-results', () => {
+    return store.getAllLastGhostTestResults();
   });
 }

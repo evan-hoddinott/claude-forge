@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
-import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry } from '../shared/types';
+import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings } from '../shared/types';
 
 // electron-store is ESM; when Node.js requires it at runtime the default export
 // may land on `.default`. This handles both CJS interop shapes.
@@ -17,6 +17,8 @@ interface StoreSchema {
   chatHistory: Record<string, ChatMessage[]>;
   apiKeys: Record<string, string>;
   vaultEntries: VaultEntry[];
+  ghostTestHistory: Record<string, GhostTestResult[]>;
+  ghostTestSettings: Record<string, GhostTestSettings>;
 }
 
 let _store: Store<StoreSchema> | null = null;
@@ -90,6 +92,8 @@ function getStore(): Store<StoreSchema> {
         chatHistory: {},
         apiKeys: {},
         vaultEntries: [],
+        ghostTestHistory: {},
+        ghostTestSettings: {},
       },
     });
   }
@@ -278,4 +282,51 @@ export function getEncryptionStatus(): 'active' | 'fallback' {
   } catch {
     return 'fallback';
   }
+}
+
+// --- Ghost Test ---
+
+const DEFAULT_GHOST_TEST_SETTINGS: GhostTestSettings = {
+  enabled: true,
+  customCommand: '',
+  timeoutSeconds: 30,
+  maxRetries: 3,
+  useDocker: false,
+};
+
+export function getGhostTestHistory(projectId: string): GhostTestResult[] {
+  const history = getStore().get('ghostTestHistory');
+  return history[projectId] ?? [];
+}
+
+export function saveGhostTestResult(projectId: string, result: GhostTestResult): void {
+  const s = getStore();
+  const history = s.get('ghostTestHistory');
+  const existing = history[projectId] ?? [];
+  // Keep newest first, max 20 entries
+  history[projectId] = [result, ...existing].slice(0, 20);
+  s.set('ghostTestHistory', history);
+}
+
+export function getGhostTestSettings(projectId: string): GhostTestSettings {
+  const allSettings = getStore().get('ghostTestSettings');
+  return { ...DEFAULT_GHOST_TEST_SETTINGS, ...(allSettings[projectId] ?? {}) };
+}
+
+export function saveGhostTestSettings(projectId: string, settings: Partial<GhostTestSettings>): GhostTestSettings {
+  const s = getStore();
+  const allSettings = s.get('ghostTestSettings');
+  const merged = { ...DEFAULT_GHOST_TEST_SETTINGS, ...(allSettings[projectId] ?? {}), ...settings };
+  allSettings[projectId] = merged;
+  s.set('ghostTestSettings', allSettings);
+  return merged;
+}
+
+export function getAllLastGhostTestResults(): Record<string, GhostTestResult | null> {
+  const history = getStore().get('ghostTestHistory');
+  const out: Record<string, GhostTestResult | null> = {};
+  for (const [projectId, results] of Object.entries(history)) {
+    out[projectId] = results[0] ?? null;
+  }
+  return out;
 }
