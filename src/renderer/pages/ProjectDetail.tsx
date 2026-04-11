@@ -96,6 +96,12 @@ function AgentIcon({ agentType, className }: { agentType: AgentType; className?:
           <circle cx="8" cy="8" r="2.5" />
         </svg>
       );
+    case 'copilot':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 1L9.5 6.5H15L10.5 9.5L12 15L8 12L4 15L5.5 9.5L1 6.5H6.5Z" />
+        </svg>
+      );
   }
 }
 
@@ -788,8 +794,8 @@ function SettingsTab({
           <p className="text-xs text-text-muted">
             Select which agents to use with this project. Context files will be generated for each.
           </p>
-          <div className="grid grid-cols-3 gap-2">
-            {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => {
+          <div className="grid grid-cols-2 gap-2">
+            {(Object.keys(AGENTS) as AgentType[]).map((agentType) => {
               const config = AGENTS[agentType];
               const selected = agents.includes(agentType);
               return (

@@ -1396,6 +1396,12 @@ function AgentIconSmall({ agentType }: { agentType: AgentType }) {
           <circle cx="8" cy="8" r="2.5" />
         </svg>
       );
+    case 'copilot':
+      return (
+        <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 1L9.5 6.5H15L10.5 9.5L12 15L8 12L4 15L5.5 9.5L1 6.5H6.5Z" />
+        </svg>
+      );
   }
 }
 
@@ -1502,8 +1508,8 @@ function StepReview({
         <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
           AI Agents
         </h4>
-        <div className="grid grid-cols-3 gap-2">
-          {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => {
+        <div className="grid grid-cols-2 gap-2">
+          {(Object.keys(AGENTS) as AgentType[]).map((agentType) => {
             const config = AGENTS[agentType];
             const status = agentStatuses?.[agentType];
             const isInstalled = status?.installed && status?.authenticated;

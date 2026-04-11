@@ -242,6 +242,12 @@ function AgentIcon({ agentType, className }: { agentType: AgentType; className?:
           <circle cx="8" cy="8" r="2.5" />
         </svg>
       );
+    case 'copilot':
+      return (
+        <svg className={cls} viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 1L9.5 6.5H15L10.5 9.5L12 15L8 12L4 15L5.5 9.5L1 6.5H6.5Z" />
+        </svg>
+      );
   }
 }
 
@@ -686,7 +692,7 @@ function AgentsSection({
     <SectionCard title="AI Agents">
       {/* Agent status overview */}
       <div className="space-y-2">
-        {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => {
+        {(Object.keys(AGENTS) as AgentType[]).map((agentType) => {
           const config = AGENTS[agentType];
           const status = agentStatuses?.[agentType];
           return (
@@ -707,7 +713,9 @@ function AgentsSection({
                 <span className="text-text-muted">
                   Not found — install via{' '}
                   <code className="text-xs bg-white/5 px-1.5 py-0.5 rounded">
-                    npm i -g {config.npmPackage}
+                    {config.installMethod === 'gh-extension'
+                      ? 'gh extension install github/gh-copilot'
+                      : `npm i -g ${config.npmPackage}`}
                   </code>
                 </span>
               )}
@@ -720,7 +728,7 @@ function AgentsSection({
       <div>
         <FieldLabel>Default AI agent for new projects</FieldLabel>
         <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.03] w-fit">
-          {(['claude', 'gemini', 'codex'] as AgentType[]).map((agentType) => {
+          {(Object.keys(AGENTS) as AgentType[]).map((agentType) => {
             const config = AGENTS[agentType];
             return (
               <button
