@@ -19,6 +19,7 @@ const SetupAssistant = lazy(() => import('./components/SetupAssistant'));
 const OnboardingTutorial = lazy(() => import('./components/OnboardingTutorial'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Store = lazy(() => import('./pages/Store'));
+const Hub = lazy(() => import('./pages/Hub'));
 const SplashScreen = lazy(() => import('./components/SplashScreen'));
 const ChatPanel = lazy(() => import('./components/ChatPanel'));
 const ExportVibeDialog = lazy(() => import('./components/ExportVibeDialog'));
@@ -26,7 +27,7 @@ const ImportVibeDialog = lazy(() => import('./components/ImportVibeDialog'));
 const ExportSnapshotDialog = lazy(() => import('./components/ExportSnapshotDialog'));
 const ImportSnapshotDialog = lazy(() => import('./components/ImportSnapshotDialog'));
 
-export type Page = 'dashboard' | 'settings' | 'store';
+export type Page = 'dashboard' | 'settings' | 'store' | 'hub';
 
 const pageVariantsAnimated = {
   initial: { opacity: 0, y: 6 },
@@ -69,6 +70,7 @@ function AppInner() {
   const [appMode, setAppMode] = useState<AppMode>('simple');
   const [showSplash, setShowSplash] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
   const [exportVibeProject, setExportVibeProject] = useState<Project | null>(null);
   const [showImportVibe, setShowImportVibe] = useState(false);
   const [exportSnapshotProject, setExportSnapshotProject] = useState<Project | null>(null);
@@ -109,6 +111,12 @@ function AppInner() {
       window.removeEventListener('open-tutorial', handleOpenTutorial);
     };
   }, []);
+
+  // Listen for connectivity changes
+  useEffect(() => {
+    api.ollama.onConnectivity(({ online }: { online: boolean }) => setIsOffline(!online));
+    return () => api.ollama.offConnectivity();
+  }, [api]);
 
   // Listen for auto ghost test results (triggered after agent sessions)
   useEffect(() => {
@@ -267,6 +275,12 @@ function AppInner() {
     <div className="flex flex-col h-screen bg-bg overflow-hidden">
       <TitleBar onToggleChat={() => setChatPanelOpen((v) => !v)} />
       <UpdateNotification mode={appMode} />
+      {isOffline && (
+        <div className="shrink-0 bg-amber-900/80 border-b border-amber-600/40 px-4 py-1 text-[10px] font-mono text-amber-200 flex items-center gap-2">
+          <span>✈️</span>
+          <span>Offline Forge Mode — using local models. Cloud features paused.</span>
+        </div>
+      )}
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar
           activePage={activePage}
@@ -321,6 +335,19 @@ function AppInner() {
               >
                 <Suspense fallback={LazyFallback}>
                   <Store projects={allProjects ?? []} />
+                </Suspense>
+              </motion.div>
+            ) : activePage === 'hub' ? (
+              <motion.div
+                key="hub"
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="h-full"
+              >
+                <Suspense fallback={LazyFallback}>
+                  <Hub projects={allProjects ?? []} />
                 </Suspense>
               </motion.div>
             ) : (

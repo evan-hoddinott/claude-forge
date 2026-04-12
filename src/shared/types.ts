@@ -1,6 +1,6 @@
 export type ProjectStatus = 'created' | 'in-progress' | 'ready' | 'error';
 
-export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot';
+export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot' | 'ollama';
 
 export interface AgentConfig {
   type: AgentType;
@@ -17,6 +17,7 @@ export interface AgentConfig {
   color: string;
   installMethod?: 'npm' | 'gh-extension';
   launchCommand?: string;
+  isLocal?: boolean;
 }
 
 export const AGENTS: Record<AgentType, AgentConfig> = {
@@ -77,6 +78,21 @@ export const AGENTS: Record<AgentType, AgentConfig> = {
     color: '#6e40c9',
     installMethod: 'gh-extension',
     launchCommand: 'gh copilot suggest',
+  },
+  ollama: {
+    type: 'ollama',
+    displayName: 'Local AI (Ollama)',
+    npmPackage: '',
+    command: 'ollama',
+    contextFileName: 'LOCAL.md',
+    authCheckCommand: 'ollama --version',
+    loginCommand: '',
+    versionCommand: 'ollama --version',
+    subscriptionUrl: 'https://ollama.com',
+    docsUrl: 'https://ollama.com/docs',
+    iconName: 'ollama',
+    color: '#333333',
+    isLocal: true,
   },
 };
 
@@ -368,6 +384,48 @@ export interface ChatModelInfo {
   providerId: string;
   isFree: boolean;
   isAvailable: boolean;
+  sizeGb?: number;
+  isLocal?: boolean;
+}
+
+// --- Ollama Types ---
+
+export interface OllamaModel {
+  name: string;
+  displayName: string;
+  sizeGb: number;
+  quantization?: string;
+  modifiedAt: string;
+}
+
+export interface OllamaStatus {
+  running: boolean;
+  installed: boolean;
+  models: OllamaModel[];
+}
+
+export interface OllamaStats {
+  modelName?: string;
+  tokensPerSecond?: number;
+  gpuPercent?: number;
+  vramUsedGb?: number;
+  vramTotalGb?: number;
+}
+
+export interface HardwareInfo {
+  totalRamGb: number;
+  gpuVramGb: number;
+  gpuName?: string;
+}
+
+export interface OllamaPullProgress {
+  modelName: string;
+  status: string;
+  downloadedGb?: number;
+  totalGb?: number;
+  percent?: number;
+  done: boolean;
+  error?: string;
 }
 
 export interface ChatProviderInfo {
@@ -818,6 +876,26 @@ export interface ElectronAPI {
     preview: (projectId: string, projectPath: string, snapshotId: string) => Promise<{ filesChanged: string[]; diff: string }>;
     backToPresent: (projectId: string, projectPath: string) => Promise<void>;
   };
+  hub: {
+    fetchCatalog: (forceRefresh?: boolean) => Promise<HubCatalog>;
+    installItem: (itemId: string, projectPath: string) => Promise<void>;
+    getInstalled: (projectPath: string) => Promise<string[]>;
+    trackDownload: (itemId: string) => Promise<void>;
+    publish: (input: HubPublishInput) => Promise<{ url: string }>;
+    generateVibe: (projectId: string) => Promise<string>;
+  };
+  ollama: {
+    getStatus: () => Promise<OllamaStatus>;
+    start: () => Promise<{ success: boolean; error?: string }>;
+    getStats: () => Promise<OllamaStats>;
+    pullModel: (name: string) => Promise<void>;
+    deleteModel: (name: string) => Promise<{ success: boolean; error?: string }>;
+    detectHardware: () => Promise<HardwareInfo>;
+    onPullProgress: (callback: (data: OllamaPullProgress) => void) => void;
+    offPullProgress: () => void;
+    onConnectivity: (callback: (data: { online: boolean }) => void) => void;
+    offConnectivity: () => void;
+  };
 }
 
 export interface BattleSideProgressDTO {
@@ -918,6 +996,73 @@ export interface SnapshotImportPreview {
   hasVibe: boolean;
   hasChatHistory: boolean;
   fileSizeBytes: number;
+}
+
+// --- Forge Hub Types ---
+
+export type HubItemType = 'skill' | 'template' | 'constraint' | 'playbook';
+
+export interface HubAuthor {
+  name: string;
+  github: string;
+  verified: boolean;
+}
+
+export interface HubItem {
+  id: string;
+  type: HubItemType;
+  name: string;
+  author: HubAuthor;
+  version: string;
+  description: string;
+  longDescription: string;
+  category: string;
+  tags: string[];
+  agents: string[];
+  rating: number;
+  ratingCount: number;
+  downloads: number;
+  size: number;
+  icon: string;
+  featured: boolean;
+  official: boolean;
+  source: 'bundled' | 'community';
+  createdAt: string;
+  updatedAt: string;
+  downloadUrl: string;
+  readmeUrl: string;
+}
+
+export interface HubCatalog {
+  version: string;
+  lastUpdated: string;
+  items: HubItem[];
+}
+
+export interface HubVibeBundleFile {
+  path: string;
+  content: string;
+  merge?: boolean;
+}
+
+export interface HubVibeBundle {
+  id: string;
+  name: string;
+  version: string;
+  type: HubItemType;
+  files: HubVibeBundleFile[];
+}
+
+export interface HubPublishInput {
+  name: string;
+  type: HubItemType;
+  description: string;
+  longDescription: string;
+  category: string;
+  tags: string[];
+  icon: string;
+  vibePath?: string;
+  vibeContent?: HubVibeBundle;
 }
 
 declare global {

@@ -903,6 +903,20 @@ export default function Sidebar({
         />
         <NavItem
           icon={
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+              <circle cx="8" cy="8" r="6.5" />
+              <ellipse cx="8" cy="8" rx="2.8" ry="6.5" />
+              <line x1="1.5" y1="6" x2="14.5" y2="6" />
+              <line x1="1.5" y1="10" x2="14.5" y2="10" />
+            </svg>
+          }
+          label="Forge Hub"
+          active={activePage === 'hub'}
+          onClick={() => onNavigate('hub')}
+          collapsed={collapsed}
+        />
+        <NavItem
+          icon={
             <svg
               viewBox="0 0 16 16"
               fill="none"

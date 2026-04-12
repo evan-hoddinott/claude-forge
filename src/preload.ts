@@ -333,4 +333,40 @@ contextBridge.exposeInMainWorld('electronAPI', {
     backToPresent: (projectId: string, projectPath: string) =>
       ipcRenderer.invoke('time-machine:back-to-present', projectId, projectPath),
   },
+  ollama: {
+    getStatus: () => ipcRenderer.invoke('ollama:get-status'),
+    start: () => ipcRenderer.invoke('ollama:start'),
+    getStats: () => ipcRenderer.invoke('ollama:get-stats'),
+    pullModel: (name: string) => ipcRenderer.invoke('ollama:pull-model', name),
+    deleteModel: (name: string) => ipcRenderer.invoke('ollama:delete-model', name),
+    detectHardware: () => ipcRenderer.invoke('ollama:detect-hardware'),
+    onPullProgress: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, d: unknown) => callback(d);
+      ipcRenderer.on('ollama:pull-progress', handler);
+    },
+    offPullProgress: () => {
+      ipcRenderer.removeAllListeners('ollama:pull-progress');
+    },
+    onConnectivity: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, d: unknown) => callback(d);
+      ipcRenderer.on('connectivity:status', handler);
+    },
+    offConnectivity: () => {
+      ipcRenderer.removeAllListeners('connectivity:status');
+    },
+  },
+  hub: {
+    fetchCatalog: (forceRefresh?: boolean) =>
+      ipcRenderer.invoke('hub:fetch-catalog', forceRefresh),
+    installItem: (itemId: string, projectPath: string) =>
+      ipcRenderer.invoke('hub:install-item', itemId, projectPath),
+    getInstalled: (projectPath: string) =>
+      ipcRenderer.invoke('hub:get-installed', projectPath),
+    trackDownload: (itemId: string) =>
+      ipcRenderer.invoke('hub:track-download', itemId),
+    publish: (input: unknown) =>
+      ipcRenderer.invoke('hub:publish', input),
+    generateVibe: (projectId: string) =>
+      ipcRenderer.invoke('hub:generate-vibe', projectId),
+  },
 });

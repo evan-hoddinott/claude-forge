@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
-import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord, BattleRecord, AgentLeaderboardEntry, TimelineEvent, FuelEntry, FuelBudget, ConductorPlan, TimeMachineSnapshot } from '../shared/types';
+import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord, BattleRecord, AgentLeaderboardEntry, TimelineEvent, FuelEntry, FuelBudget, ConductorPlan, TimeMachineSnapshot, HubCatalog } from '../shared/types';
 
 // electron-store is ESM; when Node.js requires it at runtime the default export
 // may land on `.default`. This handles both CJS interop shapes.
@@ -27,6 +27,8 @@ interface StoreSchema {
   fuelEntries: FuelEntry[];
   conductorPlans: Record<string, ConductorPlan>; // projectId → active plan
   timeMachineSnapshots: Record<string, TimeMachineSnapshot[]>; // projectId → snapshots
+  hubCache: { catalog: HubCatalog; fetchedAt: string } | null;
+  hubDownloads: Record<string, number>; // itemId → local download count
 }
 
 let _store: Store<StoreSchema> | null = null;
@@ -116,6 +118,8 @@ function getStore(): Store<StoreSchema> {
         fuelEntries: [],
         conductorPlans: {},
         timeMachineSnapshots: {},
+        hubCache: null,
+        hubDownloads: {},
       },
     });
   }
@@ -519,6 +523,27 @@ export function removeOldSnapshots(projectId: string, keepCount: number): string
   all[projectId] = existing.slice(0, keepCount);
   s.set('timeMachineSnapshots', all);
   return toRemove.map((s) => s.gitTag);
+}
+
+// --- Hub Cache & Downloads ---
+
+export function getHubCache(): { catalog: HubCatalog; fetchedAt: string } | null {
+  return getStore().get('hubCache');
+}
+
+export function setHubCache(catalog: HubCatalog): void {
+  getStore().set('hubCache', { catalog, fetchedAt: new Date().toISOString() });
+}
+
+export function getHubDownloads(): Record<string, number> {
+  return getStore().get('hubDownloads');
+}
+
+export function incrementHubDownload(itemId: string): void {
+  const s = getStore();
+  const downloads = s.get('hubDownloads');
+  downloads[itemId] = (downloads[itemId] ?? 0) + 1;
+  s.set('hubDownloads', downloads);
 }
 
 export function getLeaderboard(): AgentLeaderboardEntry[] {

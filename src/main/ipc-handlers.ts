@@ -26,6 +26,9 @@ import * as timelineService from './services/timeline-service';
 import * as conductorService from './services/conductor-service';
 import * as fuelService from './services/fuel-service';
 import * as timeMachineService from './services/time-machine-service';
+import * as ollamaService from './services/ollama-service';
+import * as hubService from './services/hub-service';
+import { startConnectivityMonitoring } from './services/connectivity-service';
 import {
   validateString,
   isValidAgentType,
@@ -1099,7 +1102,7 @@ export function registerIpcHandlers(): void {
 
   // --- Chat ---
 
-  ipcMain.handle('chat:get-providers', () => {
+  ipcMain.handle('chat:get-providers', async () => {
     const apiKeys = {
       openai: store.getApiKey('openai'),
       anthropic: store.getApiKey('anthropic'),
@@ -1774,4 +1777,67 @@ export function registerIpcHandlers(): void {
     const vPath = validateString(projectPath, 'projectPath');
     return timeMachineService.backToPresent({ projectPath: vPath });
   });
+
+  // --- Ollama ---
+
+  ipcMain.handle('ollama:get-status', () => ollamaService.detectOllama());
+
+  ipcMain.handle('ollama:start', () => ollamaService.startOllama());
+
+  ipcMain.handle('ollama:get-stats', () => ollamaService.getRunningStats());
+
+  ipcMain.handle('ollama:detect-hardware', () => ollamaService.detectHardware());
+
+  ipcMain.handle('ollama:delete-model', (_, name: unknown) => {
+    const validName = validateString(name, 'modelName', 200);
+    return ollamaService.deleteModel(validName);
+  });
+
+  ipcMain.handle('ollama:pull-model', async (_, name: unknown) => {
+    const validName = validateString(name, 'modelName', 200);
+    const win = BrowserWindow.getAllWindows()[0];
+    await ollamaService.pullModel(validName, (progress) => {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('ollama:pull-progress', progress);
+      }
+    });
+  });
+
+  // --- Forge Hub ---
+  ipcMain.handle('hub:fetch-catalog', (_, forceRefresh?: boolean) =>
+    hubService.fetchCatalog(forceRefresh ?? false),
+  );
+
+  ipcMain.handle('hub:install-item', (_, itemId: unknown, projectPath: unknown) => {
+    const id = validateString(itemId, 'itemId', 100);
+    const projPath = validateString(projectPath, 'projectPath', 1000);
+    return hubService.installItem(id, projPath);
+  });
+
+  ipcMain.handle('hub:get-installed', (_, projectPath: unknown) => {
+    const projPath = validateString(projectPath, 'projectPath', 1000);
+    return hubService.getInstalledItems(projPath);
+  });
+
+  ipcMain.handle('hub:track-download', (_, itemId: unknown) => {
+    const id = validateString(itemId, 'itemId', 100);
+    return hubService.trackDownload(id);
+  });
+
+  ipcMain.handle('hub:publish', (_, input: unknown) =>
+    hubService.publishItem(input as import('../shared/types').HubPublishInput),
+  );
+
+  ipcMain.handle('hub:generate-vibe', (_, projectId: unknown) => {
+    const id = validateString(projectId, 'projectId', 100);
+    return hubService.generateVibe(id);
+  });
+
+  // Start connectivity monitoring after handlers are registered
+  const mainWin = BrowserWindow.getAllWindows()[0];
+  if (mainWin) {
+    startConnectivityMonitoring(mainWin);
+  }
+  // Note: if window isn't ready yet, the main process (index.ts) should call
+  // startConnectivityMonitoring after window creation instead.
 }
