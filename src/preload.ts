@@ -260,4 +260,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeAllListeners('battle:progress');
     },
   },
+  timeline: {
+    getEvents: (projectId: string) =>
+      ipcRenderer.invoke('timeline:get', projectId),
+    addEvent: (projectId: string, event: unknown) =>
+      ipcRenderer.invoke('timeline:add-event', projectId, event),
+    onEventAdded: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('timeline:event-added', handler);
+    },
+    offEventAdded: () => {
+      ipcRenderer.removeAllListeners('timeline:event-added');
+    },
+  },
 });

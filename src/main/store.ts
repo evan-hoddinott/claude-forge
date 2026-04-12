@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
-import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord, BattleRecord, AgentLeaderboardEntry } from '../shared/types';
+import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord, BattleRecord, AgentLeaderboardEntry, TimelineEvent } from '../shared/types';
 
 // electron-store is ESM; when Node.js requires it at runtime the default export
 // may land on `.default`. This handles both CJS interop shapes.
@@ -23,6 +23,7 @@ interface StoreSchema {
   fileAttribution: Record<string, Record<string, { agent: AgentType | 'user'; date: string }>>;
   installedSkills: Record<string, InstalledSkillRecord[]>;
   battleHistory: Record<string, BattleRecord[]>;
+  timelineEvents: Record<string, TimelineEvent[]>;
 }
 
 let _store: Store<StoreSchema> | null = null;
@@ -102,6 +103,7 @@ function getStore(): Store<StoreSchema> {
         fileAttribution: {},
         installedSkills: {},
         battleHistory: {},
+        timelineEvents: {},
       },
     });
   }
@@ -408,6 +410,24 @@ export function saveBattleRecord(projectId: string, record: BattleRecord): void 
   // Newest first, keep last 50
   all[projectId] = [record, ...existing].slice(0, 50);
   s.set('battleHistory', all);
+}
+
+// --- Timeline Events ---
+
+const MAX_TIMELINE_EVENTS = 500;
+
+export function getTimelineEvents(projectId: string): TimelineEvent[] {
+  const all = getStore().get('timelineEvents');
+  return all[projectId] ?? [];
+}
+
+export function addTimelineEvent(projectId: string, event: TimelineEvent): void {
+  const s = getStore();
+  const all = s.get('timelineEvents');
+  const existing = all[projectId] ?? [];
+  // Newest first, cap at MAX_TIMELINE_EVENTS
+  all[projectId] = [event, ...existing].slice(0, MAX_TIMELINE_EVENTS);
+  s.set('timelineEvents', all);
 }
 
 export function getLeaderboard(): AgentLeaderboardEntry[] {

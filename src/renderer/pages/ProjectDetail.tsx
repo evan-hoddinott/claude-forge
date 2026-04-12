@@ -18,12 +18,16 @@ const FileExplorer = lazy(() => import('../components/FileExplorer'));
 // Lazy-load ReasoningMap — only when Map tab is opened
 const ReasoningMap = lazy(() => import('../components/ReasoningMap'));
 
-type Tab = 'overview' | 'files' | 'map' | 'github' | 'agents' | 'settings';
+// Lazy-load TimelineTab — only when Timeline tab is opened
+const TimelineTab = lazy(() => import('../components/TimelineTab'));
+
+type Tab = 'overview' | 'files' | 'map' | 'timeline' | 'github' | 'agents' | 'settings';
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'files', label: 'Files' },
   { id: 'map', label: 'Map' },
+  { id: 'timeline', label: 'Timeline' },
   { id: 'github', label: 'GitHub' },
   { id: 'agents', label: 'AI Agents' },
   { id: 'settings', label: 'Settings' },
@@ -252,6 +256,12 @@ export default function ProjectDetail({
           <div className="h-full">
             <Suspense fallback={<MapSkeleton />}>
               <ReasoningMap project={project} />
+            </Suspense>
+          </div>
+        ) : activeTab === 'timeline' ? (
+          <div className="h-full">
+            <Suspense fallback={<TimelineSkeleton />}>
+              <TimelineTab project={project} />
             </Suspense>
           </div>
         ) : (
@@ -1077,6 +1087,30 @@ function MapSkeleton() {
       <div className="w-48 h-3 rounded bg-white/[0.05] animate-pulse" />
       <div className="w-32 h-3 rounded bg-white/[0.03] animate-pulse" />
       <div className="text-xs text-text-muted mt-2">Loading map...</div>
+    </div>
+  );
+}
+
+function TimelineSkeleton() {
+  return (
+    <div className="h-full flex flex-col">
+      <div className="px-6 py-4 border-b border-border/20">
+        <div className="w-40 h-3 rounded bg-white/[0.05] animate-pulse" />
+      </div>
+      <div className="flex-1 px-6 py-5 space-y-4">
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={i} className="flex gap-3">
+            <div className="flex flex-col items-center">
+              <div className="w-2 h-2 bg-white/[0.08] animate-pulse mt-1" />
+              <div className="w-0.5 flex-1 bg-white/[0.04] mt-1" />
+            </div>
+            <div className="flex-1 border border-border/20 p-3 space-y-2">
+              <div className="w-48 h-2.5 rounded bg-white/[0.06] animate-pulse" />
+              <div className="w-32 h-2 rounded bg-white/[0.03] animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

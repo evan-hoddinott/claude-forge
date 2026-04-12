@@ -442,6 +442,43 @@ export interface GhostTestSettings {
   useDocker: boolean;
 }
 
+// --- Timeline Types ---
+
+export type TimelineEventType =
+  | 'agent-start'
+  | 'agent-end'
+  | 'file-edit'
+  | 'git-commit'
+  | 'git-push'
+  | 'ghost-test'
+  | 'battle'
+  | 'skill-install'
+  | 'skill-uninstall'
+  | 'bundle-export'
+  | 'settings-change';
+
+export interface TimelineEvent {
+  id: string;
+  projectId: string;
+  timestamp: string; // ISO date
+  type: TimelineEventType;
+  agent?: AgentType;
+  description: string;
+  details?: {
+    filesChanged?: string[];
+    filesCreated?: string[];
+    filesDeleted?: string[];
+    duration?: number;        // ms
+    commitMessage?: string;
+    testResult?: string;      // 'passed' | 'failed' | 'auto-fixed' | 'timeout'
+    battleWinner?: string;
+    battleTask?: string;
+    skillName?: string;
+    linesAdded?: number;
+    linesRemoved?: number;
+  };
+}
+
 export interface ElectronAPI {
   setup: {
     checkDependencies: () => Promise<SetupCheckResult>;
@@ -598,6 +635,12 @@ export interface ElectronAPI {
     getLeaderboard: () => Promise<AgentLeaderboardEntry[]>;
     onProgress: (callback: (event: BattleProgressDTO) => void) => void;
     offProgress: () => void;
+  };
+  timeline: {
+    getEvents: (projectId: string) => Promise<TimelineEvent[]>;
+    addEvent: (projectId: string, event: Omit<TimelineEvent, 'id' | 'timestamp' | 'projectId'>) => Promise<TimelineEvent>;
+    onEventAdded: (callback: (data: { projectId: string; event: TimelineEvent }) => void) => void;
+    offEventAdded: () => void;
   };
 }
 

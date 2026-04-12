@@ -22,6 +22,7 @@ import * as ghostTestService from './services/ghost-test-service';
 import * as reasoningMapService from './services/reasoning-map-service';
 import * as skillService from './services/skill-service';
 import * as battleService from './services/battle-service';
+import * as timelineService from './services/timeline-service';
 import {
   validateString,
   isValidAgentType,
@@ -269,6 +270,8 @@ export function registerIpcHandlers(): void {
       );
     }
 
+    const agentStartTime = Date.now();
+
     await agentService.startAgent(
       agentType,
       validId,
@@ -277,6 +280,9 @@ export function registerIpcHandlers(): void {
       project.inputs,
     );
 
+    // Record agent session start in timeline
+    timelineService.recordAgentStart(validId, agentType as import('../shared/types').AgentType);
+
     store.updateProject(validId, {
       lastClaudeSession: new Date().toISOString(),
       status: 'in-progress',
@@ -284,18 +290,23 @@ export function registerIpcHandlers(): void {
 
     // Register exit callback for agent attribution tracking
     agentService.registerExitCallback(validId, agentType as import('../shared/types').AgentType, async (projPath, agType) => {
+      let changedFiles: string[] = [];
       try {
         const diff = await runCommand('git diff --name-only HEAD', { cwd: projPath, timeout: 5000 });
-        const files = diff.split('\n').filter(Boolean);
-        if (files.length > 0) {
-          store.updateFileAttribution(validId, files, agType);
+        changedFiles = diff.split('\n').filter(Boolean);
+        if (changedFiles.length > 0) {
+          store.updateFileAttribution(validId, changedFiles, agType);
         }
       } catch {
         // not a git repo or no changes — ignore
       }
+      // Record agent session end in timeline
+      timelineService.recordAgentEnd(validId, agType, changedFiles, Date.now() - agentStartTime);
+
       const win = BrowserWindow.getAllWindows()[0];
       if (win && !win.isDestroyed()) {
         win.webContents.send('reasoningmap:files-changed', { projectId: validId });
+        win.webContents.send('timeline:event-added', { projectId: validId });
       }
     });
 
@@ -309,9 +320,12 @@ export function registerIpcHandlers(): void {
         agentType as import('../shared/types').AgentType,
         gtSettings,
         (result) => {
+          // Record ghost test in timeline
+          timelineService.recordGhostTest(validId, result.status, result.command, result.duration);
           const win = BrowserWindow.getAllWindows()[0];
           if (win && !win.isDestroyed()) {
             win.webContents.send('ghost-test:auto-result', { projectId: validId, result });
+            win.webContents.send('timeline:event-added', { projectId: validId });
           }
         },
         (message) => {
@@ -1017,7 +1031,13 @@ export function registerIpcHandlers(): void {
     const validContent = validateString(content, 'content', 10 * 1024 * 1024); // 10MB max
     const projectRoot = getProjectPathForFile(validPath);
     if (!projectRoot) throw new Error('File is not within any known project');
-    return fileService.saveFile(validPath, validContent, projectRoot);
+    const result = await fileService.saveFile(validPath, validContent, projectRoot);
+    // Record file edit in timeline for the owning project
+    const project = store.getAllProjects().find((p) => p.path === projectRoot);
+    if (project) {
+      timelineService.recordFileEdit(project.id, validPath);
+    }
+    return result;
   });
 
   // --- Context file regeneration ---
@@ -1392,7 +1412,7 @@ export function registerIpcHandlers(): void {
     };
 
     try {
-      return await ghostTestService.runGhostTestWithRetry(
+      const result = await ghostTestService.runGhostTestWithRetry(
         vProjectId,
         vProjectPath,
         command,
@@ -1400,6 +1420,13 @@ export function registerIpcHandlers(): void {
         agentType as import('../shared/types').AgentType,
         onProgress,
       );
+      // Record in timeline
+      timelineService.recordGhostTest(vProjectId, result.status, result.command, result.duration);
+      const win = BrowserWindow.getAllWindows()[0];
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('timeline:event-added', { projectId: vProjectId });
+      }
+      return result;
     } catch (err) {
       throw new Error(safeError(err));
     }
@@ -1475,6 +1502,7 @@ export function registerIpcHandlers(): void {
     const project = store.getProjectById(vProjectId);
     if (!project) throw new Error('Project not found');
     await skillService.installSkill(vSkillId, project);
+    timelineService.recordSkillInstall(vProjectId, vSkillId, false);
   });
 
   ipcMain.handle('skills:uninstall', async (_, skillId: unknown, projectId: unknown) => {
@@ -1483,6 +1511,7 @@ export function registerIpcHandlers(): void {
     const project = store.getProjectById(vProjectId);
     if (!project) throw new Error('Project not found');
     await skillService.uninstallSkill(vSkillId, project);
+    timelineService.recordSkillInstall(vProjectId, vSkillId, true);
   });
 
   ipcMain.handle('skills:save-as', async (_, skillId: unknown) => {
@@ -1558,6 +1587,11 @@ export function registerIpcHandlers(): void {
     const record = await battleService.finalizeBattle(side as 0 | 1, vPath);
     store.saveBattleRecord(record.projectId, record);
 
+    // Record battle result in timeline
+    const winnerSide = record.winnerSide;
+    const winnerAgent = winnerSide !== null ? record.sides[winnerSide].agentType : undefined;
+    timelineService.recordBattle(record.projectId, record.task, record.agents, winnerAgent);
+
     // Update project status
     store.updateProject(record.projectId, { status: 'in-progress' });
     battleService.offProgress();
@@ -1577,5 +1611,21 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('battle:get-leaderboard', () => {
     return store.getLeaderboard();
+  });
+
+  // --- Timeline ---
+
+  ipcMain.handle('timeline:get', (_, projectId: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    return timelineService.getEvents(vId);
+  });
+
+  ipcMain.handle('timeline:add-event', (event, projectId: unknown, eventInput: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    if (!eventInput || typeof eventInput !== 'object') throw new Error('Invalid event input');
+    const timelineEvent = timelineService.addEvent(vId, eventInput as Parameters<typeof timelineService.addEvent>[1]);
+    // Notify renderer of new event
+    event.sender.send('timeline:event-added', { projectId: vId, event: timelineEvent });
+    return timelineEvent;
   });
 }
