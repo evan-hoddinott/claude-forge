@@ -939,3 +939,63 @@
   border: 1px solid var(--forge-border) !important;
   background-color: var(--forge-bg-deep) !important;
 }
+
+/* ─── Conductor Mode Animations ─────────────────────── */
+
+@keyframes conductor-train-bob {
+  from { transform: translateX(-50%) translateY(0px); }
+  to   { transform: translateX(-50%) translateY(-2px); }
+}
+
+@keyframes conductor-train-wobble {
+  from { transform: translateX(-50%) rotate(-2deg); }
+  to   { transform: translateX(-50%) rotate(2deg); }
+}
+
+@keyframes conductor-toot {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-16px) scale(1.3); }
+}
+
+@keyframes conductor-checkpoint-pulse {
+  0%   { opacity: 1; transform: translateX(-50%) scale(1); }
+  50%  { opacity: 0.6; transform: translateX(-50%) scale(1.3); }
+  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+@keyframes conductor-spark {
+  0%   { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(2) translateY(-20px); }
+}
+
+@keyframes conductor-loading {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes conductor-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ─── Workbench Kanban Columns ───────────────────────── */
+
+.workbench-forging-col {
+  box-shadow: inset 0 0 40px rgba(184, 134, 11, 0.08);
+}
+
+.workbench-done-card {
+  background: rgba(90, 122, 58, 0.06) !important;
+}
+
+/* ─── Time Machine Track ─────────────────────────────── */
+
+.time-machine-track-line {
+  background: var(--forge-border);
+}
+
+.time-machine-track-line-completed {
+  background: var(--forge-accent-green);
+  transition: width 0.3s ease;
+}
+

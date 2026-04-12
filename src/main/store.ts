@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
-import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord, BattleRecord, AgentLeaderboardEntry, TimelineEvent } from '../shared/types';
+import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord, BattleRecord, AgentLeaderboardEntry, TimelineEvent, FuelEntry, FuelBudget, ConductorPlan, TimeMachineSnapshot } from '../shared/types';
 
 // electron-store is ESM; when Node.js requires it at runtime the default export
 // may land on `.default`. This handles both CJS interop shapes.
@@ -24,6 +24,9 @@ interface StoreSchema {
   installedSkills: Record<string, InstalledSkillRecord[]>;
   battleHistory: Record<string, BattleRecord[]>;
   timelineEvents: Record<string, TimelineEvent[]>;
+  fuelEntries: FuelEntry[];
+  conductorPlans: Record<string, ConductorPlan>; // projectId → active plan
+  timeMachineSnapshots: Record<string, TimeMachineSnapshot[]>; // projectId → snapshots
 }
 
 let _store: Store<StoreSchema> | null = null;
@@ -56,6 +59,12 @@ function preferenceDefaults(): UserPreferences {
     chatLastModel: 'gpt-4o',
     chatLastProvider: 'github',
     autoPushToGitHub: false,
+    fuelBudget: {
+      dailyCap: 5.0,
+      warnAt: 80,
+      pauseConductorAtCap: true,
+      hardStop: false,
+    },
   };
 }
 
@@ -104,6 +113,9 @@ function getStore(): Store<StoreSchema> {
         installedSkills: {},
         battleHistory: {},
         timelineEvents: {},
+        fuelEntries: [],
+        conductorPlans: {},
+        timeMachineSnapshots: {},
       },
     });
   }
@@ -428,6 +440,85 @@ export function addTimelineEvent(projectId: string, event: TimelineEvent): void 
   // Newest first, cap at MAX_TIMELINE_EVENTS
   all[projectId] = [event, ...existing].slice(0, MAX_TIMELINE_EVENTS);
   s.set('timelineEvents', all);
+}
+
+// --- Fuel Entries ---
+
+const MAX_FUEL_ENTRIES = 10000;
+
+export function getFuelEntries(): FuelEntry[] {
+  return getStore().get('fuelEntries');
+}
+
+export function addFuelEntry(entry: FuelEntry): void {
+  const s = getStore();
+  const entries = s.get('fuelEntries');
+  entries.push(entry);
+  // Keep newest, trim if over limit
+  if (entries.length > MAX_FUEL_ENTRIES) {
+    entries.splice(0, entries.length - MAX_FUEL_ENTRIES);
+  }
+  s.set('fuelEntries', entries);
+}
+
+export function getFuelBudget(): FuelBudget {
+  return getPreferences().fuelBudget;
+}
+
+export function setFuelBudget(budget: Partial<FuelBudget>): FuelBudget {
+  const current = getFuelBudget();
+  const updated = { ...current, ...budget };
+  updatePreferences({ fuelBudget: updated });
+  return updated;
+}
+
+// --- Conductor Plans ---
+
+export function getConductorPlan(projectId: string): ConductorPlan | null {
+  const plans = getStore().get('conductorPlans');
+  return plans[projectId] ?? null;
+}
+
+export function saveConductorPlan(projectId: string, plan: ConductorPlan): void {
+  const s = getStore();
+  const plans = s.get('conductorPlans');
+  plans[projectId] = plan;
+  s.set('conductorPlans', plans);
+}
+
+export function deleteConductorPlan(projectId: string): void {
+  const s = getStore();
+  const plans = s.get('conductorPlans');
+  delete plans[projectId];
+  s.set('conductorPlans', plans);
+}
+
+// --- Time Machine Snapshots ---
+
+const MAX_SNAPSHOTS_PER_PROJECT = 50;
+
+export function getTimeMachineSnapshots(projectId: string): TimeMachineSnapshot[] {
+  const all = getStore().get('timeMachineSnapshots');
+  return all[projectId] ?? [];
+}
+
+export function addTimeMachineSnapshot(projectId: string, snapshot: TimeMachineSnapshot): void {
+  const s = getStore();
+  const all = s.get('timeMachineSnapshots');
+  const existing = all[projectId] ?? [];
+  // newest first
+  all[projectId] = [snapshot, ...existing].slice(0, MAX_SNAPSHOTS_PER_PROJECT);
+  s.set('timeMachineSnapshots', all);
+}
+
+export function removeOldSnapshots(projectId: string, keepCount: number): string[] {
+  const s = getStore();
+  const all = s.get('timeMachineSnapshots');
+  const existing = all[projectId] ?? [];
+  const toRemove = existing.slice(keepCount);
+  all[projectId] = existing.slice(0, keepCount);
+  s.set('timeMachineSnapshots', all);
+  return toRemove.map((s) => s.gitTag);
 }
 
 export function getLeaderboard(): AgentLeaderboardEntry[] {

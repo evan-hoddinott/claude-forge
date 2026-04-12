@@ -178,6 +178,7 @@ export interface UserPreferences {
   chatLastModel: string;
   chatLastProvider: string;
   autoPushToGitHub: boolean;
+  fuelBudget: FuelBudget;
 }
 
 export interface DependencyStatus {
@@ -442,6 +443,144 @@ export interface GhostTestSettings {
   useDocker: boolean;
 }
 
+// --- Conductor Mode Types ---
+
+export type ControlLevel = 'express' | 'guided' | 'full-control';
+export type StationStatus = 'pending' | 'active' | 'completed' | 'failed';
+export type ConductorTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+export type ConductorStatus =
+  | 'planning'
+  | 'answering'
+  | 'reviewing'
+  | 'executing'
+  | 'checkpoint'
+  | 'completed'
+  | 'failed'
+  | 'paused';
+
+export interface ConductorTask {
+  id: string;
+  description: string;
+  assignedAgent: AgentType;
+  prompt: string;
+  status: ConductorTaskStatus;
+  duration?: number;
+  tokensUsed?: number;
+  filesChanged?: string[];
+  output?: string;
+  error?: string;
+}
+
+export interface ConductorStation {
+  id: string;
+  name: string;
+  estimatedMinutes?: number;
+  tasks: ConductorTask[];
+  hasCheckpoint: boolean;
+  status: StationStatus;
+  startSnapshotId?: string;
+}
+
+export interface ConductorQuestionOption {
+  id: string;
+  label: string;
+  description: string;
+  pros?: string;
+  cons?: string;
+}
+
+export interface ConductorQuestion {
+  id: string;
+  text: string;
+  options: ConductorQuestionOption[];
+}
+
+export interface ConductorAnswer {
+  questionId: string;
+  optionId: string;
+}
+
+export interface ConductorPlan {
+  id: string;
+  projectId: string;
+  goal: string;
+  controlLevel: ControlLevel;
+  questions?: ConductorQuestion[];
+  answers?: ConductorAnswer[];
+  stations: ConductorStation[];
+  status: ConductorStatus;
+  currentStationIndex: number;
+  currentTaskIndex: number;
+  tokenUsage: { used: number; estimated: number; saved: number };
+  createdAt: string;
+  completedAt?: string;
+}
+
+// --- Fuel Gauge Types ---
+
+export type FuelTaskType = 'conductor-task' | 'chat' | 'ghost-test' | 'battle';
+
+export interface FuelEntry {
+  id: string;
+  timestamp: string; // ISO date
+  provider: string;
+  model: string;
+  tokensIn: number;
+  tokensOut: number;
+  cost: number;          // USD
+  savedAmount: number;   // USD saved by routing
+  projectId: string;
+  taskType: FuelTaskType;
+}
+
+export interface FuelDayReport {
+  date: string;          // YYYY-MM-DD
+  totalCost: number;
+  totalSaved: number;
+  freeRequests: number;
+  entries: FuelEntry[];
+}
+
+export interface FuelStatus {
+  todayCost: number;
+  todaySaved: number;
+  todayFreeRequests: number;
+  dailyCap: number;
+  percentage: number;
+  overBudget: boolean;
+}
+
+export interface FuelBudget {
+  dailyCap: number;      // USD
+  warnAt: number;        // percentage 0-100
+  pauseConductorAtCap: boolean;
+  hardStop: boolean;
+}
+
+export interface FuelProjectReport {
+  projectId: string;
+  totalCost: number;
+  totalSaved: number;
+  byProvider: Record<string, { cost: number; requests: number }>;
+}
+
+// --- Time Machine Types ---
+
+export type SnapshotTrigger = 'agent-start' | 'agent-end' | 'conductor' | 'manual' | 'auto';
+export type SnapshotColor = 'green' | 'red' | 'blue' | 'amber';
+
+export interface TimeMachineSnapshot {
+  id: string;
+  projectId: string;
+  gitTag: string;
+  timestamp: string;   // ISO date
+  label: string;
+  trigger: SnapshotTrigger;
+  agentType?: AgentType;
+  filesChanged?: string[];
+  color: SnapshotColor;
+}
+
 // --- Timeline Types ---
 
 export type TimelineEventType =
@@ -455,7 +594,12 @@ export type TimelineEventType =
   | 'skill-install'
   | 'skill-uninstall'
   | 'bundle-export'
-  | 'settings-change';
+  | 'settings-change'
+  | 'conductor-start'
+  | 'conductor-station'
+  | 'conductor-complete'
+  | 'time-machine-snapshot'
+  | 'time-machine-revert';
 
 export interface TimelineEvent {
   id: string;
@@ -641,6 +785,38 @@ export interface ElectronAPI {
     addEvent: (projectId: string, event: Omit<TimelineEvent, 'id' | 'timestamp' | 'projectId'>) => Promise<TimelineEvent>;
     onEventAdded: (callback: (data: { projectId: string; event: TimelineEvent }) => void) => void;
     offEventAdded: () => void;
+  };
+  conductor: {
+    startPlan: (projectId: string, goal: string, controlLevel: ControlLevel) => Promise<ConductorPlan>;
+    submitAnswers: (planId: string, answers: ConductorAnswer[]) => Promise<ConductorPlan>;
+    startExecution: (planId: string) => Promise<void>;
+    pause: (planId: string) => Promise<void>;
+    resume: (planId: string) => Promise<void>;
+    skipTask: (planId: string) => Promise<void>;
+    stop: (planId: string) => Promise<void>;
+    checkpointDecision: (planId: string, decision: 'continue' | 'pause' | 'revert' | 'stop') => Promise<void>;
+    getPlan: (projectId: string) => Promise<ConductorPlan | null>;
+    reorderTasks: (planId: string, stationId: string, taskIds: string[]) => Promise<ConductorPlan>;
+    reassignTask: (planId: string, taskId: string, agentType: AgentType) => Promise<ConductorPlan>;
+    onStatusUpdate: (callback: (data: { planId: string; plan: ConductorPlan }) => void) => void;
+    offStatusUpdate: () => void;
+    onTaskUpdate: (callback: (data: { planId: string; stationId: string; task: ConductorTask }) => void) => void;
+    offTaskUpdate: () => void;
+  };
+  fuel: {
+    getStatus: () => Promise<FuelStatus>;
+    getBudget: () => Promise<FuelBudget>;
+    setBudget: (budget: Partial<FuelBudget>) => Promise<FuelBudget>;
+    getProjectReport: (projectId: string) => Promise<FuelProjectReport>;
+    onStatusUpdate: (callback: (status: FuelStatus) => void) => void;
+    offStatusUpdate: () => void;
+  };
+  timeMachine: {
+    getSnapshots: (projectId: string) => Promise<TimeMachineSnapshot[]>;
+    createSnapshot: (projectId: string, projectPath: string, label: string) => Promise<TimeMachineSnapshot>;
+    revert: (projectId: string, projectPath: string, snapshotId: string) => Promise<void>;
+    preview: (projectId: string, projectPath: string, snapshotId: string) => Promise<{ filesChanged: string[]; diff: string }>;
+    backToPresent: (projectId: string, projectPath: string) => Promise<void>;
   };
 }
 

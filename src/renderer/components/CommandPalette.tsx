@@ -18,6 +18,8 @@ interface CommandPaletteProps {
   onNewProject: () => void;
   onNavigate: (page: Page) => void;
   onOpenProject: (id: string) => void;
+  onStartConductor?: (projectId: string) => void;
+  activeProjectId?: string | null;
 }
 
 export default function CommandPalette({
@@ -26,6 +28,8 @@ export default function CommandPalette({
   onNewProject,
   onNavigate,
   onOpenProject,
+  onStartConductor,
+  activeProjectId,
 }: CommandPaletteProps) {
   const api = useAPI();
   const { data: projects } = useQuery(() => api.projects.list());
@@ -67,6 +71,14 @@ export default function CommandPalette({
         icon: <GridIcon />,
         action: () => { onNavigate('dashboard'); onClose(); },
       },
+      ...(onStartConductor && activeProjectId ? [{
+        id: 'conductor-start',
+        label: '🚂 Start Conductor',
+        hint: 'AI orchestration',
+        section: 'action' as const,
+        icon: <TrainIcon />,
+        action: () => { onStartConductor(activeProjectId); onClose(); },
+      }] : []),
     ];
 
     const projectItems: CommandItem[] = (projects || [])
@@ -89,7 +101,7 @@ export default function CommandPalette({
         item.label.toLowerCase().includes(q) ||
         item.hint?.toLowerCase().includes(q),
     );
-  }, [query, projects, onNewProject, onNavigate, onOpenProject, onClose]);
+  }, [query, projects, onNewProject, onNavigate, onOpenProject, onClose, onStartConductor, activeProjectId]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -260,6 +272,16 @@ function FolderIcon() {
   return (
     <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 4.5A1.5 1.5 0 013.5 3h2.379a1.5 1.5 0 011.06.44l.622.62a1.5 1.5 0 001.06.44H12.5A1.5 1.5 0 0114 6v5.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z" />
+    </svg>
+  );
+}
+
+function TrainIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M1 10h2l1-4h8l1 4h2v1H1v-1zm3.5-4L6 3h4l1.5 3H4.5z" />
+      <circle cx="4" cy="12" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
     </svg>
   );
 }

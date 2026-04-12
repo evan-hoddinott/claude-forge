@@ -7,10 +7,12 @@ import { AGENTS } from '../../shared/types';
 import StatusBadge from '../components/StatusBadge';
 import DeployDialog from '../components/DeployDialog';
 import GhostTestPanel from '../components/GhostTestPanel';
+import TimeMachine from '../components/TimeMachine';
 
 const ExportVibeDialog = lazy(() => import('../components/ExportVibeDialog'));
 const ExportSnapshotDialog = lazy(() => import('../components/ExportSnapshotDialog'));
 const BattleDialog = lazy(() => import('../components/BattleDialog'));
+const ConductorOverlay = lazy(() => import('../components/conductor/ConductorOverlay'));
 
 // Lazy-load FileExplorer (includes Monaco Editor) — only when Files tab is opened
 const FileExplorer = lazy(() => import('../components/FileExplorer'));
@@ -135,6 +137,7 @@ export default function ProjectDetail({
   const [exportVibeOpen, setExportVibeOpen] = useState(false);
   const [exportSnapshotOpen, setExportSnapshotOpen] = useState(false);
   const [battleOpen, setBattleOpen] = useState(false);
+  const [conductorOpen, setConductorOpen] = useState(false);
 
   if (loading) return <LoadingSkeleton />;
 
@@ -207,6 +210,9 @@ export default function ProjectDetail({
             <HeaderButton onClick={() => setBattleOpen(true)}>
               <BattleIcon /> Battle
             </HeaderButton>
+            <HeaderButton onClick={() => setConductorOpen(true)}>
+              <ConductorIcon /> Conductor
+            </HeaderButton>
             <button
               onClick={() => setDeployOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/15 hover:bg-accent/25 border border-accent/30 text-accent text-xs font-semibold transition-all"
@@ -218,6 +224,9 @@ export default function ProjectDetail({
             </button>
           </div>
         </div>
+
+        {/* Time Machine */}
+        <TimeMachine projectId={project.id} projectPath={project.path} />
 
         {/* Tab bar */}
         <div className="flex items-center gap-1">
@@ -334,6 +343,20 @@ export default function ProjectDetail({
           />
         )}
       </Suspense>
+
+      {/* Conductor overlay */}
+      <AnimatePresence>
+        {conductorOpen && (
+          <Suspense fallback={null}>
+            <ConductorOverlay
+              projectId={project.id}
+              projectName={project.name}
+              projectPath={project.path}
+              onClose={() => setConductorOpen(false)}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1204,6 +1227,16 @@ function BattleIcon() {
       <path d="M2 8h12" />
       <path d="M5 5l-3 3 3 3" />
       <path d="M11 5l3 3-3 3" />
+    </svg>
+  );
+}
+
+function ConductorIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M1 10h2l1-4h8l1 4h2v1H1v-1zm3.5-4L6 3h4l1.5 3H4.5z" />
+      <circle cx="4" cy="12" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
     </svg>
   );
 }

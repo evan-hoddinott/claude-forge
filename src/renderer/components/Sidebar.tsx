@@ -9,6 +9,12 @@ import { useVisibleInterval, useDeferredInit } from '../hooks/usePerformance';
 import ForgeFire from './retro/ForgeFire';
 import ForgeCounter from './retro/ForgeCounter';
 import AsciiDivider from './retro/AsciiDivider';
+import FuelGauge from './FuelGauge';
+
+// Lazy wrapper so FuelGauge doesn't add to initial render
+function FuelGaugeWidget({ className }: { className?: string }) {
+  return <FuelGauge className={className} />;
+}
 
 interface SidebarProps {
   activePage: Page;
@@ -950,6 +956,9 @@ export default function Sidebar({
 
       {/* Forge Stats Counter */}
       {!collapsed && <ForgeCounter className="mx-3 mb-2" />}
+
+      {/* Fuel Gauge */}
+      {!collapsed && <FuelGaugeWidget className="mx-3 mb-2" />}
 
       {/* Mode toggle */}
       <ModeToggle collapsed={collapsed} />

@@ -273,4 +273,64 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeAllListeners('timeline:event-added');
     },
   },
+  conductor: {
+    startPlan: (projectId: string, goal: string, controlLevel: string) =>
+      ipcRenderer.invoke('conductor:start-plan', projectId, goal, controlLevel),
+    submitAnswers: (planId: string, answers: unknown) =>
+      ipcRenderer.invoke('conductor:submit-answers', planId, answers),
+    startExecution: (planId: string) =>
+      ipcRenderer.invoke('conductor:start-execution', planId),
+    pause: (planId: string) => ipcRenderer.invoke('conductor:pause', planId),
+    resume: (planId: string) => ipcRenderer.invoke('conductor:resume', planId),
+    skipTask: (planId: string) => ipcRenderer.invoke('conductor:skip-task', planId),
+    stop: (planId: string) => ipcRenderer.invoke('conductor:stop', planId),
+    checkpointDecision: (planId: string, decision: string) =>
+      ipcRenderer.invoke('conductor:checkpoint-decision', planId, decision),
+    getPlan: (projectId: string) =>
+      ipcRenderer.invoke('conductor:get-plan', projectId),
+    reorderTasks: (planId: string, stationId: string, taskIds: string[]) =>
+      ipcRenderer.invoke('conductor:reorder-tasks', planId, stationId, taskIds),
+    reassignTask: (planId: string, taskId: string, agentType: string) =>
+      ipcRenderer.invoke('conductor:reassign-task', planId, taskId, agentType),
+    onStatusUpdate: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('conductor:status-update', handler);
+    },
+    offStatusUpdate: () => {
+      ipcRenderer.removeAllListeners('conductor:status-update');
+    },
+    onTaskUpdate: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('conductor:task-update', handler);
+    },
+    offTaskUpdate: () => {
+      ipcRenderer.removeAllListeners('conductor:task-update');
+    },
+  },
+  fuel: {
+    getStatus: () => ipcRenderer.invoke('fuel:get-status'),
+    getBudget: () => ipcRenderer.invoke('fuel:get-budget'),
+    setBudget: (budget: unknown) => ipcRenderer.invoke('fuel:set-budget', budget),
+    getProjectReport: (projectId: string) =>
+      ipcRenderer.invoke('fuel:get-project-report', projectId),
+    onStatusUpdate: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('fuel:status-update', handler);
+    },
+    offStatusUpdate: () => {
+      ipcRenderer.removeAllListeners('fuel:status-update');
+    },
+  },
+  timeMachine: {
+    getSnapshots: (projectId: string) =>
+      ipcRenderer.invoke('time-machine:get-snapshots', projectId),
+    createSnapshot: (projectId: string, projectPath: string, label: string) =>
+      ipcRenderer.invoke('time-machine:create-snapshot', projectId, projectPath, label),
+    revert: (projectId: string, projectPath: string, snapshotId: string) =>
+      ipcRenderer.invoke('time-machine:revert', projectId, projectPath, snapshotId),
+    preview: (projectId: string, projectPath: string, snapshotId: string) =>
+      ipcRenderer.invoke('time-machine:preview', projectId, projectPath, snapshotId),
+    backToPresent: (projectId: string, projectPath: string) =>
+      ipcRenderer.invoke('time-machine:back-to-present', projectId, projectPath),
+  },
 });

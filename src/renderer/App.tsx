@@ -382,6 +382,14 @@ function AppInner() {
             onNewProject={() => { setShowCommandPalette(false); setShowWizard(true); }}
             onNavigate={(page) => { setShowCommandPalette(false); handleNavigate(page); }}
             onOpenProject={(id) => { setShowCommandPalette(false); setSelectedProjectId(id); }}
+            activeProjectId={selectedProjectId}
+            onStartConductor={(projectId) => {
+              setShowCommandPalette(false);
+              if (!selectedProjectId) setSelectedProjectId(projectId);
+              // The ConductorOverlay is launched from ProjectDetail
+              // so navigate to the project first
+              setSelectedProjectId(projectId);
+            }}
           />
         )}
       </Suspense>

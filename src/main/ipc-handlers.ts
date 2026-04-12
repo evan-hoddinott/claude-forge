@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import type { CreateProjectInput, ImportProjectInput, Project, AgentType, AgentStatus, SetupCheckResult, DependencyStatus, VaultEntry, VaultEntryMasked, DeployOptions, VibeExportOptions } from '../shared/types';
+import type { CreateProjectInput, ImportProjectInput, Project, AgentType, AgentStatus, SetupCheckResult, DependencyStatus, VaultEntry, VaultEntryMasked, DeployOptions, VibeExportOptions, ControlLevel, ConductorAnswer, FuelBudget } from '../shared/types';
 import { AGENTS } from '../shared/types';
 import * as store from './store';
 import * as projectService from './services/project-service';
@@ -23,6 +23,9 @@ import * as reasoningMapService from './services/reasoning-map-service';
 import * as skillService from './services/skill-service';
 import * as battleService from './services/battle-service';
 import * as timelineService from './services/timeline-service';
+import * as conductorService from './services/conductor-service';
+import * as fuelService from './services/fuel-service';
+import * as timeMachineService from './services/time-machine-service';
 import {
   validateString,
   isValidAgentType,
@@ -1627,5 +1630,148 @@ export function registerIpcHandlers(): void {
     // Notify renderer of new event
     event.sender.send('timeline:event-added', { projectId: vId, event: timelineEvent });
     return timelineEvent;
+  });
+
+  // --- Conductor ---
+
+  ipcMain.handle('conductor:start-plan', async (_, projectId: unknown, goal: unknown, controlLevel: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    const vGoal = validateString(goal, 'goal');
+    const vLevel = validateString(controlLevel, 'controlLevel') as ControlLevel;
+    const project = store.getProjectById(vId);
+    if (!project) throw new Error('Project not found');
+    return conductorService.startPlan({
+      projectId: vId,
+      projectPath: project.path,
+      goal: vGoal,
+      controlLevel: vLevel,
+    });
+  });
+
+  ipcMain.handle('conductor:submit-answers', async (_, planId: unknown, answers: unknown) => {
+    const vPlanId = validateString(planId, 'planId');
+    if (!Array.isArray(answers)) throw new Error('answers must be an array');
+    // Find plan by planId
+    const projects = store.getAllProjects();
+    let projectId: string | undefined;
+    for (const p of projects) {
+      const plan = store.getConductorPlan(p.id);
+      if (plan?.id === vPlanId) { projectId = p.id; break; }
+    }
+    if (!projectId) throw new Error('Plan not found');
+    return conductorService.submitAnswers({ planId: vPlanId, projectId, answers: answers as ConductorAnswer[] });
+  });
+
+  ipcMain.handle('conductor:start-execution', async (_, planId: unknown) => {
+    const vPlanId = validateString(planId, 'planId');
+    const projects = store.getAllProjects();
+    for (const p of projects) {
+      const plan = store.getConductorPlan(p.id);
+      if (plan?.id === vPlanId) {
+        await conductorService.startExecution({ planId: vPlanId, projectId: p.id, projectPath: p.path });
+        return;
+      }
+    }
+    throw new Error('Plan not found');
+  });
+
+  ipcMain.handle('conductor:pause', (_, planId: unknown) => {
+    conductorService.pausePlan(validateString(planId, 'planId'));
+  });
+
+  ipcMain.handle('conductor:resume', (_, planId: unknown) => {
+    conductorService.resumePlan(validateString(planId, 'planId'));
+  });
+
+  ipcMain.handle('conductor:skip-task', (_, planId: unknown) => {
+    conductorService.skipTask(validateString(planId, 'planId'));
+  });
+
+  ipcMain.handle('conductor:stop', (_, planId: unknown) => {
+    conductorService.stopPlan(validateString(planId, 'planId'));
+  });
+
+  ipcMain.handle('conductor:checkpoint-decision', (_, planId: unknown, decision: unknown) => {
+    const vPlanId = validateString(planId, 'planId');
+    const vDecision = validateString(decision, 'decision') as 'continue' | 'pause' | 'revert' | 'stop';
+    conductorService.resolveCheckpoint(vPlanId, vDecision);
+  });
+
+  ipcMain.handle('conductor:get-plan', (_, projectId: unknown) => {
+    return conductorService.getPlan(validateString(projectId, 'projectId'));
+  });
+
+  ipcMain.handle('conductor:reorder-tasks', (_, planId: unknown, stationId: unknown, taskIds: unknown) => {
+    const vPlanId = validateString(planId, 'planId');
+    const vStationId = validateString(stationId, 'stationId');
+    if (!Array.isArray(taskIds)) throw new Error('taskIds must be an array');
+    // Find project for this plan
+    const projects = store.getAllProjects();
+    for (const p of projects) {
+      const plan = store.getConductorPlan(p.id);
+      if (plan?.id === vPlanId) {
+        return conductorService.reorderTasks({ projectId: p.id, stationId: vStationId, taskIds: taskIds as string[] });
+      }
+    }
+    throw new Error('Plan not found');
+  });
+
+  ipcMain.handle('conductor:reassign-task', (_, planId: unknown, taskId: unknown, agentType: unknown) => {
+    const vPlanId = validateString(planId, 'planId');
+    const vTaskId = validateString(taskId, 'taskId');
+    const vAgent = validateString(agentType, 'agentType') as AgentType;
+    const projects = store.getAllProjects();
+    for (const p of projects) {
+      const plan = store.getConductorPlan(p.id);
+      if (plan?.id === vPlanId) {
+        return conductorService.reassignTask({ projectId: p.id, taskId: vTaskId, agentType: vAgent });
+      }
+    }
+    throw new Error('Plan not found');
+  });
+
+  // --- Fuel Gauge ---
+
+  ipcMain.handle('fuel:get-status', () => fuelService.getStatus());
+  ipcMain.handle('fuel:get-budget', () => fuelService.getBudget());
+  ipcMain.handle('fuel:set-budget', (_, budget: unknown) => {
+    if (!budget || typeof budget !== 'object') throw new Error('Invalid budget');
+    return fuelService.setBudget(budget as Partial<FuelBudget>);
+  });
+  ipcMain.handle('fuel:get-project-report', (_, projectId: unknown) => {
+    return fuelService.getProjectReport(validateString(projectId, 'projectId'));
+  });
+
+  // --- Time Machine ---
+
+  ipcMain.handle('time-machine:get-snapshots', (_, projectId: unknown) => {
+    return timeMachineService.getSnapshots(validateString(projectId, 'projectId'));
+  });
+
+  ipcMain.handle('time-machine:create-snapshot', async (_, projectId: unknown, projectPath: unknown, label: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    const vPath = validateString(projectPath, 'projectPath');
+    const vLabel = validateString(label, 'label');
+    return timeMachineService.createSnapshot({ projectId: vId, projectPath: vPath, label: vLabel, trigger: 'manual' });
+  });
+
+  ipcMain.handle('time-machine:revert', async (_, projectId: unknown, projectPath: unknown, snapshotId: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    const vPath = validateString(projectPath, 'projectPath');
+    const vSnapId = validateString(snapshotId, 'snapshotId');
+    return timeMachineService.revertToSnapshot({ projectId: vId, projectPath: vPath, snapshotId: vSnapId });
+  });
+
+  ipcMain.handle('time-machine:preview', async (_, projectId: unknown, projectPath: unknown, snapshotId: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    const vPath = validateString(projectPath, 'projectPath');
+    const vSnapId = validateString(snapshotId, 'snapshotId');
+    return timeMachineService.previewSnapshot({ projectId: vId, projectPath: vPath, snapshotId: vSnapId });
+  });
+
+  ipcMain.handle('time-machine:back-to-present', async (_, projectId: unknown, projectPath: unknown) => {
+    validateString(projectId, 'projectId');
+    const vPath = validateString(projectPath, 'projectPath');
+    return timeMachineService.backToPresent({ projectPath: vPath });
   });
 }
