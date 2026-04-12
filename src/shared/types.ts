@@ -389,6 +389,34 @@ export interface UpdateStatus {
   message?: string;
 }
 
+// --- Battle Types ---
+
+export interface BattleSideResult {
+  agentType: AgentType;
+  filesModified: number;
+  linesAdded: number;
+  linesRemoved: number;
+  runtimeMs: number;
+  ghostTestStatus?: GhostTestStatus;
+  winner: boolean;
+}
+
+export interface BattleRecord {
+  id: string;
+  projectId: string;
+  task: string;
+  timestamp: string;
+  agents: [AgentType, AgentType];
+  sides: [BattleSideResult, BattleSideResult];
+  winnerSide: 0 | 1 | null;
+}
+
+export interface AgentLeaderboardEntry {
+  agentType: AgentType;
+  wins: number;
+  losses: number;
+}
+
 // --- Ghost Test Types ---
 
 export type GhostTestStatus = 'passed' | 'failed' | 'timeout' | 'auto-fixed';
@@ -559,6 +587,37 @@ export interface ElectronAPI {
     uninstall: (skillId: string, projectId: string) => Promise<void>;
     saveAs: (skillId: string) => Promise<void>;
   };
+  battle: {
+    start: (projectId: string, projectPath: string, task: string, agents: [AgentType, AgentType]) => Promise<string>;
+    cancel: () => Promise<void>;
+    getProgress: () => Promise<{ id: string; agents: [AgentType, AgentType]; progress: [BattleSideProgressDTO, BattleSideProgressDTO] } | null>;
+    getDiff: (side: 0 | 1) => Promise<string>;
+    applyWinner: (side: 0 | 1, projectPath: string) => Promise<BattleRecord>;
+    discard: () => Promise<void>;
+    getHistory: (projectId: string) => Promise<BattleRecord[]>;
+    getLeaderboard: () => Promise<AgentLeaderboardEntry[]>;
+    onProgress: (callback: (event: BattleProgressDTO) => void) => void;
+    offProgress: () => void;
+  };
+}
+
+export interface BattleSideProgressDTO {
+  status: 'waiting' | 'running' | 'done' | 'error';
+  filesModified: number;
+  linesAdded: number;
+  linesRemoved: number;
+  runtimeMs: number;
+  log: string[];
+  ghostTestStatus?: GhostTestStatus;
+  error?: string;
+}
+
+export interface BattleProgressDTO {
+  battleId: string;
+  side: 0 | 1;
+  type: 'status' | 'log' | 'done' | 'error' | 'ghost-test';
+  progress?: BattleSideProgressDTO;
+  message?: string;
 }
 
 // --- Vibe Bundle Types ---

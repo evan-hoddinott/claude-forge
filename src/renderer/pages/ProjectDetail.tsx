@@ -10,6 +10,7 @@ import GhostTestPanel from '../components/GhostTestPanel';
 
 const ExportVibeDialog = lazy(() => import('../components/ExportVibeDialog'));
 const ExportSnapshotDialog = lazy(() => import('../components/ExportSnapshotDialog'));
+const BattleDialog = lazy(() => import('../components/BattleDialog'));
 
 // Lazy-load FileExplorer (includes Monaco Editor) — only when Files tab is opened
 const FileExplorer = lazy(() => import('../components/FileExplorer'));
@@ -129,6 +130,7 @@ export default function ProjectDetail({
   const [deployOpen, setDeployOpen] = useState(false);
   const [exportVibeOpen, setExportVibeOpen] = useState(false);
   const [exportSnapshotOpen, setExportSnapshotOpen] = useState(false);
+  const [battleOpen, setBattleOpen] = useState(false);
 
   if (loading) return <LoadingSkeleton />;
 
@@ -197,6 +199,9 @@ export default function ProjectDetail({
             </HeaderButton>
             <HeaderButton onClick={() => setExportSnapshotOpen(true)}>
               <SnapshotButtonIcon /> Snapshot
+            </HeaderButton>
+            <HeaderButton onClick={() => setBattleOpen(true)}>
+              <BattleIcon /> Battle
             </HeaderButton>
             <button
               onClick={() => setDeployOpen(true)}
@@ -306,6 +311,16 @@ export default function ProjectDetail({
           <ExportSnapshotDialog
             project={project}
             onClose={() => setExportSnapshotOpen(false)}
+          />
+        )}
+      </Suspense>
+
+      {/* Battle dialog */}
+      <Suspense fallback={null}>
+        {battleOpen && (
+          <BattleDialog
+            project={project}
+            onClose={() => setBattleOpen(false)}
           />
         )}
       </Suspense>
@@ -1145,6 +1160,16 @@ function SnapshotButtonIcon() {
       <circle cx="8" cy="8" r="3" />
       <path d="M8 1v2M8 13v2M1 8h2M13 8h2" />
       <path d="M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M11.1 4.9l1.4-1.4M3.5 12.5l1.4-1.4" />
+    </svg>
+  );
+}
+
+function BattleIcon() {
+  return (
+    <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 8h12" />
+      <path d="M5 5l-3 3 3 3" />
+      <path d="M11 5l3 3-3 3" />
     </svg>
   );
 }

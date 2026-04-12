@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
-import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord } from '../shared/types';
+import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord, BattleRecord, AgentLeaderboardEntry } from '../shared/types';
 
 // electron-store is ESM; when Node.js requires it at runtime the default export
 // may land on `.default`. This handles both CJS interop shapes.
@@ -22,6 +22,7 @@ interface StoreSchema {
   reasoningMaps: Record<string, ReasoningMap>;
   fileAttribution: Record<string, Record<string, { agent: AgentType | 'user'; date: string }>>;
   installedSkills: Record<string, InstalledSkillRecord[]>;
+  battleHistory: Record<string, BattleRecord[]>;
 }
 
 let _store: Store<StoreSchema> | null = null;
@@ -100,6 +101,7 @@ function getStore(): Store<StoreSchema> {
         reasoningMaps: {},
         fileAttribution: {},
         installedSkills: {},
+        battleHistory: {},
       },
     });
   }
@@ -390,4 +392,46 @@ export function removeInstalledSkill(projectId: string, skillId: string): void {
   const existing = all[projectId] ?? [];
   all[projectId] = existing.filter((r) => r.skillId !== skillId);
   s.set('installedSkills', all);
+}
+
+// --- Battle History ---
+
+export function getBattleHistory(projectId: string): BattleRecord[] {
+  const all = getStore().get('battleHistory');
+  return all[projectId] ?? [];
+}
+
+export function saveBattleRecord(projectId: string, record: BattleRecord): void {
+  const s = getStore();
+  const all = s.get('battleHistory');
+  const existing = all[projectId] ?? [];
+  // Newest first, keep last 50
+  all[projectId] = [record, ...existing].slice(0, 50);
+  s.set('battleHistory', all);
+}
+
+export function getLeaderboard(): AgentLeaderboardEntry[] {
+  const all = getStore().get('battleHistory');
+  const tally = new Map<string, { wins: number; losses: number }>();
+
+  for (const records of Object.values(all)) {
+    for (const record of records) {
+      if (record.winnerSide === null) continue;
+      for (let i = 0; i < 2; i++) {
+        const side = record.sides[i];
+        const key = side.agentType;
+        const entry = tally.get(key) ?? { wins: 0, losses: 0 };
+        if (side.winner) {
+          entry.wins += 1;
+        } else {
+          entry.losses += 1;
+        }
+        tally.set(key, entry);
+      }
+    }
+  }
+
+  return Array.from(tally.entries())
+    .map(([agentType, { wins, losses }]) => ({ agentType: agentType as AgentType, wins, losses }))
+    .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
 }

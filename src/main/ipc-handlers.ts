@@ -21,6 +21,7 @@ import * as snapshotService from './services/snapshot-service';
 import * as ghostTestService from './services/ghost-test-service';
 import * as reasoningMapService from './services/reasoning-map-service';
 import * as skillService from './services/skill-service';
+import * as battleService from './services/battle-service';
 import {
   validateString,
   isValidAgentType,
@@ -1498,5 +1499,83 @@ export function registerIpcHandlers(): void {
     if (!result.filePath) return;
     const { writeFile } = await import('node:fs/promises');
     await writeFile(result.filePath, JSON.stringify(skill, null, 2), 'utf-8');
+  });
+
+  // --- Agent Battle ---
+
+  ipcMain.handle('battle:start', async (event, projectId: unknown, projectPath: unknown, task: unknown, agents: unknown) => {
+    const vProjectId = validateString(projectId, 'projectId');
+    const vProjectPath = await validatePath(projectPath as string, 'projectPath');
+    const vTask = validateString(task, 'task');
+
+    if (!Array.isArray(agents) || agents.length !== 2) throw new Error('agents must be an array of 2 AgentType values');
+    const [a1, a2] = agents as string[];
+    if (!isValidAgentType(a1) || !isValidAgentType(a2)) throw new Error('Invalid agent type');
+
+    if (battleService.isActive()) throw new Error('A battle is already in progress');
+
+    // Get ghost test settings so we can auto-run tests after each side
+    const gtSettings = store.getGhostTestSettings(vProjectId);
+
+    // Forward battle progress events to the renderer
+    const progressCb = (ev: import('./services/battle-service').BattleProgressEvent) => {
+      event.sender.send('battle:progress', ev);
+    };
+    battleService.onProgress(progressCb);
+
+    const battleId = await battleService.startBattle(
+      vProjectId,
+      vProjectPath,
+      vTask,
+      [a1 as import('../shared/types').AgentType, a2 as import('../shared/types').AgentType],
+      gtSettings.enabled ? { enabled: true, customCommand: gtSettings.customCommand, timeoutSeconds: gtSettings.timeoutSeconds } : undefined,
+    );
+
+    return battleId;
+  });
+
+  ipcMain.handle('battle:cancel', async () => {
+    battleService.offProgress();
+    await battleService.cancelBattle();
+  });
+
+  ipcMain.handle('battle:get-progress', () => {
+    return battleService.getProgress();
+  });
+
+  ipcMain.handle('battle:get-diff', async (_, side: unknown) => {
+    if (side !== 0 && side !== 1) throw new Error('side must be 0 or 1');
+    return battleService.getDiff(side as 0 | 1);
+  });
+
+  ipcMain.handle('battle:apply-winner', async (_, side: unknown, projectPath: unknown) => {
+    if (side !== 0 && side !== 1) throw new Error('side must be 0 or 1');
+    const vPath = await validatePath(projectPath as string, 'projectPath');
+
+    const progress = battleService.getProgress();
+    if (!progress) throw new Error('No active battle');
+
+    const record = await battleService.finalizeBattle(side as 0 | 1, vPath);
+    store.saveBattleRecord(record.projectId, record);
+
+    // Update project status
+    store.updateProject(record.projectId, { status: 'in-progress' });
+    battleService.offProgress();
+
+    return record;
+  });
+
+  ipcMain.handle('battle:discard', async () => {
+    battleService.offProgress();
+    await battleService.discardBattle();
+  });
+
+  ipcMain.handle('battle:get-history', (_, projectId: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    return store.getBattleHistory(vId);
+  });
+
+  ipcMain.handle('battle:get-leaderboard', () => {
+    return store.getLeaderboard();
   });
 }

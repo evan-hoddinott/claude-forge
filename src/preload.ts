@@ -241,4 +241,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('skills:uninstall', skillId, projectId),
     saveAs: (skillId: string) => ipcRenderer.invoke('skills:save-as', skillId),
   },
+  battle: {
+    start: (projectId: string, projectPath: string, task: string, agents: [string, string]) =>
+      ipcRenderer.invoke('battle:start', projectId, projectPath, task, agents),
+    cancel: () => ipcRenderer.invoke('battle:cancel'),
+    getProgress: () => ipcRenderer.invoke('battle:get-progress'),
+    getDiff: (side: 0 | 1) => ipcRenderer.invoke('battle:get-diff', side),
+    applyWinner: (side: 0 | 1, projectPath: string) =>
+      ipcRenderer.invoke('battle:apply-winner', side, projectPath),
+    discard: () => ipcRenderer.invoke('battle:discard'),
+    getHistory: (projectId: string) => ipcRenderer.invoke('battle:get-history', projectId),
+    getLeaderboard: () => ipcRenderer.invoke('battle:get-leaderboard'),
+    onProgress: (callback: (event: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('battle:progress', handler);
+    },
+    offProgress: () => {
+      ipcRenderer.removeAllListeners('battle:progress');
+    },
+  },
 });
