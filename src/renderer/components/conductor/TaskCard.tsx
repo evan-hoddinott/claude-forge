@@ -11,6 +11,7 @@ const AGENT_COLORS: Record<AgentType, string> = {
   gemini:  '#4285F4',
   codex:   '#10A37F',
   copilot: '#6e40c9',
+  ollama:  '#333333',
 };
 
 const AGENT_LABELS: Record<AgentType, string> = {
@@ -18,6 +19,7 @@ const AGENT_LABELS: Record<AgentType, string> = {
   gemini:  'Gemini',
   codex:   'Codex',
   copilot: 'Copilot',
+  ollama:  'Local AI',
 };
 
 function StatusBadge({ status }: { status: ConductorTask['status'] }) {

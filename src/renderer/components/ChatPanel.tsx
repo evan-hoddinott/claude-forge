@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { v4 as uuidv4 } from 'uuid';
-import type { ChatMessage, ChatProviderInfo } from '../../shared/types';
+import type { ChatMessage, ChatProviderInfo, OllamaStats } from '../../shared/types';
 
 interface ChatPanelProps {
   open: boolean;
@@ -173,9 +173,16 @@ function ModelSelector({
             {providers.map(provider => (
               <div key={provider.id}>
                 <div className="px-3 py-1.5 text-[9px] font-mono text-text-muted uppercase tracking-wider bg-white/[0.02] border-b border-white/[0.05] flex items-center gap-1">
+                  {provider.id === 'ollama' && <span>🖥️</span>}
                   {provider.name}
                   {provider.isFree && <span className="text-green-400">[FREE]</span>}
-                  {!provider.isAvailable && (
+                  {provider.id === 'ollama' && (
+                    <>
+                      <span className="text-green-400">[OFFLINE]</span>
+                      <span className="text-green-400">[LOCAL]</span>
+                    </>
+                  )}
+                  {!provider.isAvailable && provider.id !== 'ollama' && (
                     <span className="text-[8px] text-amber-400 ml-auto">[KEY NEEDED]</span>
                   )}
                 </div>
@@ -194,9 +201,16 @@ function ModelSelector({
                         : ''
                     }`}
                   >
+                    {model.isLocal && <span className="text-[9px]">🖥️</span>}
                     <span>{model.displayName}</span>
-                    {model.isFree && (
+                    {model.sizeGb && (
+                      <span className="text-[8px] text-text-muted ml-1">({model.sizeGb} GB)</span>
+                    )}
+                    {model.isFree && !model.isLocal && (
                       <span className="text-[8px] bg-green-900/30 text-green-500 px-0.5 ml-auto">FREE</span>
+                    )}
+                    {model.isLocal && (
+                      <span className="text-[8px] bg-green-900/30 text-green-500 px-0.5 ml-auto">LOCAL</span>
                     )}
                   </button>
                 ))}
@@ -219,6 +233,7 @@ export default function ChatPanel({ open, onClose, projectId }: ChatPanelProps) 
   const [selectedProvider, setSelectedProvider] = useState('github');
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
   const [panelWidth, setPanelWidth] = useState(400);
+  const [ollamaStats, setOllamaStats] = useState<OllamaStats | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isDragging = useRef(false);
@@ -267,6 +282,25 @@ export default function ChatPanel({ open, onClose, projectId }: ChatPanelProps) 
     });
     return () => api.chat.offToken();
   }, [selectedModel]);
+
+  // Poll Ollama stats when using a local model
+  useEffect(() => {
+    if (selectedProvider !== 'ollama') {
+      setOllamaStats(null);
+      return;
+    }
+    const poll = async () => {
+      try {
+        const stats = await api.ollama.getStats();
+        setOllamaStats(stats);
+      } catch {
+        setOllamaStats(null);
+      }
+    };
+    poll();
+    const id = setInterval(poll, 3000);
+    return () => clearInterval(id);
+  }, [selectedProvider]);
 
   // Focus input when opening
   useEffect(() => {
@@ -389,6 +423,20 @@ export default function ChatPanel({ open, onClose, projectId }: ChatPanelProps) 
               </button>
             </div>
           </div>
+
+          {/* Ollama performance bar */}
+          {selectedProvider === 'ollama' && ollamaStats?.modelName && (
+            <div className="px-3 py-1 text-[9px] font-mono text-text-muted bg-black/20 border-b border-white/[0.05] flex items-center gap-2">
+              <span>🖥️</span>
+              <span>{ollamaStats.modelName}</span>
+              {ollamaStats.tokensPerSecond && (
+                <span className="text-green-500">{ollamaStats.tokensPerSecond} tok/s</span>
+              )}
+              {ollamaStats.vramUsedGb && (
+                <span className="text-text-muted ml-auto">VRAM: {ollamaStats.vramUsedGb} GB</span>
+              )}
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-3">

@@ -113,36 +113,42 @@ export const BUILT_IN_SKILL_CONTENT: Record<string, Record<AgentType, string>> =
     gemini: securityAuditorContent(),
     codex: securityAuditorContent(),
     copilot: securityAuditorContent(),
+    ollama: securityAuditorContent(),
   },
   'ui-ux-designer': {
     claude: uiUxDesignerContent(),
     gemini: uiUxDesignerContent(),
     codex: uiUxDesignerContent(),
     copilot: uiUxDesignerContent(),
+    ollama: uiUxDesignerContent(),
   },
   'test-writer': {
     claude: testWriterContent(),
     gemini: testWriterContent(),
     codex: testWriterContent(),
     copilot: testWriterContent(),
+    ollama: testWriterContent(),
   },
   'docs-writer': {
     claude: docsWriterContent(),
     gemini: docsWriterContent(),
     codex: docsWriterContent(),
     copilot: docsWriterContent(),
+    ollama: docsWriterContent(),
   },
   'perf-optimizer': {
     claude: perfOptimizerContent(),
     gemini: perfOptimizerContent(),
     codex: perfOptimizerContent(),
     copilot: perfOptimizerContent(),
+    ollama: perfOptimizerContent(),
   },
   'code-reviewer': {
     claude: codeReviewerContent(),
     gemini: codeReviewerContent(),
     codex: codeReviewerContent(),
     copilot: codeReviewerContent(),
+    ollama: codeReviewerContent(),
   },
 };
 

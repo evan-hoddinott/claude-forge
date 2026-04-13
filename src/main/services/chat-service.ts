@@ -55,13 +55,13 @@ function isGitHubAuthenticated(): boolean {
   }
 }
 
-export function getProviders(apiKeys: Record<string, string | null>): ChatProviderInfo[] {
+export async function getProviders(apiKeys: Record<string, string | null>): Promise<ChatProviderInfo[]> {
   const ghAuthenticated = isGitHubAuthenticated();
   const hasOpenAI = Boolean(apiKeys['openai']);
   const hasAnthropic = Boolean(apiKeys['anthropic']);
   const hasGoogle = Boolean(apiKeys['google']);
 
-  return [
+  const providers: ChatProviderInfo[] = [
     {
       id: 'github',
       name: 'GitHub Models',
@@ -95,6 +95,35 @@ export function getProviders(apiKeys: Record<string, string | null>): ChatProvid
       models: GOOGLE_MODELS.map(m => ({ ...m, isAvailable: hasGoogle })),
     },
   ];
+
+  // Detect local Ollama models
+  try {
+    const { detectOllama } = await import('./ollama-service');
+    const status = await detectOllama();
+    if (status.running && status.models.length > 0) {
+      const ollamaProvider: ChatProviderInfo = {
+        id: 'ollama',
+        name: 'Local Models (Ollama)',
+        isFree: true,
+        hasKey: true,
+        isAvailable: true,
+        models: status.models.map(m => ({
+          id: m.name,
+          displayName: m.displayName,
+          providerId: 'ollama',
+          isFree: true,
+          isAvailable: true,
+          sizeGb: m.sizeGb,
+          isLocal: true,
+        })),
+      };
+      providers.unshift(ollamaProvider);
+    }
+  } catch {
+    // Ollama unavailable — skip silently
+  }
+
+  return providers;
 }
 
 // --- SSE Streaming Parser ---
@@ -297,6 +326,44 @@ async function chatGoogle(
   }
 }
 
+// --- Provider: Ollama (OpenAI-compatible local endpoint) ---
+
+async function chatOllama(
+  model: string,
+  messages: ChatMessage[],
+  callbacks: StreamCallbacks,
+): Promise<void> {
+  const response = await fetch('http://localhost:11434/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Ollama error ${response.status}: ${text.slice(0, 200)}`);
+  }
+
+  if (!response.body) throw new Error('No response body');
+
+  for await (const data of parseSSE(response.body)) {
+    if (data === '[DONE]') break;
+    try {
+      const parsed = JSON.parse(data);
+      const delta = parsed?.choices?.[0]?.delta?.content;
+      if (typeof delta === 'string') {
+        callbacks.onToken(delta);
+      }
+    } catch {
+      // skip malformed
+    }
+  }
+}
+
 // --- Unified Entry Point ---
 
 export async function sendChatMessage(
@@ -329,6 +396,9 @@ export async function sendChatMessage(
         await chatGoogle(model, messages, key, callbacks);
         break;
       }
+      case 'ollama':
+        await chatOllama(model, messages, callbacks);
+        break;
       default:
         throw new Error(`Unknown provider: ${providerId}`);
     }
@@ -364,6 +434,7 @@ function getTestModel(providerId: string): string {
     case 'openai': return 'gpt-4o-mini';
     case 'anthropic': return 'claude-haiku-4-5-20251001';
     case 'google': return 'gemini-1.5-flash';
+    case 'ollama': return '';
     default: return '';
   }
 }

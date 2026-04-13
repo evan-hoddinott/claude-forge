@@ -143,6 +143,7 @@ function agentLabel(agent: AgentType): string {
     gemini: 'Gemini CLI',
     codex: 'OpenAI Codex',
     copilot: 'GitHub Copilot',
+    ollama: 'Local AI (Ollama)',
   };
   return labels[agent] ?? agent;
 }

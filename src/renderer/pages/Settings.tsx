@@ -2,10 +2,11 @@ import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from '
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useCachedQuery } from '../hooks/usePerformance';
 import { useToast } from '../components/Toast';
-import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode, VaultEntryMasked } from '../../shared/types';
+import type { UserPreferences, EnvironmentInfo, ProjectLocationMode, AgentType, AgentStatus, AppMode, VaultEntryMasked, OllamaStatus } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import { rawLabel } from '../utils/language';
 import { useUpdateStatus } from '../components/UpdateNotification';
+import ModelBrowser from '../components/ModelBrowser';
 
 class SettingsErrorBoundary extends Component<
   { children: ReactNode },
@@ -129,6 +130,7 @@ function SettingsInner() {
           refetch={refetch}
           agentStatuses={agentStatuses}
         />
+        <OllamaSection />
         <VaultSection ghAuth={ghAuth} agentStatuses={agentStatuses} />
         <FileExplorerSection prefs={prefs} api={api} refetch={refetch} />
         <AccessibilitySection prefs={prefs} api={api} refetch={refetch} />
@@ -1049,6 +1051,111 @@ function SetupSection() {
 }
 
 // --- Data ---
+
+// ─── Ollama Section ───────────────────────────────────────────────────────────
+
+function OllamaSection() {
+  const api = useAPI();
+  const { toast } = useToast();
+  const [status, setStatus] = useState<OllamaStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [starting, setStarting] = useState(false);
+  const [showBrowser, setShowBrowser] = useState(false);
+
+  useEffect(() => {
+    api.ollama.getStatus().then(s => {
+      setStatus(s);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [api]);
+
+  async function handleStart() {
+    setStarting(true);
+    const result = await api.ollama.start();
+    if (result.success) {
+      toast('Ollama started successfully');
+      const s = await api.ollama.getStatus();
+      setStatus(s);
+    } else {
+      toast(result.error ?? 'Failed to start Ollama', 'error');
+    }
+    setStarting(false);
+  }
+
+  return (
+    <SectionCard title="Local AI (Ollama)">
+      {loading ? (
+        <div className="h-12 bg-white/[0.02] animate-pulse rounded" />
+      ) : (
+        <div className="space-y-4">
+          {/* Status indicator */}
+          <div className="flex items-center gap-3">
+            <div className={`w-2 h-2 rounded-full ${
+              status?.running ? 'bg-green-500' :
+              status?.installed ? 'bg-amber-500' :
+              'bg-white/20'
+            }`} />
+            <div className="flex-1">
+              <p className="text-xs font-medium text-text-primary">
+                {status?.running
+                  ? `Running — ${status.models.length} model${status.models.length !== 1 ? 's' : ''} available`
+                  : status?.installed
+                  ? 'Installed but not running'
+                  : 'Not installed'}
+              </p>
+              {status?.running && status.models.length > 0 && (
+                <p className="text-[10px] text-text-muted mt-0.5 font-mono">
+                  {status.models.map(m => m.name).join(', ')}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {status?.installed && !status.running && (
+                <button
+                  onClick={handleStart}
+                  disabled={starting}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/5 hover:bg-white/10 text-text-secondary disabled:opacity-50 transition-colors"
+                >
+                  {starting ? 'Starting...' : 'Start Ollama'}
+                </button>
+              )}
+              {status?.running && (
+                <button
+                  onClick={() => setShowBrowser(true)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent/20 hover:bg-accent/30 text-accent border border-accent/30 transition-colors"
+                >
+                  Browse Models
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Install instructions if not installed */}
+          {!status?.installed && (
+            <div className="p-3 border border-white/[0.06] bg-white/[0.02] rounded-lg space-y-2">
+              <p className="text-xs text-text-muted">
+                Run AI models locally — free, private, and offline. Install Ollama to get started:
+              </p>
+              <code className="block text-[10px] font-mono text-text-secondary bg-black/30 px-2 py-1.5 rounded">
+                curl -fsSL https://ollama.com/install.sh | sh
+              </code>
+              <p className="text-[10px] text-text-muted">
+                Or visit <span className="text-accent">ollama.com/download</span> for Windows/macOS installers.
+              </p>
+            </div>
+          )}
+
+          <FieldHint>
+            Local models run entirely on your machine. No API key needed, no internet required, completely private.
+          </FieldHint>
+        </div>
+      )}
+      {showBrowser && (
+        <ModelBrowser open onClose={() => setShowBrowser(false)} />
+      )}
+    </SectionCard>
+  );
+}
 
 // ─── Vault Section ────────────────────────────────────────────────────────────
 

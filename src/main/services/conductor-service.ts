@@ -788,6 +788,7 @@ function getFallbackAgent(agentType: AgentType): AgentType | null {
     gemini: 'claude',
     codex: 'claude',
     copilot: 'claude',
+    ollama: null,
   };
   return fallbacks[agentType];
 }

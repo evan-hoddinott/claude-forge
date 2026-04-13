@@ -17,6 +17,7 @@ const AGENT_LABELS: Record<AgentType, string> = {
   gemini:  'Gemini',
   codex:   'Codex',
   copilot: 'Copilot',
+  ollama:  'Local AI',
 };
 
 function TaskStatusIcon({ status }: { status: ConductorTask['status'] }) {

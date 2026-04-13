@@ -98,6 +98,7 @@ function agentColor(agent: AgentType | undefined): string {
     gemini: 'border-blue-500/50',
     codex: 'border-green-500/50',
     copilot: 'border-purple-500/50',
+    ollama: 'border-white/30',
   };
   return map[agent] ?? 'border-accent/40';
 }

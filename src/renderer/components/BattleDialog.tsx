@@ -31,6 +31,7 @@ const AGENT_COLORS: Record<AgentType, string> = {
   gemini: '#4285F4',
   codex: '#10A37F',
   copilot: '#6e40c9',
+  ollama: '#333333',
 };
 
 function AgentIcon({ type, size = 16 }: { type: AgentType; size?: number }) {
