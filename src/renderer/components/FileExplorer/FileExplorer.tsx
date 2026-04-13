@@ -70,10 +70,16 @@ export default function FileExplorer({ project }: FileExplorerProps) {
     return fileTree.filter((node) => CONTEXT_FILE_NAMES.includes(node.name));
   }, [fileTree]);
 
-  // Filter out context files from main tree display
+  // Extract .forge/ node
+  const forgeNode = useMemo(() => {
+    if (!fileTree) return null;
+    return fileTree.find((node) => node.name === '.forge' && node.type === 'directory') ?? null;
+  }, [fileTree]);
+
+  // Filter out context files and .forge from main tree display
   const mainTree = useMemo(() => {
     if (!fileTree) return [];
-    return fileTree.filter((node) => !CONTEXT_FILE_NAMES.includes(node.name));
+    return fileTree.filter((node) => !CONTEXT_FILE_NAMES.includes(node.name) && node.name !== '.forge');
   }, [fileTree]);
 
   // Single tree walk to compute stats, common extensions, and all files
@@ -407,15 +413,26 @@ export default function FileExplorer({ project }: FileExplorerProps) {
               filterExtensions={filterExtensions}
             />
           ) : (
-            <FileTree
-              nodes={mainTree}
-              selectedPath={selectedFile?.path ?? null}
-              onSelect={handleSelect}
-              onDoubleClick={handleDoubleClick}
-              onContextMenu={handleContextMenu}
-              contextFiles={contextFiles}
-              filterExtensions={filterExtensions}
-            />
+            <>
+              {forgeNode && (
+                <ForgeStateSection
+                  node={forgeNode}
+                  selectedPath={selectedFile?.path ?? null}
+                  onSelect={handleSelect}
+                  onDoubleClick={handleDoubleClick}
+                  onContextMenu={handleContextMenu}
+                />
+              )}
+              <FileTree
+                nodes={mainTree}
+                selectedPath={selectedFile?.path ?? null}
+                onSelect={handleSelect}
+                onDoubleClick={handleDoubleClick}
+                onContextMenu={handleContextMenu}
+                contextFiles={contextFiles}
+                filterExtensions={filterExtensions}
+              />
+            </>
           )}
         </div>
       </div>
@@ -454,6 +471,47 @@ export default function FileExplorer({ project }: FileExplorerProps) {
           />
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// --- Forge State Section ---
+
+function ForgeStateSection({
+  node,
+  selectedPath,
+  onSelect,
+  onDoubleClick,
+  onContextMenu,
+}: {
+  node: FileTreeNode;
+  selectedPath: string | null;
+  onSelect: (n: FileTreeNode) => void;
+  onDoubleClick: (n: FileTreeNode) => void;
+  onContextMenu: (e: React.MouseEvent, n: FileTreeNode) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-white/[0.06]">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold text-amber-400/80 hover:text-amber-400 transition-colors"
+      >
+        <span className="text-[11px]">⚒</span>
+        <span>Forge State</span>
+        <span className="ml-auto text-text-muted">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && node.children && (
+        <FileTree
+          nodes={node.children}
+          selectedPath={selectedPath}
+          onSelect={onSelect}
+          onDoubleClick={onDoubleClick}
+          onContextMenu={onContextMenu}
+          contextFiles={[]}
+          filterExtensions={[]}
+        />
+      )}
     </div>
   );
 }

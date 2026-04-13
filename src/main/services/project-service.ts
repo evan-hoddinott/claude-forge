@@ -6,6 +6,7 @@ import * as store from '../store';
 import { writeContextFiles, writeContextFile } from './context-generator';
 import { sanitizeProjectName } from '../utils/sanitize';
 import { runExecFile } from '../utils/run-command';
+import * as forgeDirectory from './forge-directory';
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {
   // Validate and sanitize the project name before any file operations
@@ -47,6 +48,12 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
     // context file generation is best-effort
   }
 
+  try {
+    await forgeDirectory.initialize(project.path, project.agents as AgentType[]);
+  } catch {
+    // forge init is best-effort
+  }
+
   return project;
 }
 
@@ -75,6 +82,14 @@ export async function importProject(input: ImportProjectInput): Promise<Project>
         await writeContextFile(project, agentType).catch(() => { /* best-effort */ });
       }
     }
+  }
+
+  try {
+    if (!(await forgeDirectory.exists(input.path))) {
+      await forgeDirectory.initialize(input.path, [input.preferredAgent]);
+    }
+  } catch {
+    // forge init is best-effort
   }
 
   return project;

@@ -2,7 +2,7 @@ import { useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAPI, useQuery, useMutation } from '../hooks/useAPI';
 import { useToast } from '../components/Toast';
-import type { Project, ProjectInput, AgentType } from '../../shared/types';
+import type { Project, ProjectInput, AgentType, ForgeState } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import StatusBadge from '../components/StatusBadge';
 import DeployDialog from '../components/DeployDialog';
@@ -363,6 +363,45 @@ export default function ProjectDetail({
 
 // --- Tab: Overview ---
 
+function ForgeStateCard({ project }: { project: Project }) {
+  const api = useAPI();
+  const { data: forgeState } = useQuery<ForgeState | null>(() => api.forge.getState(project.path), [project.path]);
+
+  if (!forgeState) return null;
+
+  const agents = Object.entries(forgeState.registry.agents) as [AgentType, NonNullable<ForgeState['registry']['agents'][AgentType]>][];
+
+  return (
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="text-amber-400">⚒</span>
+        <h3 className="text-xs font-semibold text-text-primary uppercase tracking-wider">Forge State</h3>
+        <span className="ml-auto text-[10px] text-text-muted px-1.5 py-0.5 rounded bg-white/[0.04]">
+          {forgeState.manifest.orchestrationMode}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {agents.map(([name, entry]) => (
+          <div key={name} className="flex items-center gap-1.5 text-[11px] text-text-secondary">
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              entry.status === 'working' ? 'bg-green-400' :
+              entry.status === 'blocked' ? 'bg-red-400' :
+              entry.status === 'offline' ? 'bg-white/20' : 'bg-amber-400/60'
+            }`} />
+            <span className="capitalize">{name}</span>
+            <span className="text-text-muted">({entry.role})</span>
+          </div>
+        ))}
+      </div>
+      {forgeState.blackboardTaskCount > 0 && (
+        <p className="text-[11px] text-text-muted">
+          {forgeState.blackboardTaskCount} task{forgeState.blackboardTaskCount !== 1 ? 's' : ''} on blackboard
+        </p>
+      )}
+    </div>
+  );
+}
+
 function OverviewTab({ project }: { project: Project }) {
   const preview = buildContextPreview(project);
   const contextFiles = (project.agents || ['claude']).map(a => AGENTS[a].contextFileName);
@@ -419,6 +458,9 @@ function OverviewTab({ project }: { project: Project }) {
           ))}
         </div>
       )}
+
+      {/* Forge State */}
+      <ForgeStateCard project={project} />
 
       {/* Ghost Tests */}
       <GhostTestPanel project={project} />

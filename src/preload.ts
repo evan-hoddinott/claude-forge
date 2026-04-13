@@ -369,4 +369,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     generateVibe: (projectId: string) =>
       ipcRenderer.invoke('hub:generate-vibe', projectId),
   },
+  forge: {
+    initialize: (projectPath: string, agents: string[]) =>
+      ipcRenderer.invoke('forge:initialize', projectPath, agents),
+    getState: (projectPath: string) =>
+      ipcRenderer.invoke('forge:get-state', projectPath),
+    getAgentMemory: (projectPath: string, agent: string) =>
+      ipcRenderer.invoke('forge:get-agent-memory', projectPath, agent),
+    appendMemory: (projectPath: string, agent: string, entry: string) =>
+      ipcRenderer.invoke('forge:append-memory', projectPath, agent, entry),
+    updateAgentStatus: (projectPath: string, agent: string, status: string) =>
+      ipcRenderer.invoke('forge:update-agent-status', projectPath, agent, status),
+  },
 });

@@ -28,6 +28,7 @@ import * as fuelService from './services/fuel-service';
 import * as timeMachineService from './services/time-machine-service';
 import * as ollamaService from './services/ollama-service';
 import * as hubService from './services/hub-service';
+import * as forgeDirectory from './services/forge-directory';
 import { startConnectivityMonitoring } from './services/connectivity-service';
 import {
   validateString,
@@ -1831,6 +1832,45 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('hub:generate-vibe', (_, projectId: unknown) => {
     const id = validateString(projectId, 'projectId', 100);
     return hubService.generateVibe(id);
+  });
+
+  // --- Forge Directory ---
+
+  ipcMain.handle('forge:initialize', async (_e, projectPath: unknown, agents: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!Array.isArray(agents)) throw new Error('agents must be an array');
+    const validAgents = (agents as unknown[]).filter((a) => isValidAgentType(a as string)) as import('../shared/types').AgentType[];
+    await forgeDirectory.initialize(p, validAgents);
+  });
+
+  ipcMain.handle('forge:get-state', async (_e, projectPath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    return forgeDirectory.getState(p);
+  });
+
+  ipcMain.handle('forge:get-agent-memory', async (_e, projectPath: unknown, agent: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const a = validateString(agent, 'agent');
+    if (!isValidAgentType(a)) throw new Error('Invalid agent type');
+    return forgeDirectory.getAgentMemory(p, a as import('../shared/types').AgentType);
+  });
+
+  ipcMain.handle('forge:append-memory', async (_e, projectPath: unknown, agent: unknown, entry: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const a = validateString(agent, 'agent');
+    const e = validateString(entry, 'entry');
+    if (!isValidAgentType(a)) throw new Error('Invalid agent type');
+    return forgeDirectory.appendToMemory(p, a as import('../shared/types').AgentType, e);
+  });
+
+  ipcMain.handle('forge:update-agent-status', async (_e, projectPath: unknown, agent: unknown, status: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const a = validateString(agent, 'agent');
+    const s = validateString(status, 'status');
+    if (!isValidAgentType(a)) throw new Error('Invalid agent type');
+    const validStatuses = ['idle', 'working', 'blocked', 'offline'];
+    if (!validStatuses.includes(s)) throw new Error('Invalid status');
+    return forgeDirectory.updateAgentStatus(p, a as import('../shared/types').AgentType, s as import('../shared/types').AgentOrchestratorStatus);
   });
 
   // Start connectivity monitoring after handlers are registered

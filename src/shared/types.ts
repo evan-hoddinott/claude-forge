@@ -350,6 +350,47 @@ export interface DeployResult {
   error?: string;
 }
 
+// --- Forge Directory Types ---
+
+export type AgentRole = 'lead' | 'engineer' | 'reviewer' | 'tester';
+export type AgentOrchestratorStatus = 'idle' | 'working' | 'blocked' | 'offline';
+export type OrchestrationMode = 'conductor' | 'manual' | 'collaborative';
+
+export interface ForgeManifest {
+  forgeVersion: string;
+  projectName: string;
+  created: string;
+  orchestrationMode: OrchestrationMode;
+  activeAgents: AgentType[];
+  primaryAgent: AgentType;
+  blackboardEnabled: boolean;
+  shadowGitEnabled: boolean;
+  schemaGatingEnabled: boolean;
+}
+
+export interface ForgeAgentEntry {
+  type: AgentType;
+  role: AgentRole;
+  status: AgentOrchestratorStatus;
+  lastActive: string;
+  sessionsCompleted: number;
+  tokensConsumed: number;
+  filesOwned: string[];
+  capabilities: string[];
+  restrictions: string[];
+}
+
+export interface ForgeRegistry {
+  agents: Partial<Record<AgentType, ForgeAgentEntry>>;
+}
+
+export interface ForgeState {
+  manifest: ForgeManifest;
+  registry: ForgeRegistry;
+  blackboardTaskCount: number;
+  lastSessionTime: string | null;
+}
+
 // --- Reasoning Map Types ---
 
 export interface MapNode {
@@ -883,6 +924,13 @@ export interface ElectronAPI {
     trackDownload: (itemId: string) => Promise<void>;
     publish: (input: HubPublishInput) => Promise<{ url: string }>;
     generateVibe: (projectId: string) => Promise<string>;
+  };
+  forge: {
+    initialize: (projectPath: string, agents: AgentType[]) => Promise<void>;
+    getState: (projectPath: string) => Promise<ForgeState | null>;
+    getAgentMemory: (projectPath: string, agent: AgentType) => Promise<string>;
+    appendMemory: (projectPath: string, agent: AgentType, entry: string) => Promise<void>;
+    updateAgentStatus: (projectPath: string, agent: AgentType, status: AgentOrchestratorStatus) => Promise<void>;
   };
   ollama: {
     getStatus: () => Promise<OllamaStatus>;

@@ -114,8 +114,8 @@ export async function buildFileTree(projectPath: string): Promise<FileTreeNode[]
       const fullPath = path.join(dirPath, entry.name);
       const relativePath = path.relative(resolvedRoot, fullPath);
 
-      // Skip hidden files (starting with .) except context files
-      if (entry.name.startsWith('.') && !['CLAUDE.md', 'GEMINI.md', 'codex.md'].includes(entry.name)) {
+      // Skip hidden files (starting with .) except context files and .forge
+      if (entry.name.startsWith('.') && !['CLAUDE.md', 'GEMINI.md', 'codex.md', '.forge'].includes(entry.name)) {
         continue;
       }
 
