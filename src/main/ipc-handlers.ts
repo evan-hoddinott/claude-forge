@@ -29,6 +29,7 @@ import * as timeMachineService from './services/time-machine-service';
 import * as ollamaService from './services/ollama-service';
 import * as hubService from './services/hub-service';
 import * as forgeDirectory from './services/forge-directory';
+import * as blackboardService from './services/blackboard-service';
 import { startConnectivityMonitoring } from './services/connectivity-service';
 import {
   validateString,
@@ -1886,6 +1887,109 @@ export function registerIpcHandlers(): void {
     const sid = validateString(sessionId, 'sessionId');
     const sum = validateString(summary, 'summary');
     return forgeDirectory.endSession(p, sid, sum);
+  });
+
+  // --- Blackboard ---
+
+  ipcMain.handle('blackboard:get-tasks', async (_e, projectPath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    return blackboardService.getTasks(p);
+  });
+
+  ipcMain.handle('blackboard:create-task', async (_e, projectPath: unknown, task: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!task || typeof task !== 'object') throw new Error('task must be an object');
+    return blackboardService.createTask(p, task as Parameters<typeof blackboardService.createTask>[1]);
+  });
+
+  ipcMain.handle('blackboard:claim-task', async (_e, projectPath: unknown, taskId: unknown, agent: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const tid = validateString(taskId, 'taskId', 100);
+    const a = validateString(agent, 'agent');
+    if (!isValidAgentType(a)) throw new Error('Invalid agent type');
+    return blackboardService.claimTask(p, tid, a as AgentType);
+  });
+
+  ipcMain.handle('blackboard:update-task-status', async (_e, projectPath: unknown, taskId: unknown, status: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const tid = validateString(taskId, 'taskId', 100);
+    const s = validateString(status, 'status', 50);
+    const validStatuses = ['pending', 'claimed', 'in-progress', 'blocked', 'completed', 'failed'];
+    if (!validStatuses.includes(s)) throw new Error('Invalid task status');
+    return blackboardService.updateTaskStatus(p, tid, s as import('../shared/types').BlackboardTaskStatus);
+  });
+
+  ipcMain.handle('blackboard:complete-task', async (_e, projectPath: unknown, taskId: unknown, artifacts: unknown, filesModified: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const tid = validateString(taskId, 'taskId', 100);
+    if (!Array.isArray(artifacts)) throw new Error('artifacts must be an array');
+    if (!Array.isArray(filesModified)) throw new Error('filesModified must be an array');
+    return blackboardService.completeTask(p, tid, artifacts as string[], filesModified as string[]);
+  });
+
+  ipcMain.handle('blackboard:fail-task', async (_e, projectPath: unknown, taskId: unknown, error: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const tid = validateString(taskId, 'taskId', 100);
+    const err = validateString(error, 'error', 2000);
+    return blackboardService.failTask(p, tid, err);
+  });
+
+  ipcMain.handle('blackboard:delete-task', async (_e, projectPath: unknown, taskId: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const tid = validateString(taskId, 'taskId', 100);
+    return blackboardService.deleteTask(p, tid);
+  });
+
+  ipcMain.handle('blackboard:clear-completed', async (_e, projectPath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    return blackboardService.clearCompleted(p);
+  });
+
+  ipcMain.handle('blackboard:post-artifact', async (_e, projectPath: unknown, name: unknown, content: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const n = validateString(name, 'name', 200);
+    const c = validateString(content, 'content', 1_000_000);
+    return blackboardService.postArtifact(p, n, c);
+  });
+
+  ipcMain.handle('blackboard:get-artifact', async (_e, projectPath: unknown, name: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const n = validateString(name, 'name', 200);
+    return blackboardService.getArtifact(p, n);
+  });
+
+  ipcMain.handle('blackboard:list-artifacts', async (_e, projectPath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    return blackboardService.listArtifacts(p);
+  });
+
+  ipcMain.handle('blackboard:send-message', async (_e, projectPath: unknown, message: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!message || typeof message !== 'object') throw new Error('message must be an object');
+    return blackboardService.sendMessage(p, message as Parameters<typeof blackboardService.sendMessage>[1]);
+  });
+
+  ipcMain.handle('blackboard:read-messages', async (_e, projectPath: unknown, agent: unknown, since: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const a = validateString(agent, 'agent');
+    if (!isValidAgentType(a)) throw new Error('Invalid agent type');
+    const sinceStr = since != null ? validateString(since, 'since', 100) : undefined;
+    return blackboardService.readMessages(p, a as AgentType, sinceStr);
+  });
+
+  ipcMain.handle('blackboard:mark-read', async (_e, projectPath: unknown, agent: unknown, messageId: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const a = validateString(agent, 'agent');
+    const mid = validateString(messageId, 'messageId', 100);
+    if (!isValidAgentType(a)) throw new Error('Invalid agent type');
+    return blackboardService.markRead(p, a as AgentType, mid);
+  });
+
+  ipcMain.handle('blackboard:clear-mailbox', async (_e, projectPath: unknown, agent: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const a = validateString(agent, 'agent');
+    if (!isValidAgentType(a)) throw new Error('Invalid agent type');
+    return blackboardService.clearMailbox(p, a as AgentType);
   });
 
   // Start connectivity monitoring after handlers are registered

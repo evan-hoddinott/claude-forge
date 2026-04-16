@@ -934,6 +934,27 @@ export interface ElectronAPI {
     startSession: (projectPath: string, agent: AgentType, task: string) => Promise<string>;
     endSession: (projectPath: string, sessionId: string, summary: string) => Promise<void>;
   };
+  blackboard: {
+    getTasks: (projectPath: string) => Promise<BlackboardTask[]>;
+    createTask: (projectPath: string, task: Omit<BlackboardTask, 'id' | 'createdAt' | 'artifacts' | 'filesModified'>) => Promise<BlackboardTask>;
+    claimTask: (projectPath: string, taskId: string, agent: AgentType) => Promise<boolean>;
+    updateTaskStatus: (projectPath: string, taskId: string, status: BlackboardTaskStatus) => Promise<void>;
+    completeTask: (projectPath: string, taskId: string, artifacts: string[], filesModified: string[]) => Promise<void>;
+    failTask: (projectPath: string, taskId: string, error: string) => Promise<void>;
+    deleteTask: (projectPath: string, taskId: string) => Promise<void>;
+    clearCompleted: (projectPath: string) => Promise<void>;
+    postArtifact: (projectPath: string, name: string, content: string) => Promise<void>;
+    getArtifact: (projectPath: string, name: string) => Promise<string>;
+    listArtifacts: (projectPath: string) => Promise<BlackboardArtifact[]>;
+    sendMessage: (projectPath: string, message: Omit<AgentMessage, 'id' | 'timestamp' | 'read'>) => Promise<void>;
+    readMessages: (projectPath: string, agent: AgentType, since?: string) => Promise<AgentMessage[]>;
+    markRead: (projectPath: string, agent: AgentType, messageId: string) => Promise<void>;
+    clearMailbox: (projectPath: string, agent: AgentType) => Promise<void>;
+    onTaskUpdate: (callback: (data: { projectPath: string; task: BlackboardTask }) => void) => void;
+    offTaskUpdate: () => void;
+    onMessageReceived: (callback: (data: { projectPath: string; message: AgentMessage }) => void) => void;
+    offMessageReceived: () => void;
+  };
   ollama: {
     getStatus: () => Promise<OllamaStatus>;
     start: () => Promise<{ success: boolean; error?: string }>;
@@ -1046,6 +1067,53 @@ export interface SnapshotImportPreview {
   hasVibe: boolean;
   hasChatHistory: boolean;
   fileSizeBytes: number;
+}
+
+// --- Blackboard Types ---
+
+export type BlackboardTaskStatus = 'pending' | 'claimed' | 'in-progress' | 'blocked' | 'completed' | 'failed';
+export type BlackboardPriority = 'critical' | 'high' | 'medium' | 'low';
+
+export interface BlackboardTask {
+  id: string;
+  title: string;
+  description: string;
+  status: BlackboardTaskStatus;
+  priority: BlackboardPriority;
+  claimedBy?: AgentType;
+  claimedAt?: string;
+  completedAt?: string;
+  failedAt?: string;
+  error?: string;
+  dependencies: string[];   // task IDs that must complete first
+  blockedBy?: string;       // task ID currently blocking this
+  artifacts: string[];      // filenames posted to blackboard/artifacts/
+  filesModified: string[];
+  tokensUsed?: number;
+  conductorStation?: string;
+  estimatedMinutes?: number;
+  actualMinutes?: number;
+  createdAt: string;
+}
+
+export interface BlackboardArtifact {
+  name: string;
+  createdAt: string;
+  createdBy?: AgentType;
+  size: number;
+}
+
+export type AgentMessageType = 'request' | 'response' | 'info' | 'system';
+
+export interface AgentMessage {
+  id: string;
+  from: AgentType | 'system' | 'conductor';
+  to: AgentType;
+  timestamp: string;
+  type: AgentMessageType;
+  subject: string;
+  body: string;
+  read: boolean;
 }
 
 // --- Forge Hub Types ---

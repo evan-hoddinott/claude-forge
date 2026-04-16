@@ -385,4 +385,50 @@ contextBridge.exposeInMainWorld('electronAPI', {
     endSession: (projectPath: string, sessionId: string, summary: string) =>
       ipcRenderer.invoke('forge:end-session', projectPath, sessionId, summary),
   },
+  blackboard: {
+    getTasks: (projectPath: string) =>
+      ipcRenderer.invoke('blackboard:get-tasks', projectPath),
+    createTask: (projectPath: string, task: unknown) =>
+      ipcRenderer.invoke('blackboard:create-task', projectPath, task),
+    claimTask: (projectPath: string, taskId: string, agent: string) =>
+      ipcRenderer.invoke('blackboard:claim-task', projectPath, taskId, agent),
+    updateTaskStatus: (projectPath: string, taskId: string, status: string) =>
+      ipcRenderer.invoke('blackboard:update-task-status', projectPath, taskId, status),
+    completeTask: (projectPath: string, taskId: string, artifacts: string[], filesModified: string[]) =>
+      ipcRenderer.invoke('blackboard:complete-task', projectPath, taskId, artifacts, filesModified),
+    failTask: (projectPath: string, taskId: string, error: string) =>
+      ipcRenderer.invoke('blackboard:fail-task', projectPath, taskId, error),
+    deleteTask: (projectPath: string, taskId: string) =>
+      ipcRenderer.invoke('blackboard:delete-task', projectPath, taskId),
+    clearCompleted: (projectPath: string) =>
+      ipcRenderer.invoke('blackboard:clear-completed', projectPath),
+    postArtifact: (projectPath: string, name: string, content: string) =>
+      ipcRenderer.invoke('blackboard:post-artifact', projectPath, name, content),
+    getArtifact: (projectPath: string, name: string) =>
+      ipcRenderer.invoke('blackboard:get-artifact', projectPath, name),
+    listArtifacts: (projectPath: string) =>
+      ipcRenderer.invoke('blackboard:list-artifacts', projectPath),
+    sendMessage: (projectPath: string, message: unknown) =>
+      ipcRenderer.invoke('blackboard:send-message', projectPath, message),
+    readMessages: (projectPath: string, agent: string, since?: string) =>
+      ipcRenderer.invoke('blackboard:read-messages', projectPath, agent, since),
+    markRead: (projectPath: string, agent: string, messageId: string) =>
+      ipcRenderer.invoke('blackboard:mark-read', projectPath, agent, messageId),
+    clearMailbox: (projectPath: string, agent: string) =>
+      ipcRenderer.invoke('blackboard:clear-mailbox', projectPath, agent),
+    onTaskUpdate: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('blackboard:task-update', handler);
+    },
+    offTaskUpdate: () => {
+      ipcRenderer.removeAllListeners('blackboard:task-update');
+    },
+    onMessageReceived: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('blackboard:message-received', handler);
+    },
+    offMessageReceived: () => {
+      ipcRenderer.removeAllListeners('blackboard:message-received');
+    },
+  },
 });

@@ -18,6 +18,7 @@ import * as fuelService from './fuel-service';
 import * as timeMachineService from './time-machine-service';
 import * as timelineService from './timeline-service';
 import { runCommand, runExecFile } from '../utils/run-command';
+import * as blackboardService from './blackboard-service';
 
 // --- State ---
 
@@ -30,6 +31,8 @@ interface ExecutionState {
   stopped: boolean;
   checkpointDecision: CheckpointDecision | null;
   checkpointResolve: (() => void) | null;
+  /** Maps ConductorTask.id → blackboard task id for live sync */
+  blackboardIdMap: Map<string, string>;
 }
 
 const activeExecutions = new Map<string, ExecutionState>();
@@ -499,8 +502,29 @@ export async function startExecution(opts: {
     stopped: false,
     checkpointDecision: null,
     checkpointResolve: null,
+    blackboardIdMap: new Map(),
   };
   activeExecutions.set(plan.id, state);
+
+  // Sync plan tasks to blackboard (best-effort — don't abort execution on failure)
+  try {
+    const allTasks = plan.stations.flatMap((station) =>
+      station.tasks.map((task) => ({
+        taskId: task.id,
+        title: task.description,
+        description: task.prompt,
+        agent: task.assignedAgent,
+        stationId: station.id,
+        stationName: station.name,
+        estimatedMinutes: station.estimatedMinutes,
+        dependencies: [] as string[], // within-station deps resolved at start
+      })),
+    );
+    const idMap = await blackboardService.syncPlanToBlackboard(projectPath, allTasks);
+    for (const [k, v] of idMap) state.blackboardIdMap.set(k, v);
+  } catch (err) {
+    console.warn('[conductor] Could not sync to blackboard:', err);
+  }
 
   // Run execution in background
   executeAll(state).catch((err) => {
@@ -547,6 +571,21 @@ async function executeAll(state: ExecutionState): Promise<void> {
       plan.currentTaskIndex = ti;
       task.status = 'running';
       broadcastTask(plan, station, task);
+
+      // Sync running status to blackboard (best-effort)
+      const bbTaskId = state.blackboardIdMap.get(task.id);
+      if (bbTaskId) {
+        blackboardService.claimTask(projectPath, bbTaskId, task.assignedAgent).catch(() => { /* best-effort blackboard sync */ });
+        blackboardService.updateTaskStatus(projectPath, bbTaskId, 'in-progress').catch(() => { /* best-effort blackboard sync */ });
+        // Notify the assigned agent's mailbox
+        blackboardService.sendMessage(projectPath, {
+          from: 'conductor',
+          to: task.assignedAgent,
+          type: 'system',
+          subject: `Task assigned: ${task.description.slice(0, 60)}`,
+          body: `You have been assigned blackboard task ${bbTaskId}. Check .forge/blackboard/artifacts/ for relevant artifacts from previous tasks.`,
+        }).catch(() => { /* best-effort blackboard sync */ });
+      }
       broadcastPlan(plan);
 
       const startTime = Date.now();
@@ -566,6 +605,19 @@ async function executeAll(state: ExecutionState): Promise<void> {
           task.filesChanged = result.filesChanged;
           task.output = result.output;
           success = true;
+
+          // Sync completion to blackboard
+          if (bbTaskId) {
+            blackboardService.completeTask(projectPath, bbTaskId, [], result.filesChanged).catch(() => { /* best-effort blackboard sync */ });
+            // Post output as an artifact if substantive
+            if (result.output.length > 100) {
+              blackboardService.postArtifact(
+                projectPath,
+                `${task.id}-output.txt`,
+                result.output,
+              ).catch(() => { /* best-effort blackboard sync */ });
+            }
+          }
 
           // Record fuel usage (estimate tokens from output length)
           const tokensOut = Math.ceil(result.output.length / 4);
@@ -590,6 +642,11 @@ async function executeAll(state: ExecutionState): Promise<void> {
           } else {
             task.status = 'failed';
             task.error = err instanceof Error ? err.message : String(err);
+
+            // Sync failure to blackboard
+            if (bbTaskId) {
+              blackboardService.failTask(projectPath, bbTaskId, task.error ?? 'unknown error').catch(() => { /* best-effort blackboard sync */ });
+            }
 
             // In Express mode: try a different agent automatically
             if (plan.controlLevel === 'express') {

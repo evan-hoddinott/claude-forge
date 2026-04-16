@@ -23,13 +23,17 @@ const ReasoningMap = lazy(() => import('../components/ReasoningMap'));
 // Lazy-load TimelineTab — only when Timeline tab is opened
 const TimelineTab = lazy(() => import('../components/TimelineTab'));
 
-type Tab = 'overview' | 'files' | 'map' | 'timeline' | 'github' | 'agents' | 'settings';
+// Lazy-load BlackboardTab — only when Blackboard tab is opened
+const BlackboardTab = lazy(() => import('../components/BlackboardTab'));
+
+type Tab = 'overview' | 'files' | 'map' | 'timeline' | 'github' | 'agents' | 'settings' | 'blackboard';
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'files', label: 'Files' },
   { id: 'map', label: 'Map' },
   { id: 'timeline', label: 'Timeline' },
+  { id: 'blackboard', label: 'Blackboard' },
   { id: 'github', label: 'GitHub' },
   { id: 'agents', label: 'AI Agents' },
   { id: 'settings', label: 'Settings' },
@@ -271,6 +275,12 @@ export default function ProjectDetail({
           <div className="h-full">
             <Suspense fallback={<TimelineSkeleton />}>
               <TimelineTab project={project} />
+            </Suspense>
+          </div>
+        ) : activeTab === 'blackboard' ? (
+          <div className="h-full">
+            <Suspense fallback={<BlackboardSkeleton />}>
+              <BlackboardTab project={project} />
             </Suspense>
           </div>
         ) : (
@@ -1173,6 +1183,31 @@ function TimelineSkeleton() {
               <div className="w-48 h-2.5 rounded bg-white/[0.06] animate-pulse" />
               <div className="w-32 h-2 rounded bg-white/[0.03] animate-pulse" />
             </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BlackboardSkeleton() {
+  return (
+    <div className="h-full flex flex-col">
+      <div className="px-6 py-4 border-b border-white/[0.06] flex items-center gap-4">
+        <div className="w-32 h-3 rounded bg-white/[0.05] animate-pulse" />
+        <div className="w-24 h-2 rounded bg-white/[0.03] animate-pulse" />
+      </div>
+      <div className="flex gap-4 p-6 overflow-hidden">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="flex flex-col min-w-[220px] gap-2">
+            <div className="w-20 h-2.5 rounded bg-white/[0.05] animate-pulse mb-1" />
+            {Array.from({ length: 2 + i }, (_, j) => (
+              <div
+                key={j}
+                className="h-16 rounded-xl bg-white/[0.03] animate-pulse"
+                style={{ animationDelay: `${(i * 3 + j) * 60}ms` }}
+              />
+            ))}
           </div>
         ))}
       </div>
