@@ -30,6 +30,8 @@ import * as ollamaService from './services/ollama-service';
 import * as hubService from './services/hub-service';
 import * as forgeDirectory from './services/forge-directory';
 import * as blackboardService from './services/blackboard-service';
+import * as staleReadGuard from './services/stale-read-guard';
+import * as shadowGitService from './services/shadow-git-service';
 import { startConnectivityMonitoring } from './services/connectivity-service';
 import {
   validateString,
@@ -1990,6 +1992,76 @@ export function registerIpcHandlers(): void {
     const a = validateString(agent, 'agent');
     if (!isValidAgentType(a)) throw new Error('Invalid agent type');
     return blackboardService.clearMailbox(p, a as AgentType);
+  });
+
+  // ─── Stale Read Guard ─────────────────────────────────────────────────────
+
+  ipcMain.handle('stale-read-guard:record-read', async (_, projectPath: unknown, agent: unknown, filePath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!isValidAgentType(agent)) throw new Error('Invalid agent type');
+    const fp = validateString(filePath, 'filePath', 4096);
+    const projectRoot = getProjectPathForFile(fp);
+    if (!projectRoot) throw new Error('File is not within any known project');
+    await staleReadGuard.recordRead(p, agent as AgentType, fp);
+  });
+
+  ipcMain.handle('stale-read-guard:validate-write', async (_, projectPath: unknown, agent: unknown, filePath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!isValidAgentType(agent)) throw new Error('Invalid agent type');
+    const fp = validateString(filePath, 'filePath', 4096);
+    const projectRoot = getProjectPathForFile(fp);
+    if (!projectRoot) throw new Error('File is not within any known project');
+    return staleReadGuard.validateWrite(p, agent as AgentType, fp);
+  });
+
+  ipcMain.handle('stale-read-guard:record-write', async (_, projectPath: unknown, agent: unknown, filePath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!isValidAgentType(agent)) throw new Error('Invalid agent type');
+    const fp = validateString(filePath, 'filePath', 4096);
+    const projectRoot = getProjectPathForFile(fp);
+    if (!projectRoot) throw new Error('File is not within any known project');
+    await staleReadGuard.recordWrite(p, agent as AgentType, fp);
+  });
+
+  ipcMain.handle('stale-read-guard:get-registry', async (_, projectPath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    return staleReadGuard.getRegistry(p);
+  });
+
+  ipcMain.handle('stale-read-guard:clear-agent', async (_, projectPath: unknown, agent: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!isValidAgentType(agent)) throw new Error('Invalid agent type');
+    await staleReadGuard.clearAgent(p, agent as AgentType);
+  });
+
+  // ─── Shadow Git ───────────────────────────────────────────────────────────
+
+  ipcMain.handle('shadow-git:snapshot', async (_, projectPath: unknown, label: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const l = validateString(label, 'label', 500);
+    return shadowGitService.snapshot(p, l);
+  });
+
+  ipcMain.handle('shadow-git:get-diff-chunks', async (_, projectPath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    return shadowGitService.getDiffChunks(p);
+  });
+
+  ipcMain.handle('shadow-git:apply-chunks', async (_, projectPath: unknown, chunkIds: unknown, commitMessage: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!Array.isArray(chunkIds)) throw new Error('chunkIds must be an array');
+    const validIds = (chunkIds as unknown[]).map((id) => validateString(id, 'chunkId', 100));
+    const msg = validateString(commitMessage, 'commitMessage', 500);
+    await shadowGitService.applyChunks(p, validIds, msg);
+  });
+
+  ipcMain.handle('shadow-git:revert-to-snapshot', async (_, projectPath: unknown, gitTag: unknown, label: unknown, activeAgents: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const tag = validateString(gitTag, 'gitTag', 200);
+    const lbl = validateString(label, 'label', 500);
+    if (!Array.isArray(activeAgents)) throw new Error('activeAgents must be an array');
+    const validAgents = (activeAgents as unknown[]).filter((a) => isValidAgentType(a)) as AgentType[];
+    await shadowGitService.revertToSnapshot(p, tag, lbl, validAgents);
   });
 
   // Start connectivity monitoring after handlers are registered

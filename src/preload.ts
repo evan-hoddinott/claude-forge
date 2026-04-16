@@ -431,4 +431,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeAllListeners('blackboard:message-received');
     },
   },
+  staleReadGuard: {
+    recordRead: (projectPath: string, agent: string, filePath: string) =>
+      ipcRenderer.invoke('stale-read-guard:record-read', projectPath, agent, filePath),
+    validateWrite: (projectPath: string, agent: string, filePath: string) =>
+      ipcRenderer.invoke('stale-read-guard:validate-write', projectPath, agent, filePath),
+    recordWrite: (projectPath: string, agent: string, filePath: string) =>
+      ipcRenderer.invoke('stale-read-guard:record-write', projectPath, agent, filePath),
+    getRegistry: (projectPath: string) =>
+      ipcRenderer.invoke('stale-read-guard:get-registry', projectPath),
+    clearAgent: (projectPath: string, agent: string) =>
+      ipcRenderer.invoke('stale-read-guard:clear-agent', projectPath, agent),
+  },
+  shadowGit: {
+    snapshot: (projectPath: string, label: string) =>
+      ipcRenderer.invoke('shadow-git:snapshot', projectPath, label),
+    getDiffChunks: (projectPath: string) =>
+      ipcRenderer.invoke('shadow-git:get-diff-chunks', projectPath),
+    applyChunks: (projectPath: string, chunkIds: string[], commitMessage: string) =>
+      ipcRenderer.invoke('shadow-git:apply-chunks', projectPath, chunkIds, commitMessage),
+    revertToSnapshot: (projectPath: string, gitTag: string, label: string, activeAgents: string[]) =>
+      ipcRenderer.invoke('shadow-git:revert-to-snapshot', projectPath, gitTag, label, activeAgents),
+  },
 });

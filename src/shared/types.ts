@@ -967,6 +967,58 @@ export interface ElectronAPI {
     onConnectivity: (callback: (data: { online: boolean }) => void) => void;
     offConnectivity: () => void;
   };
+  staleReadGuard: {
+    recordRead: (projectPath: string, agent: AgentType, filePath: string) => Promise<void>;
+    validateWrite: (projectPath: string, agent: AgentType, filePath: string) => Promise<WriteValidation>;
+    recordWrite: (projectPath: string, agent: AgentType, filePath: string) => Promise<void>;
+    getRegistry: (projectPath: string) => Promise<Record<string, Record<string, { hash: string; readAt: string }>>>;
+    clearAgent: (projectPath: string, agent: AgentType) => Promise<void>;
+  };
+  shadowGit: {
+    snapshot: (projectPath: string, label: string) => Promise<ShadowSnapshot | null>;
+    getDiffChunks: (projectPath: string) => Promise<FileDiff[]>;
+    applyChunks: (projectPath: string, chunkIds: string[], commitMessage: string) => Promise<void>;
+    revertToSnapshot: (projectPath: string, gitTag: string, label: string, activeAgents: AgentType[]) => Promise<void>;
+  };
+}
+
+// ─── Stale Read Guard Types ───────────────────────────────────────────────────
+
+export interface WriteValidation {
+  allowed: boolean;
+  reason?: 'stale-read' | 'file-never-read';
+  message?: string;
+  lastReadHash?: string;
+  currentHash?: string;
+  lastReadAt?: string;
+}
+
+// ─── Shadow Git Types ─────────────────────────────────────────────────────────
+
+export interface ShadowSnapshot {
+  id: string;
+  label: string;
+  gitTag: string;
+  timestamp: string; // ISO date
+}
+
+export interface DiffChunk {
+  id: string;          // stable uuid for accept/reject tracking
+  filePath: string;    // e.g. "src/utils.ts"
+  fileHeader: string;  // full file-level diff header block
+  hunkHeader: string;  // "@@ -15,4 +15,8 @@ function validateEmail()"
+  hunk: string;        // full hunk text including @@ header line
+  linesAdded: number;
+  linesRemoved: number;
+}
+
+export interface FileDiff {
+  filePath: string;
+  chunks: DiffChunk[];
+  linesAdded: number;
+  linesRemoved: number;
+  isNew: boolean;
+  isDeleted: boolean;
 }
 
 export interface BattleSideProgressDTO {

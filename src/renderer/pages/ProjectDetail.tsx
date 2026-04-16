@@ -26,7 +26,10 @@ const TimelineTab = lazy(() => import('../components/TimelineTab'));
 // Lazy-load BlackboardTab — only when Blackboard tab is opened
 const BlackboardTab = lazy(() => import('../components/BlackboardTab'));
 
-type Tab = 'overview' | 'files' | 'map' | 'timeline' | 'github' | 'agents' | 'settings' | 'blackboard';
+// Lazy-load StagingReview — only when Review tab is opened
+const StagingReview = lazy(() => import('../components/StagingReview'));
+
+type Tab = 'overview' | 'files' | 'map' | 'timeline' | 'github' | 'agents' | 'settings' | 'blackboard' | 'review';
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -34,6 +37,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: 'map', label: 'Map' },
   { id: 'timeline', label: 'Timeline' },
   { id: 'blackboard', label: 'Blackboard' },
+  { id: 'review', label: 'Review' },
   { id: 'github', label: 'GitHub' },
   { id: 'agents', label: 'AI Agents' },
   { id: 'settings', label: 'Settings' },
@@ -281,6 +285,12 @@ export default function ProjectDetail({
           <div className="h-full">
             <Suspense fallback={<BlackboardSkeleton />}>
               <BlackboardTab project={project} />
+            </Suspense>
+          </div>
+        ) : activeTab === 'review' ? (
+          <div className="h-full">
+            <Suspense fallback={<ReviewSkeleton />}>
+              <StagingReview project={project} />
             </Suspense>
           </div>
         ) : (
@@ -1207,6 +1217,27 @@ function BlackboardSkeleton() {
                 className="h-16 rounded-xl bg-white/[0.03] animate-pulse"
                 style={{ animationDelay: `${(i * 3 + j) * 60}ms` }}
               />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ReviewSkeleton() {
+  return (
+    <div className="h-full flex flex-col">
+      <div className="px-4 py-3 border-b border-white/[0.06] flex items-center gap-3">
+        <div className="w-32 h-3 rounded bg-white/[0.05] animate-pulse" />
+        <div className="w-20 h-2 rounded bg-white/[0.03] animate-pulse" />
+      </div>
+      <div className="p-4 space-y-4">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className="space-y-2">
+            <div className="w-48 h-2.5 rounded bg-white/[0.05] animate-pulse" />
+            {Array.from({ length: 2 }, (_, j) => (
+              <div key={j} className="h-16 rounded-lg bg-white/[0.03] animate-pulse" style={{ animationDelay: `${(i * 2 + j) * 60}ms` }} />
             ))}
           </div>
         ))}
