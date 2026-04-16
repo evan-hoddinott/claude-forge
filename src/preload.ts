@@ -380,5 +380,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('forge:append-memory', projectPath, agent, entry),
     updateAgentStatus: (projectPath: string, agent: string, status: string) =>
       ipcRenderer.invoke('forge:update-agent-status', projectPath, agent, status),
+    startSession: (projectPath: string, agent: string, task: string) =>
+      ipcRenderer.invoke('forge:start-session', projectPath, agent, task),
+    endSession: (projectPath: string, sessionId: string, summary: string) =>
+      ipcRenderer.invoke('forge:end-session', projectPath, sessionId, summary),
   },
 });

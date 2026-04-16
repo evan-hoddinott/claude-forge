@@ -931,6 +931,8 @@ export interface ElectronAPI {
     getAgentMemory: (projectPath: string, agent: AgentType) => Promise<string>;
     appendMemory: (projectPath: string, agent: AgentType, entry: string) => Promise<void>;
     updateAgentStatus: (projectPath: string, agent: AgentType, status: AgentOrchestratorStatus) => Promise<void>;
+    startSession: (projectPath: string, agent: AgentType, task: string) => Promise<string>;
+    endSession: (projectPath: string, sessionId: string, summary: string) => Promise<void>;
   };
   ollama: {
     getStatus: () => Promise<OllamaStatus>;

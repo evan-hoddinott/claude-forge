@@ -19,6 +19,14 @@ import { AGENTS } from '../../shared/types';
 
 const FORGE_VERSION = '2.0.0';
 
+const FORGE_GITIGNORE_MARKER = '# Claude Forge — ephemeral orchestration state';
+const FORGE_GITIGNORE_RULES = `${FORGE_GITIGNORE_MARKER}
+.forge/blackboard/
+.forge/snapshots/
+.forge/security/audit-log.jsonl
+.forge/agents/*/session-log/
+`;
+
 function forgePath(projectPath: string, ...parts: string[]): string {
   return path.join(projectPath, '.forge', ...parts);
 }
@@ -149,8 +157,41 @@ export async function initialize(projectPath: string, agents: AgentType[]): Prom
   // blackboard/tasks.json
   await writeJson(forgePath(projectPath, 'blackboard', 'tasks.json'), { tasks: [] });
 
+  // blackboard/mailboxes/<agent>.jsonl — one per active agent
+  for (const agentType of activeAgents) {
+    const mailboxPath = forgePath(projectPath, 'blackboard', 'mailboxes', `${agentType}.jsonl`);
+    try {
+      await fs.access(mailboxPath);
+    } catch {
+      await fs.writeFile(mailboxPath, '', 'utf8');
+    }
+  }
+
+  // security/roles.json
+  await writeJson(forgePath(projectPath, 'security', 'roles.json'), {
+    roles: {
+      lead:     { capabilities: ['read', 'write', 'execute', 'git', 'review'], restrictions: [] },
+      engineer: { capabilities: ['read', 'write', 'execute', 'git'],           restrictions: [] },
+      reviewer: { capabilities: ['read', 'analyze'],                           restrictions: ['no-write', 'no-execute'] },
+      tester:   { capabilities: ['read', 'write', 'execute'],                  restrictions: ['no-git-push'] },
+    },
+  });
+
+  // snapshots/index.json
+  await writeJson(forgePath(projectPath, 'snapshots', 'index.json'), { snapshots: [] });
+
   // config.json
   await writeJson(forgePath(projectPath, 'config.json'), {});
+
+  // .gitignore — append forge rules once
+  const gitignorePath = path.join(projectPath, '.gitignore');
+  let gitignoreContent = '';
+  try {
+    gitignoreContent = await fs.readFile(gitignorePath, 'utf8');
+  } catch { /* file doesn't exist yet */ }
+  if (!gitignoreContent.includes(FORGE_GITIGNORE_MARKER)) {
+    await fs.appendFile(gitignorePath, `\n${FORGE_GITIGNORE_RULES}`, 'utf8');
+  }
 }
 
 export async function getState(projectPath: string): Promise<ForgeState | null> {
@@ -209,4 +250,80 @@ export async function updateAgentStatus(
     entry.lastActive = new Date().toISOString();
   }
   await writeJson(regPath, registry);
+}
+
+/**
+ * Start a new agent session. Creates a session-log file and marks the agent
+ * as 'working'. Returns a session ID that callers pass to endSession.
+ *
+ * Session ID format: `<agent>-<YYYYMMDDTHHmmss>-<rand4>` — the agent prefix
+ * lets endSession locate the log file without a full directory scan.
+ */
+export async function startSession(
+  projectPath: string,
+  agent: AgentType,
+  task: string,
+): Promise<string> {
+  const now = new Date();
+  // Compact ISO timestamp safe for filenames: 20260416T123045
+  const ts = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, '');
+  const rand = Math.random().toString(36).slice(2, 6);
+  const sessionId = `${agent}-${ts}-${rand}`;
+
+  const logDir = forgePath(projectPath, 'agents', agent, 'session-log');
+  await fs.mkdir(logDir, { recursive: true });
+
+  const logContent =
+    `# Session ${sessionId}\n` +
+    `**Agent:** ${agent}\n` +
+    `**Task:** ${task}\n` +
+    `**Started:** ${now.toISOString()}\n` +
+    `**Status:** in-progress\n`;
+
+  await fs.writeFile(path.join(logDir, `${sessionId}.md`), logContent, 'utf8');
+  await updateAgentStatus(projectPath, agent, 'working');
+
+  return sessionId;
+}
+
+/**
+ * End an agent session. Updates the session-log file with a summary,
+ * appends the summary to the agent's persistent memory, and resets the
+ * agent's status to 'idle' while incrementing sessionsCompleted.
+ */
+export async function endSession(
+  projectPath: string,
+  sessionId: string,
+  summary: string,
+): Promise<void> {
+  // Agent is the first segment of the session ID (e.g. "claude-20260416T…")
+  const agentType = sessionId.split('-')[0] as AgentType;
+  const sessionFile = forgePath(projectPath, 'agents', agentType, 'session-log', `${sessionId}.md`);
+
+  try {
+    const existing = await fs.readFile(sessionFile, 'utf8');
+    const updated =
+      existing.replace('**Status:** in-progress', '**Status:** completed') +
+      `**Ended:** ${new Date().toISOString()}\n\n## Summary\n${summary}\n`;
+    await fs.writeFile(sessionFile, updated, 'utf8');
+  } catch {
+    // Session file missing — still update registry and memory below
+  }
+
+  // Update registry: set idle, increment sessionsCompleted
+  const regPath = forgePath(projectPath, 'agents', 'registry.json');
+  const registry = (await readJson<ForgeRegistry>(regPath)) ?? { agents: {} };
+  const entry = registry.agents[agentType];
+  if (entry) {
+    entry.status = 'idle';
+    entry.lastActive = new Date().toISOString();
+    entry.sessionsCompleted += 1;
+  }
+  await writeJson(regPath, registry);
+
+  // Append summary to persistent memory
+  if (summary.trim()) {
+    const datePart = new Date().toISOString().split('T')[0];
+    await appendToMemory(projectPath, agentType, `## Session ${datePart}\n${summary}`);
+  }
 }

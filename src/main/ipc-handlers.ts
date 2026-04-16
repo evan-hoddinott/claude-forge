@@ -1873,6 +1873,21 @@ export function registerIpcHandlers(): void {
     return forgeDirectory.updateAgentStatus(p, a as import('../shared/types').AgentType, s as import('../shared/types').AgentOrchestratorStatus);
   });
 
+  ipcMain.handle('forge:start-session', async (_e, projectPath: unknown, agent: unknown, task: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const a = validateString(agent, 'agent');
+    const t = validateString(task, 'task');
+    if (!isValidAgentType(a)) throw new Error('Invalid agent type');
+    return forgeDirectory.startSession(p, a as import('../shared/types').AgentType, t);
+  });
+
+  ipcMain.handle('forge:end-session', async (_e, projectPath: unknown, sessionId: unknown, summary: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const sid = validateString(sessionId, 'sessionId');
+    const sum = validateString(summary, 'summary');
+    return forgeDirectory.endSession(p, sid, sum);
+  });
+
   // Start connectivity monitoring after handlers are registered
   const mainWin = BrowserWindow.getAllWindows()[0];
   if (mainWin) {
