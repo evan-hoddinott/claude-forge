@@ -32,10 +32,12 @@ import * as forgeDirectory from './services/forge-directory';
 import * as blackboardService from './services/blackboard-service';
 import * as staleReadGuard from './services/stale-read-guard';
 import * as shadowGitService from './services/shadow-git-service';
+import * as schemaGateService from './services/schema-gate';
 import { startConnectivityMonitoring } from './services/connectivity-service';
 import {
   validateString,
   isValidAgentType,
+  isValidAgentRole,
   isValidUrl,
   sanitizeErrorMessage,
   validatePath,
@@ -2062,6 +2064,52 @@ export function registerIpcHandlers(): void {
     if (!Array.isArray(activeAgents)) throw new Error('activeAgents must be an array');
     const validAgents = (activeAgents as unknown[]).filter((a) => isValidAgentType(a)) as AgentType[];
     await shadowGitService.revertToSnapshot(p, tag, lbl, validAgents);
+  });
+
+  // ─── Schema Gate ─────────────────────────────────────────────────────────────
+
+  ipcMain.handle('schema-gate:get-state', async (_, projectPath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    return schemaGateService.getState(p);
+  });
+
+  ipcMain.handle('schema-gate:assign-role', async (_, projectPath: unknown, agent: unknown, role: unknown, spatialPartition: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!isValidAgentType(agent)) throw new Error('Invalid agent type');
+    if (!isValidAgentRole(role)) throw new Error('Invalid agent role');
+    const sp = (spatialPartition !== undefined && spatialPartition !== null)
+      ? validateString(spatialPartition, 'spatialPartition', 500)
+      : undefined;
+    return schemaGateService.assignRole(p, agent, role, sp);
+  });
+
+  ipcMain.handle('schema-gate:validate-tool-call', async (_, projectPath: unknown, agent: unknown, role: unknown, toolName: unknown, args: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    if (!isValidAgentType(agent)) throw new Error('Invalid agent type');
+    if (!isValidAgentRole(role)) throw new Error('Invalid agent role');
+    const tn = validateString(toolName, 'toolName', 100);
+    const a = (typeof args === 'object' && args !== null) ? args as Record<string, unknown> : {};
+    return schemaGateService.validateToolCall(p, agent, role, tn, a);
+  });
+
+  ipcMain.handle('schema-gate:get-audit-log', async (_, projectPath: unknown, limit: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    const lim = typeof limit === 'number' ? Math.min(Math.max(1, limit), 500) : 50;
+    return schemaGateService.getAuditLog(p, lim);
+  });
+
+  ipcMain.handle('schema-gate:enable', async (_, projectPath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    return schemaGateService.enable(p);
+  });
+
+  ipcMain.handle('schema-gate:disable', async (_, projectPath: unknown) => {
+    const p = validateString(projectPath, 'projectPath');
+    return schemaGateService.disable(p);
+  });
+
+  ipcMain.handle('schema-gate:get-roles', async () => {
+    return schemaGateService.getRoleDefinitions();
   });
 
   // Start connectivity monitoring after handlers are registered

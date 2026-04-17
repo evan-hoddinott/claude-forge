@@ -29,7 +29,10 @@ const BlackboardTab = lazy(() => import('../components/BlackboardTab'));
 // Lazy-load StagingReview — only when Review tab is opened
 const StagingReview = lazy(() => import('../components/StagingReview'));
 
-type Tab = 'overview' | 'files' | 'map' | 'timeline' | 'github' | 'agents' | 'settings' | 'blackboard' | 'review';
+// Lazy-load SecurityDashboard — only when Security tab is opened
+const SecurityDashboard = lazy(() => import('../components/SecurityDashboard'));
+
+type Tab = 'overview' | 'files' | 'map' | 'timeline' | 'github' | 'agents' | 'settings' | 'blackboard' | 'review' | 'security';
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -40,6 +43,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: 'review', label: 'Review' },
   { id: 'github', label: 'GitHub' },
   { id: 'agents', label: 'AI Agents' },
+  { id: 'security', label: 'Security' },
   { id: 'settings', label: 'Settings' },
 ];
 
@@ -291,6 +295,12 @@ export default function ProjectDetail({
           <div className="h-full">
             <Suspense fallback={<ReviewSkeleton />}>
               <StagingReview project={project} />
+            </Suspense>
+          </div>
+        ) : activeTab === 'security' ? (
+          <div className="p-6">
+            <Suspense fallback={<div className="text-sm text-text-muted">Loading...</div>}>
+              <SecurityDashboard project={project} />
             </Suspense>
           </div>
         ) : (

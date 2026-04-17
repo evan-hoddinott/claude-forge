@@ -146,6 +146,13 @@ export function isValidAgentType(value: unknown): value is 'claude' | 'gemini' |
 }
 
 /**
+ * Validates that a value is one of the allowed AgentRole values.
+ */
+export function isValidAgentRole(value: unknown): value is 'lead' | 'engineer' | 'reviewer' | 'tester' | 'documenter' {
+  return value === 'lead' || value === 'engineer' || value === 'reviewer' || value === 'tester' || value === 'documenter';
+}
+
+/**
  * Validates a string argument from IPC.
  */
 export function validateString(value: unknown, name: string, maxLength = 1000): string {

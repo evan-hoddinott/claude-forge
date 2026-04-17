@@ -167,15 +167,9 @@ export async function initialize(projectPath: string, agents: AgentType[]): Prom
     }
   }
 
-  // security/roles.json
-  await writeJson(forgePath(projectPath, 'security', 'roles.json'), {
-    roles: {
-      lead:     { capabilities: ['read', 'write', 'execute', 'git', 'review'], restrictions: [] },
-      engineer: { capabilities: ['read', 'write', 'execute', 'git'],           restrictions: [] },
-      reviewer: { capabilities: ['read', 'analyze'],                           restrictions: ['no-write', 'no-execute'] },
-      tester:   { capabilities: ['read', 'write', 'execute'],                  restrictions: ['no-git-push'] },
-    },
-  });
+  // security/roles.json — full definitions consumed by schema-gate
+  const { ROLE_DEFINITIONS } = await import('./schema-gate');
+  await writeJson(forgePath(projectPath, 'security', 'roles.json'), { roles: ROLE_DEFINITIONS });
 
   // snapshots/index.json
   await writeJson(forgePath(projectPath, 'snapshots', 'index.json'), { snapshots: [] });

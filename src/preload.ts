@@ -453,4 +453,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
     revertToSnapshot: (projectPath: string, gitTag: string, label: string, activeAgents: string[]) =>
       ipcRenderer.invoke('shadow-git:revert-to-snapshot', projectPath, gitTag, label, activeAgents),
   },
+  schemaGate: {
+    getState: (projectPath: string) =>
+      ipcRenderer.invoke('schema-gate:get-state', projectPath),
+    assignRole: (projectPath: string, agent: string, role: string, spatialPartition?: string) =>
+      ipcRenderer.invoke('schema-gate:assign-role', projectPath, agent, role, spatialPartition),
+    validateToolCall: (projectPath: string, agent: string, role: string, toolName: string, args: Record<string, unknown>) =>
+      ipcRenderer.invoke('schema-gate:validate-tool-call', projectPath, agent, role, toolName, args),
+    getAuditLog: (projectPath: string, limit?: number) =>
+      ipcRenderer.invoke('schema-gate:get-audit-log', projectPath, limit),
+    enable: (projectPath: string) =>
+      ipcRenderer.invoke('schema-gate:enable', projectPath),
+    disable: (projectPath: string) =>
+      ipcRenderer.invoke('schema-gate:disable', projectPath),
+    getRoles: () =>
+      ipcRenderer.invoke('schema-gate:get-roles'),
+  },
 });

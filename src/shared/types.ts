@@ -352,7 +352,7 @@ export interface DeployResult {
 
 // --- Forge Directory Types ---
 
-export type AgentRole = 'lead' | 'engineer' | 'reviewer' | 'tester';
+export type AgentRole = 'lead' | 'engineer' | 'reviewer' | 'tester' | 'documenter';
 export type AgentOrchestratorStatus = 'idle' | 'working' | 'blocked' | 'offline';
 export type OrchestrationMode = 'conductor' | 'manual' | 'collaborative';
 
@@ -378,6 +378,7 @@ export interface ForgeAgentEntry {
   filesOwned: string[];
   capabilities: string[];
   restrictions: string[];
+  spatialPartition?: string;
 }
 
 export interface ForgeRegistry {
@@ -389,6 +390,59 @@ export interface ForgeState {
   registry: ForgeRegistry;
   blackboardTaskCount: number;
   lastSessionTime: string | null;
+}
+
+// --- Schema Gate Types ---
+
+export interface ToolDefinition {
+  name: string;
+  description: string;
+}
+
+export interface SchemaGateValidation {
+  allowed: boolean;
+  reason?: string;
+}
+
+export type SecurityEventType = 'blocked-tool' | 'blocked-file-write' | 'blocked-command' | 'allowed';
+
+export interface SecurityEvent {
+  timestamp: string;
+  agent: AgentType;
+  event: SecurityEventType;
+  detail: string;
+  role?: AgentRole;
+}
+
+export interface RoleDefinition {
+  displayName: string;
+  description: string;
+  capabilities: string[];
+  tools: string[];
+  restrictions: string[];
+  fileRestrictions?: {
+    writeAllowed: string[];
+    writeBlocked: string[];
+  };
+  commandRestrictions?: {
+    allowed: string[];
+    blocked: string[];
+  };
+  modelTier: 'frontier' | 'performance' | 'efficient';
+}
+
+export type RoleDefinitions = Record<AgentRole, RoleDefinition>;
+
+export interface SchemaGateAssignment {
+  agent: AgentType;
+  role: AgentRole;
+  spatialPartition?: string;
+  assignedAt: string;
+}
+
+export interface SchemaGateState {
+  enabled: boolean;
+  assignments: SchemaGateAssignment[];
 }
 
 // --- Reasoning Map Types ---
@@ -979,6 +1033,15 @@ export interface ElectronAPI {
     getDiffChunks: (projectPath: string) => Promise<FileDiff[]>;
     applyChunks: (projectPath: string, chunkIds: string[], commitMessage: string) => Promise<void>;
     revertToSnapshot: (projectPath: string, gitTag: string, label: string, activeAgents: AgentType[]) => Promise<void>;
+  };
+  schemaGate: {
+    getState: (projectPath: string) => Promise<SchemaGateState>;
+    assignRole: (projectPath: string, agent: AgentType, role: AgentRole, spatialPartition?: string) => Promise<void>;
+    validateToolCall: (projectPath: string, agent: AgentType, role: AgentRole, toolName: string, args: Record<string, unknown>) => Promise<SchemaGateValidation>;
+    getAuditLog: (projectPath: string, limit?: number) => Promise<SecurityEvent[]>;
+    enable: (projectPath: string) => Promise<void>;
+    disable: (projectPath: string) => Promise<void>;
+    getRoles: () => Promise<RoleDefinitions>;
   };
 }
 
