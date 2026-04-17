@@ -130,6 +130,7 @@ function SettingsInner() {
           refetch={refetch}
           agentStatuses={agentStatuses}
         />
+        <BudgetSection />
         <OllamaSection />
         <VaultSection ghAuth={ghAuth} agentStatuses={agentStatuses} />
         <FileExplorerSection prefs={prefs} api={api} refetch={refetch} />
@@ -1051,6 +1052,160 @@ function SetupSection() {
 }
 
 // --- Data ---
+
+// ─── Budget Section ───────────────────────────────────────────────────────────
+
+function BudgetSection() {
+  const api = useAPI();
+  const { toast } = useToast();
+  const { data: budget, refetch } = useQuery(() => api.fuel.getBudget(), []);
+  const { data: tbStatus } = useQuery(() => api.tokenBucket.getStatus(), []);
+
+  const save = async (updates: Parameters<typeof api.fuel.setBudget>[0]) => {
+    await api.fuel.setBudget(updates);
+    toast('Budget settings saved');
+    refetch();
+  };
+
+  if (!budget) return null;
+
+  const tokenPct = tbStatus && tbStatus.capacity > 0
+    ? Math.min(100, (tbStatus.used / tbStatus.capacity) * 100)
+    : 0;
+
+  return (
+    <SectionCard title="Budget Controls">
+      <div className="space-y-5">
+
+        {/* Live token bucket status */}
+        {tbStatus && tbStatus.capacity > 0 && (
+          <div className="rounded-lg bg-white/[0.02] border border-white/[0.06] p-3">
+            <div className="flex justify-between text-xs text-text-secondary mb-1.5">
+              <span>Daily token budget</span>
+              <span className="font-mono">{Math.round(tbStatus.used / 1000)}K / {Math.round(tbStatus.capacity / 1000)}K used</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${tokenPct}%`,
+                  background: tokenPct >= 100 ? '#ef4444' : tokenPct >= 80 ? '#f59e0b' : '#60a5fa',
+                }}
+              />
+            </div>
+            <div className="text-[10px] text-text-muted mt-1">
+              ~${((tbStatus.used / 1_000_000) * 3).toFixed(3)} estimated cost (Sonnet 4.6 input rates)
+            </div>
+          </div>
+        )}
+
+        {/* Daily token budget */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-sm font-medium text-text-primary">Daily token budget</div>
+            <div className="text-xs text-text-muted">Resets at midnight. 0 = unlimited.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="0"
+              step="10000"
+              defaultValue={budget.dailyTokenBudget ?? 100000}
+              onBlur={e => {
+                const v = parseInt(e.target.value, 10);
+                if (!isNaN(v) && v >= 0) save({ dailyTokenBudget: v });
+              }}
+              className="w-28 text-right text-sm font-mono bg-white/[0.04] border border-white/[0.1] rounded-lg px-3 py-1.5 text-text-primary focus:outline-none focus:border-accent/40"
+            />
+            <span className="text-xs text-text-muted">tokens</span>
+          </div>
+        </div>
+
+        {/* At 80% action */}
+        <div>
+          <div className="text-sm font-medium text-text-primary mb-2">At 80% usage</div>
+          <div className="space-y-1.5">
+            {([
+              ['warn',      'Warn only (show banner)'],
+              ['downshift', 'Auto-downshift to cheaper models'],
+              ['pause',     'Pause all agents (require manual approval)'],
+            ] as const).map(([val, label]) => (
+              <label key={val} className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="at80"
+                  value={val}
+                  checked={(budget.at80Action ?? 'warn') === val}
+                  onChange={() => save({ at80Action: val })}
+                  className="accent-accent"
+                />
+                <span className="text-sm text-text-secondary">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* At 100% action */}
+        <div>
+          <div className="text-sm font-medium text-text-primary mb-2">At 100% usage</div>
+          <div className="space-y-1.5">
+            {([
+              ['hard-stop',      'Hard stop (block all API calls)'],
+              ['shift-to-free',  'Shift to free models only (GitHub Models + Ollama)'],
+              ['allow-overage',  'Allow overage with warning'],
+            ] as const).map(([val, label]) => (
+              <label key={val} className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="at100"
+                  value={val}
+                  checked={(budget.at100Action ?? 'shift-to-free') === val}
+                  onChange={() => save({ at100Action: val })}
+                  className="accent-accent"
+                />
+                <span className="text-sm text-text-secondary">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Monthly cap */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-sm font-medium text-text-primary">Monthly cap</div>
+            <div className="text-xs text-text-muted">USD. 0 = unlimited.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-muted">$</span>
+            <input
+              type="number"
+              min="0"
+              step="5"
+              defaultValue={budget.monthlyCap ?? 0}
+              onBlur={e => {
+                const v = parseFloat(e.target.value);
+                if (!isNaN(v) && v >= 0) save({ monthlyCap: v });
+              }}
+              className="w-24 text-right text-sm font-mono bg-white/[0.04] border border-white/[0.1] rounded-lg px-3 py-1.5 text-text-primary focus:outline-none focus:border-accent/40"
+            />
+          </div>
+        </div>
+
+        {/* Include Ollama toggle */}
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div
+            onClick={() => save({ includeOllama: !(budget.includeOllama ?? false) })}
+            className={`relative w-9 h-5 rounded-full transition-colors ${budget.includeOllama ? 'bg-accent' : 'bg-white/[0.1]'}`}
+          >
+            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${budget.includeOllama ? 'left-[18px]' : 'left-0.5'}`} />
+          </div>
+          <span className="text-sm text-text-secondary">Include local Ollama usage in stats (even though free)</span>
+        </label>
+
+      </div>
+    </SectionCard>
+  );
+}
 
 // ─── Ollama Section ───────────────────────────────────────────────────────────
 

@@ -33,6 +33,8 @@ import * as blackboardService from './services/blackboard-service';
 import * as staleReadGuard from './services/stale-read-guard';
 import * as shadowGitService from './services/shadow-git-service';
 import * as schemaGateService from './services/schema-gate';
+import * as contractNetService from './services/contract-net';
+import * as tokenBucketService from './services/token-bucket';
 import { startConnectivityMonitoring } from './services/connectivity-service';
 import {
   validateString,
@@ -2064,6 +2066,29 @@ export function registerIpcHandlers(): void {
     if (!Array.isArray(activeAgents)) throw new Error('activeAgents must be an array');
     const validAgents = (activeAgents as unknown[]).filter((a) => isValidAgentType(a)) as AgentType[];
     await shadowGitService.revertToSnapshot(p, tag, lbl, validAgents);
+  });
+
+  // ─── Contract Net Protocol ────────────────────────────────────────────────────
+
+  ipcMain.handle('contract-net:request-bids', async (_, projectId: unknown) => {
+    const id = validateString(projectId, 'projectId');
+    return conductorService.requestBidsForPlan(id);
+  });
+
+  ipcMain.handle('contract-net:award-bid', async (_, projectId: unknown, taskId: unknown, agent: unknown) => {
+    const id = validateString(projectId, 'projectId');
+    const tid = validateString(taskId, 'taskId');
+    if (!isValidAgentType(agent)) throw new Error('Invalid agent type');
+    return conductorService.applyBidAward(id, tid, agent as AgentType);
+  });
+
+  // ─── Token Bucket ─────────────────────────────────────────────────────────────
+
+  ipcMain.handle('token-bucket:get-status', () => tokenBucketService.getStatus());
+
+  ipcMain.handle('token-bucket:check', (_, tokens: unknown) => {
+    const n = typeof tokens === 'number' ? Math.max(0, tokens) : 0;
+    return tokenBucketService.check(n);
   });
 
   // ─── Schema Gate ─────────────────────────────────────────────────────────────

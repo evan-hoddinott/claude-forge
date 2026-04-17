@@ -453,6 +453,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     revertToSnapshot: (projectPath: string, gitTag: string, label: string, activeAgents: string[]) =>
       ipcRenderer.invoke('shadow-git:revert-to-snapshot', projectPath, gitTag, label, activeAgents),
   },
+  contractNet: {
+    requestBids: (projectId: string) =>
+      ipcRenderer.invoke('contract-net:request-bids', projectId),
+    awardBid: (projectId: string, taskId: string, agent: string) =>
+      ipcRenderer.invoke('contract-net:award-bid', projectId, taskId, agent),
+  },
+  tokenBucket: {
+    getStatus: () =>
+      ipcRenderer.invoke('token-bucket:get-status'),
+    check: (tokens: number) =>
+      ipcRenderer.invoke('token-bucket:check', tokens),
+  },
   schemaGate: {
     getState: (projectPath: string) =>
       ipcRenderer.invoke('schema-gate:get-state', projectPath),

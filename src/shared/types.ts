@@ -619,6 +619,7 @@ export interface ConductorTask {
   status: ConductorTaskStatus;
   duration?: number;
   tokensUsed?: number;
+  estimatedTokens?: number;
   filesChanged?: string[];
   output?: string;
   error?: string;
@@ -669,6 +670,44 @@ export interface ConductorPlan {
   completedAt?: string;
 }
 
+// --- Contract Net Protocol Types ---
+
+export interface AgentBid {
+  taskId: string;
+  agent: AgentType;
+  confidence: number;        // 0-1
+  estimatedTokens: number;
+  estimatedMinutes: number;
+  reasoning: string;
+  contextRelevance: number;  // 0-1
+}
+
+export interface ScoredBid extends AgentBid {
+  score: number;
+}
+
+export interface BidRound {
+  taskId: string;
+  taskDescription: string;
+  bids: ScoredBid[];
+  awarded: AgentType | null;
+}
+
+// --- Token Bucket Types ---
+
+export interface TokenBucketStatus {
+  available: number;
+  capacity: number;
+  used: number;
+  percentUsed: number;
+}
+
+export interface TokenBucketResult {
+  allowed: boolean;
+  remaining: number;
+  resetIn?: number;   // seconds until daily reset
+}
+
 // --- Fuel Gauge Types ---
 
 export type FuelTaskType = 'conductor-task' | 'chat' | 'ghost-test' | 'battle';
@@ -701,13 +740,25 @@ export interface FuelStatus {
   dailyCap: number;
   percentage: number;
   overBudget: boolean;
+  sessionCost?: number;
+  byAgent?: Record<string, { cost: number; tokens: number }>;
+  tokenBucket?: TokenBucketStatus;
 }
 
+export type BudgetAt80Action  = 'warn' | 'downshift' | 'pause';
+export type BudgetAt100Action = 'hard-stop' | 'shift-to-free' | 'allow-overage';
+
 export interface FuelBudget {
-  dailyCap: number;      // USD
-  warnAt: number;        // percentage 0-100
+  dailyCap: number;              // USD
+  warnAt: number;                // percentage 0-100
   pauseConductorAtCap: boolean;
   hardStop: boolean;
+  // Token budget enforcement:
+  dailyTokenBudget: number;      // tokens (0 = unlimited)
+  at80Action: BudgetAt80Action;
+  at100Action: BudgetAt100Action;
+  monthlyCap: number;            // USD (0 = unlimited)
+  includeOllama: boolean;
 }
 
 export interface FuelProjectReport {
@@ -1033,6 +1084,14 @@ export interface ElectronAPI {
     getDiffChunks: (projectPath: string) => Promise<FileDiff[]>;
     applyChunks: (projectPath: string, chunkIds: string[], commitMessage: string) => Promise<void>;
     revertToSnapshot: (projectPath: string, gitTag: string, label: string, activeAgents: AgentType[]) => Promise<void>;
+  };
+  contractNet: {
+    requestBids: (projectId: string) => Promise<BidRound[]>;
+    awardBid: (projectId: string, taskId: string, agent: AgentType) => Promise<void>;
+  };
+  tokenBucket: {
+    getStatus: () => Promise<TokenBucketStatus>;
+    check: (tokens: number) => Promise<TokenBucketResult>;
   };
   schemaGate: {
     getState: (projectPath: string) => Promise<SchemaGateState>;

@@ -66,6 +66,11 @@ function preferenceDefaults(): UserPreferences {
       warnAt: 80,
       pauseConductorAtCap: true,
       hardStop: false,
+      dailyTokenBudget: 100_000,
+      at80Action: 'warn',
+      at100Action: 'shift-to-free',
+      monthlyCap: 0,
+      includeOllama: false,
     },
   };
 }
@@ -465,8 +470,20 @@ export function addFuelEntry(entry: FuelEntry): void {
   s.set('fuelEntries', entries);
 }
 
+const FUEL_BUDGET_DEFAULTS: FuelBudget = {
+  dailyCap: 5.0,
+  warnAt: 80,
+  pauseConductorAtCap: true,
+  hardStop: false,
+  dailyTokenBudget: 100_000,
+  at80Action: 'warn',
+  at100Action: 'shift-to-free',
+  monthlyCap: 0,
+  includeOllama: false,
+};
+
 export function getFuelBudget(): FuelBudget {
-  return getPreferences().fuelBudget;
+  return { ...FUEL_BUDGET_DEFAULTS, ...getPreferences().fuelBudget };
 }
 
 export function setFuelBudget(budget: Partial<FuelBudget>): FuelBudget {

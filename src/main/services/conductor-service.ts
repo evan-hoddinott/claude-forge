@@ -19,6 +19,8 @@ import * as timeMachineService from './time-machine-service';
 import * as timelineService from './timeline-service';
 import { runCommand, runExecFile } from '../utils/run-command';
 import * as blackboardService from './blackboard-service';
+import * as tokenBucketService from './token-bucket';
+import * as contractNetService from './contract-net';
 
 // --- State ---
 
@@ -569,6 +571,44 @@ async function executeAll(state: ExecutionState): Promise<void> {
 
       const task = station.tasks[ti];
       plan.currentTaskIndex = ti;
+
+      // ── Token budget check ────────────────────────────────────────────────
+      const budgetEnforcement = tokenBucketService.getBudgetEnforcement();
+      if (budgetEnforcement.shouldBlock || tokenBucketService.isMonthlyCapExceeded()) {
+        task.status = 'failed';
+        task.error = 'Budget limit reached. All paid API usage is blocked until the daily budget resets.';
+        broadcastTask(plan, station, task);
+        broadcast('conductor:budget-exceeded', {
+          planId: plan.id,
+          percentUsed: budgetEnforcement.percentUsed,
+          at100Action: budgetEnforcement.at100Action,
+        });
+        // Pause execution and wait for user intervention
+        state.paused = true;
+        plan.status = 'paused';
+        broadcastPlan(plan);
+        while (state.paused && !state.stopped) { await sleep(500); }
+        if (state.stopped) break;
+        // Re-check after user resumes — if still blocked, skip this task
+        const recheckEnforcement = tokenBucketService.getBudgetEnforcement();
+        if (recheckEnforcement.shouldBlock) { continue; }
+      }
+
+      // ── Downshift to free agent if budget is tight ────────────────────────
+      if (budgetEnforcement.shouldDownshift && task.assignedAgent !== 'ollama') {
+        const freeAlternative = findFreeAlternative(task.assignedAgent);
+        if (freeAlternative) {
+          broadcast('conductor:agent-downshifted', {
+            planId: plan.id,
+            taskId: task.id,
+            from: task.assignedAgent,
+            to: freeAlternative,
+            reason: 'budget-threshold',
+          });
+          task.assignedAgent = freeAlternative;
+        }
+      }
+
       task.status = 'running';
       broadcastTask(plan, station, task);
 
@@ -848,6 +888,40 @@ function getFallbackAgent(agentType: AgentType): AgentType | null {
     ollama: null,
   };
   return fallbacks[agentType];
+}
+
+function findFreeAlternative(agentType: AgentType): AgentType | null {
+  // Prefer ollama (truly local/free) if available, otherwise github-routed gemini
+  if (agentType === 'ollama') return null;
+  return 'ollama';
+}
+
+// --- Contract Net Protocol integration ---
+
+export async function requestBidsForPlan(projectId: string): Promise<import('../../shared/types').BidRound[]> {
+  const plan = store.getConductorPlan(projectId);
+  if (!plan) return [];
+
+  const pendingTasks = plan.stations
+    .flatMap(s => s.tasks)
+    .filter(t => t.status === 'pending');
+
+  if (pendingTasks.length === 0) return [];
+
+  const availableAgents: AgentType[] = ['claude', 'gemini', 'codex', 'copilot'];
+
+  const rounds = await contractNetService.runBidRounds(
+    projectId,
+    pendingTasks.map(t => ({ id: t.id, description: t.description, prompt: t.prompt })),
+    availableAgents,
+  );
+
+  broadcast('conductor:bid-results', { projectId, rounds });
+  return rounds;
+}
+
+export function applyBidAward(projectId: string, taskId: string, agent: AgentType): ConductorPlan | null {
+  return reassignTask({ projectId, taskId, agentType: agent });
 }
 
 // --- Control Methods ---

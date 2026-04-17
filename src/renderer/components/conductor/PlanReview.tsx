@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import type { ConductorPlan, ConductorStation, ConductorTask, AgentType } from '../../../shared/types';
+import type { ConductorPlan, ConductorStation, ConductorTask, AgentType, BidRound } from '../../../shared/types';
+import { useAPI } from '../../hooks/useAPI';
+import BidPanel from './BidPanel';
 
 interface PlanReviewProps {
   plan: ConductorPlan;
@@ -53,9 +55,35 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
   const totalTime = totalEstimatedTime(plan.stations);
   const agentCounts = agentTaskCount(plan.stations);
   const isFullControl = plan.controlLevel === 'full-control';
+  const showCNP = plan.controlLevel === 'guided' || plan.controlLevel === 'full-control';
+
+  const api = useAPI();
+  const [bidRounds, setBidRounds] = useState<BidRound[] | null>(null);
+  const [bidsLoading, setBidsLoading] = useState(false);
+  const [showBids, setShowBids] = useState(false);
+
+  const requestBids = async () => {
+    setBidsLoading(true);
+    try {
+      const rounds = await api.contractNet.requestBids(plan.projectId);
+      setBidRounds(rounds);
+      setShowBids(true);
+    } catch {
+      // ignore — fall back to static
+    } finally {
+      setBidsLoading(false);
+    }
+  };
+
+  const applyBids = (awards: Record<string, AgentType>) => {
+    for (const [taskId, agent] of Object.entries(awards)) {
+      onReassignTask?.(taskId, agent);
+    }
+    setShowBids(false);
+  };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="relative flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div
         className="shrink-0 px-6 py-4 flex items-center justify-between"
@@ -201,21 +229,43 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
         className="shrink-0 px-6 py-4 flex items-center justify-between"
         style={{ borderTop: '2px solid var(--forge-border)' }}
       >
-        <button
-          onClick={onBack}
-          disabled={loading}
-          style={{
-            fontFamily: 'var(--forge-font-body)',
-            fontSize: '12px',
-            padding: '8px 16px',
-            border: '1px solid var(--forge-border)',
-            background: 'transparent',
-            color: 'var(--forge-text-muted)',
-            cursor: 'pointer',
-          }}
-        >
-          ← Back
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            disabled={loading}
+            style={{
+              fontFamily: 'var(--forge-font-body)',
+              fontSize: '12px',
+              padding: '8px 16px',
+              border: '1px solid var(--forge-border)',
+              background: 'transparent',
+              color: 'var(--forge-text-muted)',
+              cursor: 'pointer',
+            }}
+          >
+            ← Back
+          </button>
+
+          {showCNP && !showBids && (
+            <button
+              onClick={requestBids}
+              disabled={bidsLoading || loading}
+              style={{
+                fontFamily: 'var(--forge-font-heading)',
+                fontSize: '11px',
+                padding: '8px 14px',
+                border: '1px solid var(--forge-accent-amber)',
+                background: 'transparent',
+                color: 'var(--forge-accent-amber)',
+                cursor: bidsLoading ? 'wait' : 'pointer',
+                letterSpacing: '0.5px',
+                opacity: bidsLoading ? 0.6 : 1,
+              }}
+            >
+              {bidsLoading ? '⏳ Collecting bids…' : '⚖ Request Agent Bids'}
+            </button>
+          )}
+        </div>
         <button
           onClick={onStart}
           disabled={loading}
@@ -234,6 +284,23 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
           {loading ? 'Starting...' : '🚂 Depart! Start Building →'}
         </button>
       </div>
+
+      {/* Bid Panel overlay */}
+      {showBids && bidRounds && (
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center p-6"
+          style={{ background: 'rgba(0,0,0,0.7)' }}
+        >
+          <div style={{ width: '100%', maxWidth: '680px', maxHeight: '80vh' }}>
+            <BidPanel
+              rounds={bidRounds}
+              controlLevel={plan.controlLevel as 'guided' | 'full-control'}
+              onApply={applyBids}
+              onSkip={() => setShowBids(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

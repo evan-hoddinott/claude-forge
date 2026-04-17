@@ -6,26 +6,35 @@ interface FuelGaugeProps {
   className?: string;
 }
 
+const AGENT_LABELS: Record<string, string> = {
+  claude:  'Claude',
+  gemini:  'Gemini',
+  codex:   'Codex',
+  copilot: 'Copilot',
+  ollama:  'Ollama',
+  anthropic: 'Claude',
+  openai: 'OpenAI',
+  github: 'GitHub',
+};
+
+function agentLabel(key: string): string {
+  return AGENT_LABELS[key] ?? key;
+}
+
 export default function FuelGauge({ className = '' }: FuelGaugeProps) {
   const api = useAPI();
-  const { data: status, refetch } = useQuery(() => api.fuel.getStatus(), []);
+  const { data: status, refetch } = useQuery<FuelStatus>(() => api.fuel.getStatus(), []);
   const [refreshTick, setRefreshTick] = useState(0);
 
-  // Auto-refresh every 30 seconds
   useEffect(() => {
     const id = setInterval(() => setRefreshTick((t) => t + 1), 30000);
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    refetch();
-  }, [refreshTick, refetch]);
+  useEffect(() => { refetch(); }, [refreshTick, refetch]);
 
-  // Listen for realtime fuel updates
   useEffect(() => {
-    api.fuel.onStatusUpdate((data) => {
-      refetch();
-    });
+    api.fuel.onStatusUpdate(() => refetch());
     return () => api.fuel.offStatusUpdate();
   }, [api, refetch]);
 
@@ -34,17 +43,33 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
   const pct = Math.min(100, status.percentage);
   const overBudget = status.overBudget;
 
+  // Token bucket bar
+  const tb = status.tokenBucket;
+  const tbPct = tb ? Math.min(100, tb.percentUsed) : 0;
+
   const barColor = overBudget
     ? 'var(--forge-accent-rust)'
     : pct >= 80
     ? 'var(--forge-accent-amber)'
     : 'var(--forge-accent-green)';
 
+  const tbColor = tbPct >= 100
+    ? 'var(--forge-accent-rust)'
+    : tbPct >= 80
+    ? 'var(--forge-accent-amber)'
+    : '#60a5fa';
+
+  // Per-agent entries (top 3 by cost/tokens)
+  const agentEntries = Object.entries(status.byAgent ?? {})
+    .sort((a, b) => b[1].cost - a[1].cost)
+    .slice(0, 3);
+
   return (
     <div
       className={`font-mono text-[11px] border border-[var(--forge-border)] bg-[var(--forge-bg-mid)] px-2 py-2 ${className}`}
       style={{ fontFamily: 'var(--forge-font-body)' }}
     >
+      {/* Header */}
       <div className="flex items-center gap-1.5 mb-1.5">
         <span style={{ color: 'var(--forge-accent-amber)' }}>⛽</span>
         <span style={{ color: 'var(--forge-text-secondary)', fontFamily: 'var(--forge-font-heading)', fontSize: '9px' }}>
@@ -52,38 +77,77 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
         </span>
       </div>
 
-      {/* Progress bar */}
+      {/* USD spend bar */}
       <div
         className="w-full h-2 mb-1"
         style={{ border: '1px solid var(--forge-border)', background: 'var(--forge-bg-deep)' }}
       >
-        <div
-          style={{
-            width: `${pct}%`,
-            height: '100%',
-            background: barColor,
-            transition: 'width 0.3s ease',
-          }}
-        />
+        <div style={{ width: `${pct}%`, height: '100%', background: barColor, transition: 'width 0.3s ease' }} />
       </div>
 
-      {/* Cost display */}
+      {/* Today cost */}
       <div style={{ color: 'var(--forge-text-secondary)' }}>
         <div className="flex justify-between">
-          <span>${status.todayCost.toFixed(2)}</span>
+          <span>Today: ${status.todayCost.toFixed(2)}</span>
           <span style={{ color: 'var(--forge-text-muted)' }}>/ ${status.dailyCap.toFixed(2)}</span>
         </div>
-        {status.todaySaved > 0 && (
-          <div style={{ color: 'var(--forge-accent-green)' }}>
-            saved ${status.todaySaved.toFixed(2)}
-          </div>
-        )}
-        {status.todayFreeRequests > 0 && (
-          <div style={{ color: 'var(--forge-text-muted)' }}>
-            {status.todayFreeRequests} free req
+
+        {/* Session cost */}
+        {status.sessionCost !== undefined && status.sessionCost > 0 && (
+          <div style={{ color: 'var(--forge-text-muted)', marginTop: '2px' }}>
+            Session: ${status.sessionCost.toFixed(3)}
           </div>
         )}
       </div>
+
+      {/* Per-agent breakdown */}
+      {agentEntries.length > 0 && (
+        <div style={{ marginTop: '4px', borderTop: '1px solid var(--forge-border)', paddingTop: '4px' }}>
+          {agentEntries.map(([key, val], idx) => (
+            <div key={key} className="flex justify-between" style={{ color: 'var(--forge-text-muted)' }}>
+              <span>{idx === agentEntries.length - 1 ? '└' : '├'} {agentLabel(key)}</span>
+              <span>
+                ${val.cost.toFixed(3)}
+                {val.tokens > 0 && <span style={{ color: 'var(--forge-text-muted)', opacity: 0.7 }}> ({Math.round(val.tokens / 1000)}K)</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Token bucket */}
+      {tb && tb.capacity > 0 && (
+        <div style={{ marginTop: '4px', borderTop: '1px solid var(--forge-border)', paddingTop: '4px' }}>
+          <div className="flex justify-between" style={{ color: 'var(--forge-text-muted)' }}>
+            <span>Tokens:</span>
+            <span style={{ color: tbColor }}>
+              {Math.round(tb.used / 1000)}K / {Math.round(tb.capacity / 1000)}K
+            </span>
+          </div>
+          <div
+            className="w-full h-1 mt-1"
+            style={{ border: '1px solid var(--forge-border)', background: 'var(--forge-bg-deep)' }}
+          >
+            <div style={{ width: `${tbPct}%`, height: '100%', background: tbColor, transition: 'width 0.3s ease' }} />
+          </div>
+        </div>
+      )}
+
+      {/* Savings + free requests */}
+      {(status.todaySaved > 0 || status.todayFreeRequests > 0) && (
+        <div style={{ marginTop: '4px', borderTop: '1px solid var(--forge-border)', paddingTop: '4px' }}>
+          {status.todaySaved > 0 && (
+            <div style={{ color: 'var(--forge-accent-green)' }}>
+              Saved ${status.todaySaved.toFixed(2)} via routing
+            </div>
+          )}
+          {status.todayFreeRequests > 0 && (
+            <div style={{ color: 'var(--forge-text-muted)' }}>
+              {status.todayFreeRequests} free req remaining
+            </div>
+          )}
+        </div>
+      )}
 
       {overBudget && (
         <div

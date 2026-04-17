@@ -1,6 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { FuelEntry, FuelStatus, FuelBudget, FuelProjectReport, FuelTaskType } from '../../shared/types';
 import * as store from '../store';
+import * as tokenBucket from './token-bucket';
+
+const SESSION_START = new Date();
 
 // --- Cost per model (USD per 1M tokens) ---
 
@@ -105,6 +108,26 @@ export function getStatus(): FuelStatus {
     ? Math.min(100, (totalCost / budget.dailyCap) * 100)
     : 0;
 
+  const sessionStart = SESSION_START.toISOString();
+  const allEntries = store.getFuelEntries();
+
+  // Session cost (since process started)
+  const sessionCost = allEntries
+    .filter(e => e.timestamp >= sessionStart)
+    .reduce((sum, e) => sum + e.cost, 0);
+
+  // Per-agent breakdown from today's entries (conductor tasks use model = agentType)
+  const today = todayDateStr();
+  const byAgent: Record<string, { cost: number; tokens: number }> = {};
+  for (const e of allEntries) {
+    if (!e.timestamp.startsWith(today)) continue;
+    const key = e.provider === 'cli-agent' ? e.model : e.provider;
+    const rec = byAgent[key] ?? { cost: 0, tokens: 0 };
+    rec.cost += e.cost;
+    rec.tokens += (e.tokensIn ?? 0) + (e.tokensOut ?? 0);
+    byAgent[key] = rec;
+  }
+
   return {
     todayCost: totalCost,
     todaySaved: totalSaved,
@@ -112,6 +135,9 @@ export function getStatus(): FuelStatus {
     dailyCap: budget.dailyCap,
     percentage,
     overBudget: totalCost >= budget.dailyCap,
+    sessionCost,
+    byAgent,
+    tokenBucket: tokenBucket.getStatus(),
   };
 }
 
