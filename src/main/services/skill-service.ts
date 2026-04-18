@@ -10,7 +10,7 @@ import * as store from '../store';
 // direct access without crossing process boundaries.
 
 const CATALOG_URL =
-  'https://raw.githubusercontent.com/evan-hoddinott/claude-forge-skills/main/catalog.json';
+  'https://raw.githubusercontent.com/evan-hoddinott/caboo-skills/main/catalog.json';
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -30,7 +30,7 @@ const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'security-auditor',
     name: 'Security Auditor',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description:
@@ -49,7 +49,7 @@ const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'ui-ux-designer',
     name: 'UI/UX Designer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description:
@@ -68,7 +68,7 @@ const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'test-writer',
     name: 'Test Writer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description:
@@ -87,7 +87,7 @@ const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'docs-writer',
     name: 'Documentation Writer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description:
@@ -106,7 +106,7 @@ const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'perf-optimizer',
     name: 'Performance Optimizer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description:
@@ -125,7 +125,7 @@ const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'code-reviewer',
     name: 'Code Reviewer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description:
@@ -305,8 +305,9 @@ export async function installSkill(skillId: string, project: Project): Promise<v
     if (!agentConfig) continue;
 
     const contextFilePath = path.join(project.path, agentConfig.contextFileName);
-    const startTag = `<!-- forge-skill:${skillId} -->`;
-    const endTag = `<!-- /forge-skill:${skillId} -->`;
+    const startTag = `<!-- caboo-skill:${skillId} -->`;
+    const endTag = `<!-- /caboo-skill:${skillId} -->`;
+    const legacyStartTag = `<!-- forge-skill:${skillId} -->`;
 
     // Read existing content (or empty string if file doesn't exist)
     let existing = '';
@@ -317,7 +318,7 @@ export async function installSkill(skillId: string, project: Project): Promise<v
     }
 
     // Skip if already installed (idempotent)
-    if (existing.includes(startTag)) continue;
+    if (existing.includes(startTag) || existing.includes(legacyStartTag)) continue;
 
     // Ensure parent directory exists (e.g. .github/ for copilot)
     const dir = path.dirname(contextFilePath);
@@ -338,13 +339,16 @@ export async function installSkill(skillId: string, project: Project): Promise<v
 
 export async function uninstallSkill(skillId: string, project: Project): Promise<void> {
   const agentsToUpdate: AgentType[] = project.agents.length > 0 ? project.agents : ['claude'];
-  const startTag = `<!-- forge-skill:${skillId} -->`;
-  const endTag = `<!-- /forge-skill:${skillId} -->`;
-  // Regex to match the delimited block including surrounding newlines
-  const blockRegex = new RegExp(
-    `\\n*${escapeRegex(startTag)}[\\s\\S]*?${escapeRegex(endTag)}\\n*`,
-    'g',
-  );
+  const tagPairs = [
+    {
+      startTag: `<!-- caboo-skill:${skillId} -->`,
+      endTag: `<!-- /caboo-skill:${skillId} -->`,
+    },
+    {
+      startTag: `<!-- forge-skill:${skillId} -->`,
+      endTag: `<!-- /forge-skill:${skillId} -->`,
+    },
+  ];
 
   for (const agentType of agentsToUpdate) {
     const agentConfig = AGENTS[agentType];
@@ -359,10 +363,18 @@ export async function uninstallSkill(skillId: string, project: Project): Promise
       continue; // File doesn't exist — nothing to remove
     }
 
-    if (!existing.includes(startTag)) continue;
+    if (!tagPairs.some(({ startTag }) => existing.includes(startTag))) continue;
 
-    const cleaned = existing.replace(blockRegex, '\n').trimEnd() + '\n';
-    await fs.writeFile(contextFilePath, cleaned, 'utf-8');
+    let cleaned = existing;
+    for (const { startTag, endTag } of tagPairs) {
+      const blockRegex = new RegExp(
+        `\\n*${escapeRegex(startTag)}[\\s\\S]*?${escapeRegex(endTag)}\\n*`,
+        'g',
+      );
+      cleaned = cleaned.replace(blockRegex, '\n');
+    }
+
+    await fs.writeFile(contextFilePath, `${cleaned.trimEnd()}\n`, 'utf-8');
   }
 
   store.removeInstalledSkill(project.id, skillId);

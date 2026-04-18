@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Build Express Installer for Claude Forge
+ * Build Express Installer for Caboo
  *
  * Downloads bundled dependencies (Node.js LTS, Git, GitHub CLI) and packages
  * them alongside the Electron app for a single-file installer experience.
@@ -126,15 +126,15 @@ function formatSize(bytes) {
 // ---------------------------------------------------------------------------
 
 function generateNsisScript() {
-  return `; Claude Forge Express Installer
+  return `; Caboo Express Installer
 ; Auto-generated — do not edit manually.
 
 !include "MUI2.nsh"
 !include "LogicLib.nsh"
 
-Name "Claude Forge"
-OutFile "ClaudeForge-Express-Setup.exe"
-InstallDir "$PROGRAMFILES\\Claude Forge"
+Name "Caboo"
+OutFile "Caboo-Express-Setup.exe"
+InstallDir "$PROGRAMFILES\\Caboo"
 RequestExecutionLevel admin
 
 ; Modern UI pages
@@ -143,7 +143,7 @@ RequestExecutionLevel admin
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_LANGUAGE "English"
 
-Section "Claude Forge" SecMain
+Section "Caboo" SecMain
   SetOutPath $INSTDIR
   ; Copy main app files
   File /r "app\\*.*"
@@ -200,7 +200,7 @@ SectionEnd
 
 function generateLinuxInstallScript() {
   return `#!/bin/bash
-# Claude Forge Express Installer — First-Launch Dependency Setup
+# Caboo Express Installer — First-Launch Dependency Setup
 # This script is run on first launch if dependencies are missing.
 
 set -e
@@ -209,7 +209,7 @@ SCRIPT_DIR="$(cd "$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 DEPS_DIR="$SCRIPT_DIR/deps"
 
 echo "========================================"
-echo "  Claude Forge — Dependency Setup"
+echo "  Caboo — Dependency Setup"
 echo "========================================"
 echo ""
 
@@ -270,7 +270,7 @@ fi
 
 echo ""
 echo "Setup complete: $install_count installed, $skip_count already present."
-echo "Starting Claude Forge..."
+echo "Starting Caboo..."
 `;
 }
 

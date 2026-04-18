@@ -369,21 +369,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     generateVibe: (projectId: string) =>
       ipcRenderer.invoke('hub:generate-vibe', projectId),
   },
-  forge: {
+  caboo: {
     initialize: (projectPath: string, agents: string[]) =>
-      ipcRenderer.invoke('forge:initialize', projectPath, agents),
+      ipcRenderer.invoke('caboo:initialize', projectPath, agents),
     getState: (projectPath: string) =>
-      ipcRenderer.invoke('forge:get-state', projectPath),
+      ipcRenderer.invoke('caboo:get-state', projectPath),
     getAgentMemory: (projectPath: string, agent: string) =>
-      ipcRenderer.invoke('forge:get-agent-memory', projectPath, agent),
+      ipcRenderer.invoke('caboo:get-agent-memory', projectPath, agent),
     appendMemory: (projectPath: string, agent: string, entry: string) =>
-      ipcRenderer.invoke('forge:append-memory', projectPath, agent, entry),
+      ipcRenderer.invoke('caboo:append-memory', projectPath, agent, entry),
     updateAgentStatus: (projectPath: string, agent: string, status: string) =>
-      ipcRenderer.invoke('forge:update-agent-status', projectPath, agent, status),
+      ipcRenderer.invoke('caboo:update-agent-status', projectPath, agent, status),
     startSession: (projectPath: string, agent: string, task: string) =>
-      ipcRenderer.invoke('forge:start-session', projectPath, agent, task),
+      ipcRenderer.invoke('caboo:start-session', projectPath, agent, task),
     endSession: (projectPath: string, sessionId: string, summary: string) =>
-      ipcRenderer.invoke('forge:end-session', projectPath, sessionId, summary),
+      ipcRenderer.invoke('caboo:end-session', projectPath, sessionId, summary),
   },
   blackboard: {
     getTasks: (projectPath: string) =>

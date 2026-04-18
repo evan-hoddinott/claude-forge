@@ -30,13 +30,13 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
       {/* Header */}
       <div
         className="shrink-0 px-6 py-4"
-        style={{ borderBottom: '2px solid var(--forge-border)' }}
+        style={{ borderBottom: '2px solid var(--caboo-border)' }}
       >
         <div
           style={{
-            fontFamily: 'var(--forge-font-heading)',
+            fontFamily: 'var(--caboo-font-heading)',
             fontSize: '16px',
-            color: 'var(--forge-text-heading)',
+            color: 'var(--caboo-text-heading)',
             letterSpacing: '1px',
           }}
         >
@@ -44,9 +44,9 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
         </div>
         <div
           style={{
-            fontFamily: 'var(--forge-font-body)',
+            fontFamily: 'var(--caboo-font-body)',
             fontSize: '11px',
-            color: 'var(--forge-text-muted)',
+            color: 'var(--caboo-text-muted)',
             marginTop: '4px',
           }}
         >
@@ -60,9 +60,9 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
           <div key={question.id}>
             <div
               style={{
-                fontFamily: 'var(--forge-font-heading)',
+                fontFamily: 'var(--caboo-font-heading)',
                 fontSize: '11px',
-                color: 'var(--forge-text-secondary)',
+                color: 'var(--caboo-text-secondary)',
                 marginBottom: '12px',
                 letterSpacing: '0.5px',
               }}
@@ -79,8 +79,8 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
                     disabled={loading}
                     className="w-full text-left transition-all"
                     style={{
-                      border: `2px solid ${isSelected ? 'var(--forge-accent-amber)' : 'var(--forge-border)'}`,
-                      background: isSelected ? 'var(--forge-bg-surface)' : 'var(--forge-bg-mid)',
+                      border: `2px solid ${isSelected ? 'var(--caboo-accent-amber)' : 'var(--caboo-border)'}`,
+                      background: isSelected ? 'var(--caboo-bg-surface)' : 'var(--caboo-bg-mid)',
                       padding: '10px 12px',
                       cursor: loading ? 'not-allowed' : 'pointer',
                     }}
@@ -90,8 +90,8 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
                         style={{
                           width: '12px',
                           height: '12px',
-                          border: `2px solid ${isSelected ? 'var(--forge-accent-amber)' : 'var(--forge-border)'}`,
-                          background: isSelected ? 'var(--forge-accent-amber)' : 'transparent',
+                          border: `2px solid ${isSelected ? 'var(--caboo-accent-amber)' : 'var(--caboo-border)'}`,
+                          background: isSelected ? 'var(--caboo-accent-amber)' : 'transparent',
                           flexShrink: 0,
                           marginTop: '2px',
                         }}
@@ -99,9 +99,9 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
                       <div>
                         <div
                           style={{
-                            fontFamily: 'var(--forge-font-heading)',
+                            fontFamily: 'var(--caboo-font-heading)',
                             fontSize: '10px',
-                            color: isSelected ? 'var(--forge-text-heading)' : 'var(--forge-text-primary)',
+                            color: isSelected ? 'var(--caboo-text-heading)' : 'var(--caboo-text-primary)',
                             marginBottom: '2px',
                           }}
                         >
@@ -109,9 +109,9 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
                         </div>
                         <div
                           style={{
-                            fontFamily: 'var(--forge-font-body)',
+                            fontFamily: 'var(--caboo-font-body)',
                             fontSize: '11px',
-                            color: 'var(--forge-text-secondary)',
+                            color: 'var(--caboo-text-secondary)',
                             marginBottom: '4px',
                           }}
                         >
@@ -122,9 +122,9 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
                             {option.pros && (
                               <div
                                 style={{
-                                  fontFamily: 'var(--forge-font-body)',
+                                  fontFamily: 'var(--caboo-font-body)',
                                   fontSize: '10px',
-                                  color: 'var(--forge-accent-green)',
+                                  color: 'var(--caboo-accent-green)',
                                 }}
                               >
                                 ✅ {option.pros}
@@ -133,9 +133,9 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
                             {option.cons && (
                               <div
                                 style={{
-                                  fontFamily: 'var(--forge-font-body)',
+                                  fontFamily: 'var(--caboo-font-body)',
                                   fontSize: '10px',
-                                  color: 'var(--forge-accent-amber)',
+                                  color: 'var(--caboo-accent-amber)',
                                 }}
                               >
                                 ⚠️ {option.cons}
@@ -156,19 +156,19 @@ export default function QAScreen({ questions, onSubmit, loading = false }: QAScr
       {/* Submit */}
       <div
         className="shrink-0 px-6 py-4"
-        style={{ borderTop: '2px solid var(--forge-border)' }}
+        style={{ borderTop: '2px solid var(--caboo-border)' }}
       >
         <button
           onClick={handleSubmit}
           disabled={!allAnswered || loading}
           style={{
-            fontFamily: 'var(--forge-font-heading)',
+            fontFamily: 'var(--caboo-font-heading)',
             fontSize: '12px',
             padding: '10px 24px',
-            background: allAnswered && !loading ? 'var(--forge-accent-amber)' : 'var(--forge-bg-surface)',
-            color: allAnswered && !loading ? 'var(--forge-bg-deep)' : 'var(--forge-text-muted)',
+            background: allAnswered && !loading ? 'var(--caboo-accent-amber)' : 'var(--caboo-bg-surface)',
+            color: allAnswered && !loading ? 'var(--caboo-bg-deep)' : 'var(--caboo-text-muted)',
             border: '2px solid',
-            borderColor: allAnswered && !loading ? 'var(--forge-accent-amber)' : 'var(--forge-border)',
+            borderColor: allAnswered && !loading ? 'var(--caboo-accent-amber)' : 'var(--caboo-border)',
             cursor: allAnswered && !loading ? 'pointer' : 'not-allowed',
             letterSpacing: '1px',
           }}

@@ -1,6 +1,6 @@
 /*
- * Pixel-art icon set for the Forge theme.
- * Uses simple inline SVGs with the forge color palette.
+ * Pixel-art icon set for the Caboo theme.
+ * Uses simple inline SVGs with the Caboo color palette.
  * 16x16 or 12x12 pixel grid, 1-2 colors per icon.
  */
 
@@ -11,16 +11,16 @@ interface PixelIconProps {
 }
 
 const COLORS = {
-  green: 'var(--forge-accent-green)',
-  greenBright: 'var(--forge-accent-green-bright)',
-  amber: 'var(--forge-accent-amber)',
-  amberBright: 'var(--forge-accent-amber-bright)',
-  brown: 'var(--forge-accent-brown)',
-  brownLight: 'var(--forge-accent-brown-light)',
-  rust: 'var(--forge-accent-rust)',
-  cream: 'var(--forge-text-primary)',
-  teal: 'var(--forge-status-info)',
-  muted: 'var(--forge-text-secondary)',
+  green: 'var(--caboo-accent-green)',
+  greenBright: 'var(--caboo-accent-green-bright)',
+  amber: 'var(--caboo-accent-amber)',
+  amberBright: 'var(--caboo-accent-amber-bright)',
+  brown: 'var(--caboo-accent-brown)',
+  brownLight: 'var(--caboo-accent-brown-light)',
+  rust: 'var(--caboo-accent-rust)',
+  cream: 'var(--caboo-text-primary)',
+  teal: 'var(--caboo-status-info)',
+  muted: 'var(--caboo-text-secondary)',
 };
 
 function getIcon(name: string): { paths: string; fill: string; stroke?: string } {

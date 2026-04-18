@@ -48,15 +48,15 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
   const tbPct = tb ? Math.min(100, tb.percentUsed) : 0;
 
   const barColor = overBudget
-    ? 'var(--forge-accent-rust)'
+    ? 'var(--caboo-accent-rust)'
     : pct >= 80
-    ? 'var(--forge-accent-amber)'
-    : 'var(--forge-accent-green)';
+    ? 'var(--caboo-accent-amber)'
+    : 'var(--caboo-accent-green)';
 
   const tbColor = tbPct >= 100
-    ? 'var(--forge-accent-rust)'
+    ? 'var(--caboo-accent-rust)'
     : tbPct >= 80
-    ? 'var(--forge-accent-amber)'
+    ? 'var(--caboo-accent-amber)'
     : '#60a5fa';
 
   // Per-agent entries (top 3 by cost/tokens)
@@ -66,13 +66,13 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
 
   return (
     <div
-      className={`font-mono text-[11px] border border-[var(--forge-border)] bg-[var(--forge-bg-mid)] px-2 py-2 ${className}`}
-      style={{ fontFamily: 'var(--forge-font-body)' }}
+      className={`font-mono text-[11px] border border-[var(--caboo-border)] bg-[var(--caboo-bg-mid)] px-2 py-2 ${className}`}
+      style={{ fontFamily: 'var(--caboo-font-body)' }}
     >
       {/* Header */}
       <div className="flex items-center gap-1.5 mb-1.5">
-        <span style={{ color: 'var(--forge-accent-amber)' }}>⛽</span>
-        <span style={{ color: 'var(--forge-text-secondary)', fontFamily: 'var(--forge-font-heading)', fontSize: '9px' }}>
+        <span style={{ color: 'var(--caboo-accent-amber)' }}>⛽</span>
+        <span style={{ color: 'var(--caboo-text-secondary)', fontFamily: 'var(--caboo-font-heading)', fontSize: '9px' }}>
           FUEL GAUGE
         </span>
       </div>
@@ -80,21 +80,21 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
       {/* USD spend bar */}
       <div
         className="w-full h-2 mb-1"
-        style={{ border: '1px solid var(--forge-border)', background: 'var(--forge-bg-deep)' }}
+        style={{ border: '1px solid var(--caboo-border)', background: 'var(--caboo-bg-deep)' }}
       >
         <div style={{ width: `${pct}%`, height: '100%', background: barColor, transition: 'width 0.3s ease' }} />
       </div>
 
       {/* Today cost */}
-      <div style={{ color: 'var(--forge-text-secondary)' }}>
+      <div style={{ color: 'var(--caboo-text-secondary)' }}>
         <div className="flex justify-between">
           <span>Today: ${status.todayCost.toFixed(2)}</span>
-          <span style={{ color: 'var(--forge-text-muted)' }}>/ ${status.dailyCap.toFixed(2)}</span>
+          <span style={{ color: 'var(--caboo-text-muted)' }}>/ ${status.dailyCap.toFixed(2)}</span>
         </div>
 
         {/* Session cost */}
         {status.sessionCost !== undefined && status.sessionCost > 0 && (
-          <div style={{ color: 'var(--forge-text-muted)', marginTop: '2px' }}>
+          <div style={{ color: 'var(--caboo-text-muted)', marginTop: '2px' }}>
             Session: ${status.sessionCost.toFixed(3)}
           </div>
         )}
@@ -102,13 +102,13 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
 
       {/* Per-agent breakdown */}
       {agentEntries.length > 0 && (
-        <div style={{ marginTop: '4px', borderTop: '1px solid var(--forge-border)', paddingTop: '4px' }}>
+        <div style={{ marginTop: '4px', borderTop: '1px solid var(--caboo-border)', paddingTop: '4px' }}>
           {agentEntries.map(([key, val], idx) => (
-            <div key={key} className="flex justify-between" style={{ color: 'var(--forge-text-muted)' }}>
+            <div key={key} className="flex justify-between" style={{ color: 'var(--caboo-text-muted)' }}>
               <span>{idx === agentEntries.length - 1 ? '└' : '├'} {agentLabel(key)}</span>
               <span>
                 ${val.cost.toFixed(3)}
-                {val.tokens > 0 && <span style={{ color: 'var(--forge-text-muted)', opacity: 0.7 }}> ({Math.round(val.tokens / 1000)}K)</span>}
+                {val.tokens > 0 && <span style={{ color: 'var(--caboo-text-muted)', opacity: 0.7 }}> ({Math.round(val.tokens / 1000)}K)</span>}
               </span>
             </div>
           ))}
@@ -117,8 +117,8 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
 
       {/* Token bucket */}
       {tb && tb.capacity > 0 && (
-        <div style={{ marginTop: '4px', borderTop: '1px solid var(--forge-border)', paddingTop: '4px' }}>
-          <div className="flex justify-between" style={{ color: 'var(--forge-text-muted)' }}>
+        <div style={{ marginTop: '4px', borderTop: '1px solid var(--caboo-border)', paddingTop: '4px' }}>
+          <div className="flex justify-between" style={{ color: 'var(--caboo-text-muted)' }}>
             <span>Tokens:</span>
             <span style={{ color: tbColor }}>
               {Math.round(tb.used / 1000)}K / {Math.round(tb.capacity / 1000)}K
@@ -126,7 +126,7 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
           </div>
           <div
             className="w-full h-1 mt-1"
-            style={{ border: '1px solid var(--forge-border)', background: 'var(--forge-bg-deep)' }}
+            style={{ border: '1px solid var(--caboo-border)', background: 'var(--caboo-bg-deep)' }}
           >
             <div style={{ width: `${tbPct}%`, height: '100%', background: tbColor, transition: 'width 0.3s ease' }} />
           </div>
@@ -135,14 +135,14 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
 
       {/* Savings + free requests */}
       {(status.todaySaved > 0 || status.todayFreeRequests > 0) && (
-        <div style={{ marginTop: '4px', borderTop: '1px solid var(--forge-border)', paddingTop: '4px' }}>
+        <div style={{ marginTop: '4px', borderTop: '1px solid var(--caboo-border)', paddingTop: '4px' }}>
           {status.todaySaved > 0 && (
-            <div style={{ color: 'var(--forge-accent-green)' }}>
+            <div style={{ color: 'var(--caboo-accent-green)' }}>
               Saved ${status.todaySaved.toFixed(2)} via routing
             </div>
           )}
           {status.todayFreeRequests > 0 && (
-            <div style={{ color: 'var(--forge-text-muted)' }}>
+            <div style={{ color: 'var(--caboo-text-muted)' }}>
               {status.todayFreeRequests} free req remaining
             </div>
           )}
@@ -152,7 +152,7 @@ export default function FuelGauge({ className = '' }: FuelGaugeProps) {
       {overBudget && (
         <div
           className="mt-1 text-center"
-          style={{ color: 'var(--forge-accent-rust)', fontFamily: 'var(--forge-font-heading)', fontSize: '9px' }}
+          style={{ color: 'var(--caboo-accent-rust)', fontFamily: 'var(--caboo-font-heading)', fontSize: '9px' }}
         >
           ⚠ BUDGET EXCEEDED
         </div>

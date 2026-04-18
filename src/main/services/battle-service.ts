@@ -14,7 +14,7 @@ import { AGENTS } from '../../shared/types';
 import { runCommand } from '../utils/run-command';
 import * as ghostTestService from './ghost-test-service';
 
-const BATTLE_BASE_DIR = path.join(os.tmpdir(), 'claude-forge-battle');
+const BATTLE_BASE_DIR = path.join(os.tmpdir(), 'caboo-battle');
 
 // --- Progress types ---
 
@@ -264,7 +264,7 @@ async function copyProject(src: string, dest: string): Promise<void> {
 async function initGitBaseline(dir: string): Promise<void> {
   try {
     await runCommand(
-      `git init && git add -A && git -c user.email="battle@forge" -c user.name="Battle" commit -m "battle-start" --allow-empty`,
+      `git init && git add -A && git -c user.email="battle@caboo" -c user.name="Battle" commit -m "battle-start" --allow-empty`,
       { cwd: dir, timeout: 30000 },
     );
   } catch {

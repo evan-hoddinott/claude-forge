@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { BidRound, ScoredBid, AgentType } from '../../../shared/types';
 
 const AGENT_COLORS: Record<string, string> = {
-  claude:  'var(--forge-accent-amber)',
+  claude:  'var(--caboo-accent-amber)',
   gemini:  '#4285F4',
   codex:   '#10A37F',
   copilot: '#6e40c9',
@@ -48,24 +48,24 @@ function BidCard({ bid, rank, isAwarded, onAward, canOverride }: BidCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: rank * 0.06 }}
       style={{
-        border: `1px solid ${isAwarded ? color : 'var(--forge-border)'}`,
-        background: isAwarded ? `${color}14` : 'var(--forge-bg-mid)',
+        border: `1px solid ${isAwarded ? color : 'var(--caboo-border)'}`,
+        background: isAwarded ? `${color}14` : 'var(--caboo-bg-mid)',
         marginBottom: '8px',
         padding: '10px 12px',
       }}
     >
       {/* Header row */}
       <div className="flex items-center gap-2">
-        <span style={{ fontFamily: 'var(--forge-font-heading)', fontSize: '13px' }}>{medal(rank)}</span>
-        <span style={{ color, fontFamily: 'var(--forge-font-heading)', fontSize: '12px', letterSpacing: '0.5px' }}>
+        <span style={{ fontFamily: 'var(--caboo-font-heading)', fontSize: '13px' }}>{medal(rank)}</span>
+        <span style={{ color, fontFamily: 'var(--caboo-font-heading)', fontSize: '12px', letterSpacing: '0.5px' }}>
           {AGENT_LABELS[bid.agent] ?? bid.agent}
         </span>
-        <span style={{ fontFamily: 'var(--forge-font-body)', fontSize: '10px', color: 'var(--forge-text-muted)', marginLeft: 'auto' }}>
+        <span style={{ fontFamily: 'var(--caboo-font-body)', fontSize: '10px', color: 'var(--caboo-text-muted)', marginLeft: 'auto' }}>
           Score: {bid.score.toFixed(2)}
         </span>
         <button
           onClick={() => setExpanded(e => !e)}
-          style={{ color: 'var(--forge-text-muted)', fontSize: '10px', marginLeft: '6px' }}
+          style={{ color: 'var(--caboo-text-muted)', fontSize: '10px', marginLeft: '6px' }}
         >
           {expanded ? '▲' : '▼'}
         </button>
@@ -87,7 +87,7 @@ function BidCard({ bid, rank, isAwarded, onAward, canOverride }: BidCardProps) {
             {/* Stats row */}
             <div
               className="flex gap-4 mt-2"
-              style={{ fontFamily: 'var(--forge-font-body)', fontSize: '10px', color: 'var(--forge-text-secondary)' }}
+              style={{ fontFamily: 'var(--caboo-font-body)', fontSize: '10px', color: 'var(--caboo-text-secondary)' }}
             >
               <span>Confidence: {Math.round(bid.confidence * 100)}%</span>
               <span>~{bid.estimatedTokens.toLocaleString()} tok</span>
@@ -98,7 +98,7 @@ function BidCard({ bid, rank, isAwarded, onAward, canOverride }: BidCardProps) {
             {/* Reasoning */}
             <p
               className="mt-2"
-              style={{ fontFamily: 'var(--forge-font-body)', fontSize: '10px', color: 'var(--forge-text-muted)', lineHeight: '1.4', fontStyle: 'italic' }}
+              style={{ fontFamily: 'var(--caboo-font-body)', fontSize: '10px', color: 'var(--caboo-text-muted)', lineHeight: '1.4', fontStyle: 'italic' }}
             >
               "{bid.reasoning}"
             </p>
@@ -112,7 +112,7 @@ function BidCard({ bid, rank, isAwarded, onAward, canOverride }: BidCardProps) {
                   border: `1px solid ${color}`,
                   color,
                   background: 'transparent',
-                  fontFamily: 'var(--forge-font-heading)',
+                  fontFamily: 'var(--caboo-font-heading)',
                   fontSize: '10px',
                   padding: '3px 10px',
                   letterSpacing: '0.5px',
@@ -153,20 +153,20 @@ export default function BidPanel({ rounds, controlLevel, onApply, onSkip, loadin
     <div
       className="flex flex-col"
       style={{
-        border: '2px solid var(--forge-border)',
-        background: 'var(--forge-bg-mid)',
+        border: '2px solid var(--caboo-border)',
+        background: 'var(--caboo-bg-mid)',
         padding: '16px',
-        fontFamily: 'var(--forge-font-body)',
+        fontFamily: 'var(--caboo-font-body)',
         maxHeight: '80vh',
         overflow: 'hidden',
       }}
     >
       {/* Header */}
-      <div style={{ borderBottom: '2px solid var(--forge-border)', paddingBottom: '10px', marginBottom: '12px' }}>
-        <div style={{ fontFamily: 'var(--forge-font-heading)', fontSize: '14px', color: 'var(--forge-text-heading)', letterSpacing: '1px' }}>
+      <div style={{ borderBottom: '2px solid var(--caboo-border)', paddingBottom: '10px', marginBottom: '12px' }}>
+        <div style={{ fontFamily: 'var(--caboo-font-heading)', fontSize: '14px', color: 'var(--caboo-text-heading)', letterSpacing: '1px' }}>
           ⚖ CONTRACT NET PROTOCOL
         </div>
-        <div style={{ fontSize: '10px', color: 'var(--forge-text-muted)', marginTop: '2px' }}>
+        <div style={{ fontSize: '10px', color: 'var(--caboo-text-muted)', marginTop: '2px' }}>
           Agents bid on tasks based on confidence and context relevance
         </div>
       </div>
@@ -187,18 +187,18 @@ export default function BidPanel({ rounds, controlLevel, onApply, onSkip, loadin
                   textAlign: 'left',
                   padding: '6px 8px',
                   marginBottom: '4px',
-                  border: activeTask === r.taskId ? `1px solid var(--forge-accent-amber)` : '1px solid var(--forge-border)',
-                  background: activeTask === r.taskId ? 'var(--forge-accent-amber)14' : 'transparent',
+                  border: activeTask === r.taskId ? `1px solid var(--caboo-accent-amber)` : '1px solid var(--caboo-border)',
+                  background: activeTask === r.taskId ? 'var(--caboo-accent-amber)14' : 'transparent',
                   cursor: 'pointer',
                 }}
               >
-                <div style={{ fontSize: '9px', color: 'var(--forge-text-muted)', fontFamily: 'var(--forge-font-heading)', letterSpacing: '0.5px' }}>
+                <div style={{ fontSize: '9px', color: 'var(--caboo-text-muted)', fontFamily: 'var(--caboo-font-heading)', letterSpacing: '0.5px' }}>
                   TASK
                 </div>
-                <div style={{ fontSize: '10px', color: 'var(--forge-text-secondary)', lineHeight: '1.3', marginTop: '2px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--caboo-text-secondary)', lineHeight: '1.3', marginTop: '2px' }}>
                   {r.taskDescription.slice(0, 50)}{r.taskDescription.length > 50 ? '…' : ''}
                 </div>
-                <div style={{ fontSize: '9px', color: winnerColor, marginTop: '3px', fontFamily: 'var(--forge-font-heading)' }}>
+                <div style={{ fontSize: '9px', color: winnerColor, marginTop: '3px', fontFamily: 'var(--caboo-font-heading)' }}>
                   → {AGENT_LABELS[winner] ?? winner}
                 </div>
               </button>
@@ -210,12 +210,12 @@ export default function BidPanel({ rounds, controlLevel, onApply, onSkip, loadin
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
           {activeRound && (
             <>
-              <div style={{ fontSize: '10px', color: 'var(--forge-text-muted)', marginBottom: '8px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--caboo-text-muted)', marginBottom: '8px' }}>
                 {activeRound.taskDescription}
               </div>
 
               {activeRound.bids.length === 0 ? (
-                <div style={{ color: 'var(--forge-text-muted)', fontSize: '10px', fontStyle: 'italic' }}>
+                <div style={{ color: 'var(--caboo-text-muted)', fontSize: '10px', fontStyle: 'italic' }}>
                   No bids collected. Task will use static assignment.
                 </div>
               ) : (
@@ -238,14 +238,14 @@ export default function BidPanel({ rounds, controlLevel, onApply, onSkip, loadin
       {/* Footer actions */}
       <div
         className="flex justify-between items-center"
-        style={{ borderTop: '1px solid var(--forge-border)', paddingTop: '10px', marginTop: '10px' }}
+        style={{ borderTop: '1px solid var(--caboo-border)', paddingTop: '10px', marginTop: '10px' }}
       >
         <button
           onClick={onSkip}
           style={{
-            fontFamily: 'var(--forge-font-body)',
+            fontFamily: 'var(--caboo-font-body)',
             fontSize: '10px',
-            color: 'var(--forge-text-muted)',
+            color: 'var(--caboo-text-muted)',
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
@@ -258,11 +258,11 @@ export default function BidPanel({ rounds, controlLevel, onApply, onSkip, loadin
           onClick={() => onApply(awards)}
           disabled={loading}
           style={{
-            fontFamily: 'var(--forge-font-heading)',
+            fontFamily: 'var(--caboo-font-heading)',
             fontSize: '11px',
             letterSpacing: '0.5px',
-            color: 'var(--forge-accent-amber)',
-            border: '1px solid var(--forge-accent-amber)',
+            color: 'var(--caboo-accent-amber)',
+            border: '1px solid var(--caboo-accent-amber)',
             background: 'transparent',
             padding: '5px 16px',
             cursor: loading ? 'not-allowed' : 'pointer',

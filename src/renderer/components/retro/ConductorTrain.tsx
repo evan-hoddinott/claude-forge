@@ -122,13 +122,13 @@ export default function ConductorTrain({
     return (
       <div
         className={`flex items-center gap-2 px-4 py-2 text-[11px] ${className}`}
-        style={{ fontFamily: 'var(--forge-font-body)', color: 'var(--forge-text-secondary)' }}
+        style={{ fontFamily: 'var(--caboo-font-body)', color: 'var(--caboo-text-secondary)' }}
       >
         <span>🚂</span>
         <span>Station {currentStationIndex + 1}/{totalStations}</span>
-        {isComplete && <span style={{ color: 'var(--forge-accent-green)' }}>✅ Complete</span>}
-        {hasError && <span style={{ color: 'var(--forge-accent-rust)' }}>⚠ Error</span>}
-        {isCheckpoint && <span style={{ color: 'var(--forge-accent-amber)' }}>⏸ Checkpoint</span>}
+        {isComplete && <span style={{ color: 'var(--caboo-accent-green)' }}>✅ Complete</span>}
+        {hasError && <span style={{ color: 'var(--caboo-accent-rust)' }}>⚠ Error</span>}
+        {isCheckpoint && <span style={{ color: 'var(--caboo-accent-amber)' }}>⏸ Checkpoint</span>}
       </div>
     );
   }
@@ -141,7 +141,7 @@ export default function ConductorTrain({
       className={`relative select-none ${className}`}
       style={{
         height: '72px',
-        fontFamily: 'var(--forge-font-body)',
+        fontFamily: 'var(--caboo-font-body)',
         overflow: 'hidden',
       }}
     >
@@ -159,14 +159,14 @@ export default function ConductorTrain({
                 transform: 'translateX(-50%)',
                 color:
                   station.status === 'completed'
-                    ? 'var(--forge-accent-green)'
+                    ? 'var(--caboo-accent-green)'
                     : station.status === 'active'
-                    ? 'var(--forge-accent-amber)'
+                    ? 'var(--caboo-accent-amber)'
                     : station.status === 'failed'
-                    ? 'var(--forge-accent-rust)'
-                    : 'var(--forge-text-muted)',
+                    ? 'var(--caboo-accent-rust)'
+                    : 'var(--caboo-text-muted)',
                 fontSize: '9px',
-                fontFamily: 'var(--forge-font-heading)',
+                fontFamily: 'var(--caboo-font-heading)',
                 whiteSpace: 'nowrap',
                 maxWidth: '80px',
                 overflow: 'hidden',
@@ -187,7 +187,7 @@ export default function ConductorTrain({
           left: '8%',
           right: '8%',
           height: '2px',
-          background: 'var(--forge-border)',
+          background: 'var(--caboo-border)',
         }}
       />
 
@@ -200,8 +200,8 @@ export default function ConductorTrain({
           width: `${trainPos * 0.84}%`,
           height: '2px',
           background: hasError
-            ? 'var(--forge-accent-rust)'
-            : 'var(--forge-accent-green)',
+            ? 'var(--caboo-accent-rust)'
+            : 'var(--caboo-accent-green)',
           transition: 'width 0.1s linear',
         }}
       />
@@ -222,17 +222,17 @@ export default function ConductorTrain({
               height: '12px',
               border: `2px solid ${
                 station.status === 'completed'
-                  ? 'var(--forge-accent-green)'
+                  ? 'var(--caboo-accent-green)'
                   : station.status === 'active'
-                  ? 'var(--forge-accent-amber)'
+                  ? 'var(--caboo-accent-amber)'
                   : station.status === 'failed'
-                  ? 'var(--forge-accent-rust)'
-                  : 'var(--forge-border)'
+                  ? 'var(--caboo-accent-rust)'
+                  : 'var(--caboo-border)'
               }`,
               background:
                 station.status === 'completed'
-                  ? 'var(--forge-accent-green)'
-                  : 'var(--forge-bg-deep)',
+                  ? 'var(--caboo-accent-green)'
+                  : 'var(--caboo-bg-deep)',
               zIndex: 2,
             }}
           />
@@ -253,10 +253,10 @@ export default function ConductorTrain({
               transform: 'translateX(-50%)',
               color:
                 station.status === 'active'
-                  ? 'var(--forge-accent-amber)'
-                  : 'var(--forge-text-muted)',
+                  ? 'var(--caboo-accent-amber)'
+                  : 'var(--caboo-text-muted)',
               fontSize: '8px',
-              fontFamily: 'var(--forge-font-heading)',
+              fontFamily: 'var(--caboo-font-heading)',
               whiteSpace: 'nowrap',
               maxWidth: '70px',
               overflow: 'hidden',
@@ -279,7 +279,7 @@ export default function ConductorTrain({
             top: '18px',
             width: '4px',
             height: '4px',
-            background: 'var(--forge-text-muted)',
+            background: 'var(--caboo-text-muted)',
             opacity: p.opacity,
             pointerEvents: 'none',
           }}
@@ -310,17 +310,17 @@ export default function ConductorTrain({
             fontSize: '11px',
             lineHeight: '1.2',
             color: isCheckpoint
-              ? 'var(--forge-accent-amber)'
+              ? 'var(--caboo-accent-amber)'
               : hasError
-              ? 'var(--forge-accent-rust)'
+              ? 'var(--caboo-accent-rust)'
               : isComplete
-              ? 'var(--forge-accent-green)'
-              : 'var(--forge-text-primary)',
+              ? 'var(--caboo-accent-green)'
+              : 'var(--caboo-text-primary)',
             whiteSpace: 'pre',
             textShadow: isCheckpoint
-              ? '0 0 6px var(--forge-accent-amber)'
+              ? '0 0 6px var(--caboo-accent-amber)'
               : isComplete
-              ? '0 0 6px var(--forge-accent-green)'
+              ? '0 0 6px var(--caboo-accent-green)'
               : 'none',
           }}
         >
@@ -335,8 +335,8 @@ export default function ConductorTrain({
           style={{
             left: `calc(8% + ${trainPos * 0.84}% + 20px)`,
             top: '10px',
-            color: 'var(--forge-accent-amber)',
-            fontFamily: 'var(--forge-font-heading)',
+            color: 'var(--caboo-accent-amber)',
+            fontFamily: 'var(--caboo-font-heading)',
             fontSize: '10px',
             animation: 'conductor-toot 0.8s ease-out forwards',
             zIndex: 20,
@@ -354,7 +354,7 @@ export default function ConductorTrain({
             left: `calc(8% + ${trainPos * 0.84}%)`,
             top: '8px',
             transform: 'translateX(-50%)',
-            color: 'var(--forge-accent-amber)',
+            color: 'var(--caboo-accent-amber)',
             fontSize: '14px',
             animation: 'conductor-checkpoint-pulse 1s ease-in-out infinite',
             zIndex: 15,
@@ -373,7 +373,7 @@ export default function ConductorTrain({
           style={{
             left: `${spark.x}%`,
             top: `${spark.y}%`,
-            color: 'var(--forge-accent-green)',
+            color: 'var(--caboo-accent-green)',
             fontSize: '10px',
             animation: 'conductor-spark 1.5s ease-out forwards',
             zIndex: 20,

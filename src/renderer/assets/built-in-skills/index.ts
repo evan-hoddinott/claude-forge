@@ -4,7 +4,7 @@ export const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'security-auditor',
     name: 'Security Auditor',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description: 'Transforms your agent into a security-focused reviewer. Every change gets checked for vulnerabilities, exposed secrets, and insecure patterns.',
@@ -21,7 +21,7 @@ export const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'ui-ux-designer',
     name: 'UI/UX Designer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description: 'Prioritizes visual polish, accessibility, responsive design, and user experience best practices in every change.',
@@ -38,7 +38,7 @@ export const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'test-writer',
     name: 'Test Writer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description: 'Writes comprehensive tests for every change — unit, integration, and edge cases — prioritizing coverage and reliability.',
@@ -55,7 +55,7 @@ export const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'docs-writer',
     name: 'Documentation Writer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description: 'Adds JSDoc comments, README sections, inline explanations, and API documentation to every change.',
@@ -72,7 +72,7 @@ export const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'perf-optimizer',
     name: 'Performance Optimizer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description: 'Focuses on bundle size, load time, caching, lazy loading, and code splitting to make your app faster.',
@@ -89,7 +89,7 @@ export const BUILT_IN_SKILLS: SkillEntry[] = [
   {
     id: 'code-reviewer',
     name: 'Code Reviewer',
-    author: 'Claude Forge Team',
+    author: 'Caboo Team',
     version: '1.0.0',
     category: 'personality',
     description: 'Reviews existing code and suggests improvements in readability, maintainability, and correctness without breaking functionality.',

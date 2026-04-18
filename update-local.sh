@@ -15,18 +15,18 @@ echo "⚒ Packaging AppImage..."
 npx electron-builder --linux --publish never
 
 echo "⚒ Stopping old instance..."
-pkill -f claude-forge 2>/dev/null || true
-pkill -f Claude-Forge 2>/dev/null || true
+pkill -f caboo 2>/dev/null || true
+pkill -f Caboo 2>/dev/null || true
 sleep 1
 
 echo "⚒ Replacing installed AppImage..."
-rm -f ~/Applications/Claude-Forge-*.AppImage
-cp release/Claude-Forge-*.AppImage ~/Applications/
-chmod +x ~/Applications/Claude-Forge-*.AppImage
+rm -f ~/Applications/Caboo-*.AppImage
+cp release/Caboo-*.AppImage ~/Applications/
+chmod +x ~/Applications/Caboo-*.AppImage
 
 echo "⚒ Launching new version..."
-nohup ~/Applications/Claude-Forge-*.AppImage > /dev/null 2>&1 &
+nohup ~/Applications/Caboo-*.AppImage > /dev/null 2>&1 &
 disown
 
 echo ""
-echo "✅ Claude Forge updated and launched!"
+echo "✅ Caboo updated and launched!"

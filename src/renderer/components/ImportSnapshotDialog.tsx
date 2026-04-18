@@ -116,7 +116,7 @@ export default function ImportSnapshotDialog({ onClose, onImported }: Props) {
                   className="text-center py-8"
                 >
                   <div className="text-4xl mb-4">📸</div>
-                  <p className="text-sm font-medium text-text-primary mb-2">Open a .cfsnap file</p>
+                  <p className="text-sm font-medium text-text-primary mb-2">Open a .cbsnap file</p>
                   <p className="text-xs text-text-muted mb-6 max-w-xs mx-auto leading-relaxed">
                     A snapshot contains the full project — code, git history, AI context, and chat.
                     Pick up exactly where someone else left off.

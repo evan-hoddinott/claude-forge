@@ -6,7 +6,7 @@
  * not raw conversational context. Agent-to-agent mailboxes enable direct
  * lateral communication without shared context windows.
  *
- * All state lives in .forge/blackboard/:
+ * All state lives in .caboo/blackboard/:
  *   tasks.json          — shared task queue (single source of truth)
  *   .lock               — atomic file lock (prevents race conditions)
  *   artifacts/<name>    — structured outputs posted by agents
@@ -37,7 +37,7 @@ function broadcast(channel: string, data: unknown): void {
 }
 
 function bbPath(projectPath: string, ...parts: string[]): string {
-  return path.join(projectPath, '.forge', 'blackboard', ...parts);
+  return path.join(projectPath, '.caboo', 'blackboard', ...parts);
 }
 
 async function readJson<T>(filePath: string): Promise<T | null> {

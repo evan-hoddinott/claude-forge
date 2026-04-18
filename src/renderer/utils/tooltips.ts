@@ -49,7 +49,7 @@ const tooltipEntries: Record<string, TooltipEntry> = {
   terminal: {
     term: 'terminal',
     title: 'Terminal',
-    description: 'A terminal is a text-based way to give your computer commands. Claude Forge handles this for you behind the scenes.',
+    description: 'A terminal is a text-based way to give your computer commands. Caboo handles this for you behind the scenes.',
   },
   commit: {
     term: 'commit',
@@ -154,7 +154,7 @@ const tooltipEntries: Record<string, TooltipEntry> = {
     description: 'A framework is a pre-built toolkit that gives you a head start. It provides common features so you don\'t have to build everything from scratch.',
   },
 
-  // --- Claude Forge specific ---
+  // --- Caboo specific ---
   context_file: {
     term: 'context_file',
     title: 'Context File',

@@ -9,7 +9,7 @@ const MAX_BUNDLE_SIZE = 10 * 1024 * 1024; // 10MB
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getForgeVersion(): string {
+function getCabooVersion(): string {
   try {
     return app.getVersion();
   } catch {
@@ -177,7 +177,7 @@ export async function exportVibe(options: VibeExportOptions): Promise<string | n
     description: options.description || project.description,
     author: options.author,
     created: new Date().toISOString(),
-    forgeVersion: getForgeVersion(),
+    cabooVersion: getCabooVersion(),
     tags: options.tags,
     category: 'general',
     constraints: {
@@ -191,7 +191,7 @@ export async function exportVibe(options: VibeExportOptions): Promise<string | n
   zip.addFile('vibe-bundle/manifest.json', Buffer.from(JSON.stringify(manifest, null, 2)));
 
   // README
-  const readme = `# ${manifest.name}\n\n${manifest.description}\n\n**Author:** ${manifest.author}  \n**Created:** ${new Date(manifest.created).toLocaleDateString()}  \n**Tags:** ${manifest.tags.join(', ')}\n\n---\n\n*This .vibe bundle was created with Claude Forge.*\n`;
+  const readme = `# ${manifest.name}\n\n${manifest.description}\n\n**Author:** ${manifest.author}  \n**Created:** ${new Date(manifest.created).toLocaleDateString()}  \n**Tags:** ${manifest.tags.join(', ')}\n\n---\n\n*This .vibe bundle was created with Caboo.*\n`;
   zip.addFile('vibe-bundle/README.md', Buffer.from(readme));
 
   // Project config

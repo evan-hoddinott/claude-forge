@@ -8,7 +8,7 @@
  *   4. Revert with memory injection — revert to a snapshot and tell all active
  *      agents what was reverted so they don't repeat the same approach
  *
- * Tags use the prefix "forge-shadow-" to avoid colliding with time-machine tags.
+ * Tags use the prefix "caboo-shadow-" to avoid colliding with time-machine tags.
  */
 
 import * as fs from 'node:fs/promises';
@@ -56,7 +56,7 @@ interface ParsedHunkHeader {
 
 // ─── Git helpers ──────────────────────────────────────────────────────────────
 
-const SHADOW_TAG_PREFIX = 'forge-shadow-';
+const SHADOW_TAG_PREFIX = 'caboo-shadow-';
 
 async function git(projectPath: string, args: string[]): Promise<string> {
   const result = await runExecFile('git', args, { cwd: projectPath, timeout: 30000 });
@@ -88,7 +88,7 @@ export async function snapshot(
       await git(projectPath, [
         'commit',
         '-m',
-        `[forge-shadow] ${label}`,
+        `[caboo-shadow] ${label}`,
         '--allow-empty',
       ]);
     }
@@ -133,7 +133,7 @@ async function injectRevertMemory(
     `Do NOT repeat this approach. Try a different strategy.\n`;
 
   for (const agent of activeAgents) {
-    const memPath = path.join(projectPath, '.forge', 'agents', agent, 'memory.md');
+    const memPath = path.join(projectPath, '.caboo', 'agents', agent, 'memory.md');
     try {
       await fs.access(memPath);
       await fs.appendFile(memPath, notice, 'utf8');
@@ -361,7 +361,7 @@ export async function applyChunks(
   const patchContent = patchLines.join('\n') + '\n';
 
   // Write patch to a temp file
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'forge-patch-'));
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'caboo-patch-'));
   const patchFile = path.join(tmpDir, 'accepted.patch');
 
   try {

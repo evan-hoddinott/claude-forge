@@ -138,7 +138,7 @@ export type ProjectLocationMode = 'wsl' | 'windows';
 
 export type AppMode = 'simple' | 'developer';
 
-// --- Skill Store Types ---
+// --- Caboo Skills Types ---
 
 export type SkillCategory = 'personality' | 'starter' | 'constraint';
 
@@ -171,7 +171,7 @@ export interface UserPreferences {
   defaultProjectDir: string;
   projectLocationMode: ProjectLocationMode;
   githubUsername: string;
-  theme: 'forge';
+  theme: 'caboo';
   defaultEditor: string;
   defaultRepoVisibility: 'public' | 'private';
   claudeLaunchMode: 'interactive' | 'auto';
@@ -350,14 +350,14 @@ export interface DeployResult {
   error?: string;
 }
 
-// --- Forge Directory Types ---
+// --- Caboo Directory Types ---
 
 export type AgentRole = 'lead' | 'engineer' | 'reviewer' | 'tester' | 'documenter';
 export type AgentOrchestratorStatus = 'idle' | 'working' | 'blocked' | 'offline';
 export type OrchestrationMode = 'conductor' | 'manual' | 'collaborative';
 
-export interface ForgeManifest {
-  forgeVersion: string;
+export interface CabooManifest {
+  cabooVersion: string;
   projectName: string;
   created: string;
   orchestrationMode: OrchestrationMode;
@@ -368,7 +368,7 @@ export interface ForgeManifest {
   schemaGatingEnabled: boolean;
 }
 
-export interface ForgeAgentEntry {
+export interface CabooAgentEntry {
   type: AgentType;
   role: AgentRole;
   status: AgentOrchestratorStatus;
@@ -381,13 +381,13 @@ export interface ForgeAgentEntry {
   spatialPartition?: string;
 }
 
-export interface ForgeRegistry {
-  agents: Partial<Record<AgentType, ForgeAgentEntry>>;
+export interface CabooRegistry {
+  agents: Partial<Record<AgentType, CabooAgentEntry>>;
 }
 
-export interface ForgeState {
-  manifest: ForgeManifest;
-  registry: ForgeRegistry;
+export interface CabooState {
+  manifest: CabooManifest;
+  registry: CabooRegistry;
   blackboardTaskCount: number;
   lastSessionTime: string | null;
 }
@@ -1030,9 +1030,9 @@ export interface ElectronAPI {
     publish: (input: HubPublishInput) => Promise<{ url: string }>;
     generateVibe: (projectId: string) => Promise<string>;
   };
-  forge: {
+  caboo: {
     initialize: (projectPath: string, agents: AgentType[]) => Promise<void>;
-    getState: (projectPath: string) => Promise<ForgeState | null>;
+    getState: (projectPath: string) => Promise<CabooState | null>;
     getAgentMemory: (projectPath: string, agent: AgentType) => Promise<string>;
     appendMemory: (projectPath: string, agent: AgentType, entry: string) => Promise<void>;
     updateAgentStatus: (projectPath: string, agent: AgentType, status: AgentOrchestratorStatus) => Promise<void>;
@@ -1171,7 +1171,7 @@ export interface VibeManifest {
   description: string;
   author: string;
   created: string;
-  forgeVersion: string;
+  cabooVersion: string;
   tags: string[];
   category: string;
   constraints: {
@@ -1212,7 +1212,7 @@ export interface SnapshotManifest {
   description: string;
   snapshotVersion: '1';
   created: string;
-  forgeVersion: string;
+  cabooVersion: string;
   projectId: string;
   includes: {
     source: boolean;
@@ -1290,7 +1290,7 @@ export interface AgentMessage {
   read: boolean;
 }
 
-// --- Forge Hub Types ---
+// --- Caboo Hub Types ---
 
 export type HubItemType = 'skill' | 'template' | 'constraint' | 'playbook';
 

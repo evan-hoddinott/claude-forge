@@ -8,7 +8,7 @@
 
 /* ─── Color & Font Overrides ─────────────────────────── */
 
-.theme-forge {
+.theme-caboo {
   /* Map to Tailwind @theme token names */
   --color-bg: #1a1e14;
   --color-surface: #232a1c;
@@ -26,383 +26,383 @@
   --font-sans: 'IBM Plex Mono', 'Space Mono', 'Courier New', monospace;
 
   /* ─── Forge-specific custom properties ─── */
-  --forge-bg-deep: #1a1e14;
-  --forge-bg-mid: #232a1c;
-  --forge-bg-surface: #2d3625;
-  --forge-bg-input: #1e2418;
-  --forge-bg-cream: #d4cba8;
-  --forge-bg-paper: #c8bc96;
+  --caboo-bg-deep: #1a1e14;
+  --caboo-bg-mid: #232a1c;
+  --caboo-bg-surface: #2d3625;
+  --caboo-bg-input: #1e2418;
+  --caboo-bg-cream: #d4cba8;
+  --caboo-bg-paper: #c8bc96;
 
-  --forge-text-primary: #d4cba8;
-  --forge-text-secondary: #9c9478;
-  --forge-text-heading: #e8dfc0;
-  --forge-text-on-light: #2d3625;
+  --caboo-text-primary: #d4cba8;
+  --caboo-text-secondary: #9c9478;
+  --caboo-text-heading: #e8dfc0;
+  --caboo-text-on-light: #2d3625;
 
-  --forge-accent-green: #5a7a3a;
-  --forge-accent-green-bright: #7da854;
-  --forge-accent-amber: #b8860b;
-  --forge-accent-amber-bright: #daa520;
-  --forge-accent-brown: #6b4e2e;
-  --forge-accent-brown-light: #8b7355;
-  --forge-accent-rust: #8b4513;
+  --caboo-accent-green: #5a7a3a;
+  --caboo-accent-green-bright: #7da854;
+  --caboo-accent-amber: #b8860b;
+  --caboo-accent-amber-bright: #daa520;
+  --caboo-accent-brown: #6b4e2e;
+  --caboo-accent-brown-light: #8b7355;
+  --caboo-accent-rust: #8b4513;
 
-  --forge-border: #4a5a38;
-  --forge-border-light: #5a6b48;
-  --forge-border-strong: #6b7d55;
+  --caboo-border: #4a5a38;
+  --caboo-border-light: #5a6b48;
+  --caboo-border-strong: #6b7d55;
 
-  --forge-status-good: #5a7a3a;
-  --forge-status-warn: #b8860b;
-  --forge-status-bad: #8b4513;
-  --forge-status-info: #5a8a7a;
+  --caboo-status-good: #5a7a3a;
+  --caboo-status-warn: #b8860b;
+  --caboo-status-bad: #8b4513;
+  --caboo-status-info: #5a8a7a;
 
-  --forge-font-heading: 'Silkscreen', 'Press Start 2P', monospace;
-  --forge-font-body: 'IBM Plex Mono', 'Space Mono', 'Courier New', monospace;
-  --forge-font-size-xs: 10px;
-  --forge-font-size-sm: 12px;
-  --forge-font-size-md: 14px;
-  --forge-font-size-lg: 16px;
-  --forge-font-size-xl: 18px;
-  --forge-font-size-title: 22px;
+  --caboo-font-heading: 'Silkscreen', 'Press Start 2P', monospace;
+  --caboo-font-body: 'IBM Plex Mono', 'Space Mono', 'Courier New', monospace;
+  --caboo-font-size-xs: 10px;
+  --caboo-font-size-sm: 12px;
+  --caboo-font-size-md: 14px;
+  --caboo-font-size-lg: 16px;
+  --caboo-font-size-xl: 18px;
+  --caboo-font-size-title: 22px;
 
-  --forge-radius: 0px;
-  --forge-border-width: 2px;
+  --caboo-radius: 0px;
+  --caboo-border-width: 2px;
 }
 
 /* ─── Background Texture ─────────────────────────────── */
 
-.theme-forge {
-  background-color: var(--forge-bg-deep);
+.theme-caboo {
+  background-color: var(--caboo-bg-deep);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='.025'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%23ffffff' opacity='.03'/%3E%3Crect x='2' y='5' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3Crect x='6' y='7' width='1' height='1' fill='%23ffffff' opacity='.025'/%3E%3Crect x='1' y='3' width='1' height='1' fill='%23ffffff' opacity='.015'/%3E%3Crect x='5' y='6' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3Crect x='7' y='1' width='1' height='1' fill='%23ffffff' opacity='.03'/%3E%3Crect x='3' y='4' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3C/svg%3E");
   background-repeat: repeat;
 }
 
 /* ─── Border Radius: 0 on EVERYTHING ─────────────────── */
 
-.theme-forge,
-.theme-forge *,
-.theme-forge *::before,
-.theme-forge *::after {
+.theme-caboo,
+.theme-caboo *,
+.theme-caboo *::before,
+.theme-caboo *::after {
   border-radius: 0 !important;
 }
 
 /* ─── Typography ─────────────────────────────────────── */
 
-.theme-forge h1,
-.theme-forge h2,
-.theme-forge h3 {
-  font-family: var(--forge-font-heading) !important;
+.theme-caboo h1,
+.theme-caboo h2,
+.theme-caboo h3 {
+  font-family: var(--caboo-font-heading) !important;
   text-shadow: none;
   line-height: 1.8;
   letter-spacing: 0.5px;
-  color: var(--forge-text-heading);
+  color: var(--caboo-text-heading);
 }
 
-.theme-forge h1 {
+.theme-caboo h1 {
   font-size: 18px;
 }
 
-.theme-forge h2 {
+.theme-caboo h2 {
   font-size: 16px;
 }
 
-.theme-forge h3 {
+.theme-caboo h3 {
   font-size: 14px;
 }
 
 /* Nav labels, section headers, and small labels in pixel font */
-.theme-forge .forge-pixel,
-.theme-forge .forge-logo-text {
-  font-family: var(--forge-font-heading) !important;
+.theme-caboo .caboo-pixel,
+.theme-caboo .caboo-logo-text {
+  font-family: var(--caboo-font-heading) !important;
 }
 
 /* Body text */
-.theme-forge body,
-.theme-forge p,
-.theme-forge span,
-.theme-forge div,
-.theme-forge button,
-.theme-forge input,
-.theme-forge textarea,
-.theme-forge select {
-  font-family: var(--forge-font-body);
+.theme-caboo body,
+.theme-caboo p,
+.theme-caboo span,
+.theme-caboo div,
+.theme-caboo button,
+.theme-caboo input,
+.theme-caboo textarea,
+.theme-caboo select {
+  font-family: var(--caboo-font-body);
   line-height: 1.6;
 }
 
 /* ─── Selection Colors ───────────────────────────────── */
 
-.theme-forge ::selection {
-  background-color: var(--forge-accent-green);
-  color: var(--forge-text-heading);
+.theme-caboo ::selection {
+  background-color: var(--caboo-accent-green);
+  color: var(--caboo-text-heading);
 }
 
-.theme-forge ::-moz-selection {
-  background-color: var(--forge-accent-green);
-  color: var(--forge-text-heading);
+.theme-caboo ::-moz-selection {
+  background-color: var(--caboo-accent-green);
+  color: var(--caboo-text-heading);
 }
 
 /* ─── Custom Scrollbars ──────────────────────────────── */
 
-.theme-forge * {
-  scrollbar-color: var(--forge-accent-green) var(--forge-bg-deep);
+.theme-caboo * {
+  scrollbar-color: var(--caboo-accent-green) var(--caboo-bg-deep);
 }
 
-.theme-forge *::-webkit-scrollbar {
+.theme-caboo *::-webkit-scrollbar {
   width: 12px;
   height: 12px;
 }
 
-.theme-forge *::-webkit-scrollbar-track {
-  background: var(--forge-bg-deep);
+.theme-caboo *::-webkit-scrollbar-track {
+  background: var(--caboo-bg-deep);
 }
 
-.theme-forge *::-webkit-scrollbar-thumb {
-  background: var(--forge-accent-green);
-  border: 2px solid var(--forge-bg-deep);
+.theme-caboo *::-webkit-scrollbar-thumb {
+  background: var(--caboo-accent-green);
+  border: 2px solid var(--caboo-bg-deep);
 }
 
-.theme-forge *::-webkit-scrollbar-thumb:hover {
-  background: var(--forge-accent-green-bright);
+.theme-caboo *::-webkit-scrollbar-thumb:hover {
+  background: var(--caboo-accent-green-bright);
 }
 
 /* ─── Focus Rings ────────────────────────────────────── */
 
-.theme-forge *:focus-visible {
-  outline: 2px solid var(--forge-accent-green);
+.theme-caboo *:focus-visible {
+  outline: 2px solid var(--caboo-accent-green);
   outline-offset: 1px;
-  box-shadow: 0 0 0 2px var(--forge-accent-green);
+  box-shadow: 0 0 0 2px var(--caboo-accent-green);
 }
 
 /* ─── Sidebar ────────────────────────────────────────── */
 
-.theme-forge aside {
-  border-right: 2px solid var(--forge-border) !important;
+.theme-caboo aside {
+  border-right: 2px solid var(--caboo-border) !important;
   box-shadow: none;
-  background-color: var(--forge-bg-mid);
+  background-color: var(--caboo-bg-mid);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23ffffff' opacity='.015'/%3E%3C/svg%3E");
   background-repeat: repeat;
 }
 
 /* Logo */
-.theme-forge .forge-logo-icon {
+.theme-caboo .caboo-logo-icon {
   animation: none;
   filter: none;
   background-color: transparent !important;
 }
 
-.theme-forge .forge-logo-text {
-  font-family: var(--forge-font-heading) !important;
+.theme-caboo .caboo-logo-text {
+  font-family: var(--caboo-font-heading) !important;
   font-size: 12px !important;
   letter-spacing: 0.5px;
   text-shadow: none;
-  color: var(--forge-text-heading);
+  color: var(--caboo-text-heading);
 }
 
 /* Sidebar separators */
-.theme-forge aside .border-t {
-  border-color: var(--forge-border) !important;
+.theme-caboo aside .border-t {
+  border-color: var(--caboo-border) !important;
 }
 
 /* Sidebar nav buttons */
-.theme-forge aside button:hover {
+.theme-caboo aside button:hover {
   text-shadow: none;
 }
 
 /* Sidebar nav items — forge active state */
-.theme-forge aside nav button.bg-white\/8,
-.theme-forge aside nav button[class*="bg-white/8"] {
+.theme-caboo aside nav button.bg-white\/8,
+.theme-caboo aside nav button[class*="bg-white/8"] {
   background-color: rgba(90, 122, 58, 0.15) !important;
-  border-left: 3px solid var(--forge-accent-amber) !important;
+  border-left: 3px solid var(--caboo-accent-amber) !important;
 }
 
 /* Sidebar nav hover */
-.theme-forge aside nav button:hover {
+.theme-caboo aside nav button:hover {
   background-color: rgba(90, 122, 58, 0.1) !important;
 }
 
-/* Override all bg-white/* patterns in forge theme */
-.theme-forge [class*="bg-white/"],
-.theme-forge [class*="bg-white\\/"] {
+/* Override all bg-white/* patterns in caboo theme */
+.theme-caboo [class*="bg-white/"],
+.theme-caboo [class*="bg-white\\/"] {
   --tw-bg-opacity: 1;
 }
 
-.theme-forge .bg-white\/5,
-.theme-forge [class*="bg-white/5"] {
+.theme-caboo .bg-white\/5,
+.theme-caboo [class*="bg-white/5"] {
   background-color: rgba(90, 122, 58, 0.12) !important;
 }
 
-.theme-forge .hover\:bg-white\/5:hover,
-.theme-forge [class*="hover:bg-white/5"]:hover {
+.theme-caboo .hover\:bg-white\/5:hover,
+.theme-caboo [class*="hover:bg-white/5"]:hover {
   background-color: rgba(90, 122, 58, 0.15) !important;
 }
 
-.theme-forge .bg-white\/8,
-.theme-forge [class*="bg-white/8"] {
+.theme-caboo .bg-white\/8,
+.theme-caboo [class*="bg-white/8"] {
   background-color: rgba(90, 122, 58, 0.18) !important;
 }
 
-.theme-forge .hover\:bg-white\/8:hover,
-.theme-forge [class*="hover:bg-white/8"]:hover {
+.theme-caboo .hover\:bg-white\/8:hover,
+.theme-caboo [class*="hover:bg-white/8"]:hover {
   background-color: rgba(90, 122, 58, 0.2) !important;
 }
 
-.theme-forge .hover\:bg-white\/10:hover,
-.theme-forge [class*="hover:bg-white/10"]:hover {
+.theme-caboo .hover\:bg-white\/10:hover,
+.theme-caboo [class*="hover:bg-white/10"]:hover {
   background-color: rgba(90, 122, 58, 0.22) !important;
 }
 
-.theme-forge [class*="bg-white/\\[0.02\\]"],
-.theme-forge [class*="bg-white\\/\\[0.02\\]"] {
+.theme-caboo [class*="bg-white/\\[0.02\\]"],
+.theme-caboo [class*="bg-white\\/\\[0.02\\]"] {
   background-color: rgba(90, 122, 58, 0.06) !important;
 }
 
-.theme-forge [class*="bg-white/\\[0.03\\]"],
-.theme-forge [class*="bg-white\\/\\[0.03\\]"] {
+.theme-caboo [class*="bg-white/\\[0.03\\]"],
+.theme-caboo [class*="bg-white\\/\\[0.03\\]"] {
   background-color: rgba(90, 122, 58, 0.08) !important;
 }
 
-.theme-forge [class*="bg-white/\\[0.04\\]"],
-.theme-forge [class*="bg-white\\/\\[0.04\\]"] {
+.theme-caboo [class*="bg-white/\\[0.04\\]"],
+.theme-caboo [class*="bg-white\\/\\[0.04\\]"] {
   background-color: rgba(90, 122, 58, 0.1) !important;
 }
 
-.theme-forge [class*="bg-white/\\[0.05\\]"],
-.theme-forge [class*="bg-white\\/\\[0.05\\]"] {
+.theme-caboo [class*="bg-white/\\[0.05\\]"],
+.theme-caboo [class*="bg-white\\/\\[0.05\\]"] {
   background-color: rgba(90, 122, 58, 0.12) !important;
 }
 
-.theme-forge [class*="bg-white/\\[0.06\\]"],
-.theme-forge [class*="bg-white\\/\\[0.06\\]"] {
+.theme-caboo [class*="bg-white/\\[0.06\\]"],
+.theme-caboo [class*="bg-white\\/\\[0.06\\]"] {
   background-color: rgba(90, 122, 58, 0.14) !important;
 }
 
 /* Border overrides: replace white borders with forge borders */
-.theme-forge [class*="border-white/"],
-.theme-forge [class*="border-white\\/"] {
-  border-color: var(--forge-border) !important;
+.theme-caboo [class*="border-white/"],
+.theme-caboo [class*="border-white\\/"] {
+  border-color: var(--caboo-border) !important;
 }
 
-.theme-forge [class*="hover:border-white/"]:hover,
-.theme-forge [class*="hover:border-white\\/"]:hover {
-  border-color: var(--forge-border-light) !important;
+.theme-caboo [class*="hover:border-white/"]:hover,
+.theme-caboo [class*="hover:border-white\\/"]:hover {
+  border-color: var(--caboo-border-light) !important;
 }
 
 /* ─── Buttons ────────────────────────────────────────── */
 
 /* Primary action buttons (New Project, etc.) */
-.theme-forge button[class*="bg-accent"] {
-  border: 2px outset var(--forge-accent-green-bright);
+.theme-caboo button[class*="bg-accent"] {
+  border: 2px outset var(--caboo-accent-green-bright);
   box-shadow: none;
   text-shadow: none;
-  font-family: var(--forge-font-heading);
+  font-family: var(--caboo-font-heading);
   font-size: 12px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
-.theme-forge button[class*="bg-accent"]:hover {
+.theme-caboo button[class*="bg-accent"]:hover {
   box-shadow: none;
-  border-color: var(--forge-accent-green-bright);
-  background-color: var(--forge-accent-green-bright) !important;
+  border-color: var(--caboo-accent-green-bright);
+  background-color: var(--caboo-accent-green-bright) !important;
 }
 
-.theme-forge button[class*="bg-accent"]:active {
+.theme-caboo button[class*="bg-accent"]:active {
   border-style: inset;
 }
 
 /* Secondary buttons */
-.theme-forge button:not([class*="bg-accent"]):hover {
+.theme-caboo button:not([class*="bg-accent"]):hover {
   box-shadow: none;
 }
 
 /* All buttons in forge — boxy and deliberate */
-.theme-forge button {
+.theme-caboo button {
   text-shadow: none;
 }
 
 /* ─── Cards & Surfaces ───────────────────────────────── */
 
-.theme-forge .rounded-xl,
-.theme-forge [class*="rounded-xl"],
-.theme-forge [class*="rounded-lg"] {
-  border-color: var(--forge-border) !important;
-  box-shadow: inset 0 0 0 1px var(--forge-border);
+.theme-caboo .rounded-xl,
+.theme-caboo [class*="rounded-xl"],
+.theme-caboo [class*="rounded-lg"] {
+  border-color: var(--caboo-border) !important;
+  box-shadow: inset 0 0 0 1px var(--caboo-border);
 }
 
-.theme-forge .rounded-xl:hover,
-.theme-forge [class*="rounded-xl"]:hover {
-  border-color: var(--forge-border-strong) !important;
-  box-shadow: 2px 2px 0px var(--forge-accent-brown);
+.theme-caboo .rounded-xl:hover,
+.theme-caboo [class*="rounded-xl"]:hover {
+  border-color: var(--caboo-border-strong) !important;
+  box-shadow: 2px 2px 0px var(--caboo-accent-brown);
 }
 
 /* ─── Input Fields — Recessed Look ───────────────────── */
 
-.theme-forge input[type="text"],
-.theme-forge input[type="search"],
-.theme-forge input:not([type]),
-.theme-forge textarea,
-.theme-forge select {
-  border: 2px inset var(--forge-border) !important;
-  background-color: var(--forge-bg-input) !important;
-  caret-color: var(--forge-accent-amber);
-  font-family: var(--forge-font-body);
+.theme-caboo input[type="text"],
+.theme-caboo input[type="search"],
+.theme-caboo input:not([type]),
+.theme-caboo textarea,
+.theme-caboo select {
+  border: 2px inset var(--caboo-border) !important;
+  background-color: var(--caboo-bg-input) !important;
+  caret-color: var(--caboo-accent-amber);
+  font-family: var(--caboo-font-body);
 }
 
-.theme-forge input:focus,
-.theme-forge textarea:focus,
-.theme-forge select:focus {
-  border-color: var(--forge-accent-green) !important;
-  box-shadow: 0 0 0 2px var(--forge-accent-green);
+.theme-caboo input:focus,
+.theme-caboo textarea:focus,
+.theme-caboo select:focus {
+  border-color: var(--caboo-accent-green) !important;
+  box-shadow: 0 0 0 2px var(--caboo-accent-green);
 }
 
 /* ─── Links ──────────────────────────────────────────── */
 
-.theme-forge a {
-  text-decoration-color: var(--forge-accent-brown-light);
-  color: var(--forge-accent-green-bright);
+.theme-caboo a {
+  text-decoration-color: var(--caboo-accent-brown-light);
+  color: var(--caboo-accent-green-bright);
 }
 
-.theme-forge a:hover {
+.theme-caboo a:hover {
   text-shadow: none;
-  text-decoration-color: var(--forge-accent-green);
-  color: var(--forge-accent-amber-bright);
+  text-decoration-color: var(--caboo-accent-green);
+  color: var(--caboo-accent-amber-bright);
 }
 
 /* ─── Progress Bars ──────────────────────────────────── */
 
-.theme-forge .rounded-full[class*="bg-accent"],
-.theme-forge div[class*="h-1"][class*="rounded-full"] > div {
+.theme-caboo .rounded-full[class*="bg-accent"],
+.theme-caboo div[class*="h-1"][class*="rounded-full"] > div {
   box-shadow: none;
 }
 
 /* ─── Code Blocks ────────────────────────────────────── */
 
-.theme-forge code {
-  border: 1px solid var(--forge-border);
+.theme-caboo code {
+  border: 1px solid var(--caboo-border);
   text-shadow: none;
-  background-color: var(--forge-bg-input);
+  background-color: var(--caboo-bg-input);
 }
 
 /* ─── Tooltips ───────────────────────────────────────── */
 
-.theme-forge [title]::after {
-  font-family: var(--forge-font-body);
+.theme-caboo [title]::after {
+  font-family: var(--caboo-font-body);
 }
 
 /* ─── Toggle Switches ────────────────────────────────── */
 
-.theme-forge input[type="checkbox"] {
-  accent-color: var(--forge-accent-green);
+.theme-caboo input[type="checkbox"] {
+  accent-color: var(--caboo-accent-green);
 }
 
-.theme-forge input[type="range"] {
-  accent-color: var(--forge-accent-green);
+.theme-caboo input[type="range"] {
+  accent-color: var(--caboo-accent-green);
 }
 
 /* ─── Status Badges ──────────────────────────────────── */
 
-.theme-forge [class*="bg-status-"] {
+.theme-caboo [class*="bg-status-"] {
   box-shadow: none;
-  font-family: var(--forge-font-heading);
+  font-family: var(--caboo-font-heading);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -410,62 +410,62 @@
 
 /* ─── Empty State ────────────────────────────────────── */
 
-.theme-forge .forge-under-construction {
-  font-family: var(--forge-font-heading);
+.theme-caboo .caboo-under-construction {
+  font-family: var(--caboo-font-heading);
   text-shadow: none;
   animation: none;
 }
 
 /* ─── Decorative Section Separators ──────────────────── */
 
-.theme-forge .forge-separator {
+.theme-caboo .caboo-separator {
   border: none;
   height: 1px;
-  background: var(--forge-border-light);
+  background: var(--caboo-border-light);
 }
 
 
 /* ─── Title Bar ──────────────────────────────────────── */
 
-.theme-forge .titlebar-drag {
-  background: var(--forge-bg-mid);
-  border-bottom: 2px solid var(--forge-border) !important;
+.theme-caboo .titlebar-drag {
+  background: var(--caboo-bg-mid);
+  border-bottom: 2px solid var(--caboo-border) !important;
 }
 
 /* Close button keeps red on hover */
-.theme-forge .titlebar-no-drag button:last-child:hover {
+.theme-caboo .titlebar-no-drag button:last-child:hover {
   background-color: #8b4513 !important;
 }
 
 /* Title bar buttons */
-.theme-forge .titlebar-no-drag button:hover {
+.theme-caboo .titlebar-no-drag button:hover {
   background-color: rgba(90, 122, 58, 0.2) !important;
 }
 
 /* ─── Wizard Step Indicators ─────────────────────────── */
 
-.theme-forge .forge-step-dot {
+.theme-caboo .caboo-step-dot {
   width: 10px;
   height: 10px;
-  border: 2px solid var(--forge-accent-green);
+  border: 2px solid var(--caboo-accent-green);
   border-radius: 0 !important;
   background: transparent;
 }
 
-.theme-forge .forge-step-dot.active {
-  background: var(--forge-accent-green);
+.theme-caboo .caboo-step-dot.active {
+  background: var(--caboo-accent-green);
   box-shadow: none;
 }
 
 /* ─── File Explorer ──────────────────────────────────── */
 
-.theme-forge [class*="font-mono"] {
+.theme-caboo [class*="font-mono"] {
   text-shadow: none;
 }
 
 /* ─── Command Palette ────────────────────────────────── */
 
-.theme-forge [class*="backdrop-blur"] {
+.theme-caboo [class*="backdrop-blur"] {
   backdrop-filter: none;
   background-color: rgba(26, 30, 20, 0.95) !important;
 }
@@ -473,98 +473,98 @@
 
 /* ─── Status dots — square in forge ──────────────────── */
 
-.theme-forge .forge-status-pulse {
+.theme-caboo .caboo-status-pulse {
   animation: none;
 }
 
 /* Status dots should be square in forge */
-.theme-forge .rounded-full {
+.theme-caboo .rounded-full {
   border-radius: 0 !important;
 }
 
 /* ─── Toast Notifications ────────────────────────────── */
 
-.theme-forge .forge-toast {
-  border: 2px solid var(--forge-border);
+.theme-caboo .caboo-toast {
+  border: 2px solid var(--caboo-border);
   border-left: 3px solid;
-  font-family: var(--forge-font-body);
+  font-family: var(--caboo-font-body);
   backdrop-filter: none;
-  background-color: var(--forge-bg-surface) !important;
+  background-color: var(--caboo-bg-surface) !important;
 }
 
 /* Override toast backdrop blur and roundness */
-.theme-forge [class*="rounded-lg"][class*="backdrop-blur"] {
+.theme-caboo [class*="rounded-lg"][class*="backdrop-blur"] {
   backdrop-filter: none !important;
-  background-color: var(--forge-bg-surface) !important;
-  border: 2px solid var(--forge-border) !important;
+  background-color: var(--caboo-bg-surface) !important;
+  border: 2px solid var(--caboo-border) !important;
   border-left: 3px solid !important;
 }
 
 /* ─── Modals / Dialogs ───────────────────────────────── */
 
-.theme-forge [class*="backdrop-blur"],
-.theme-forge [class*="backdrop-filter"] {
+.theme-caboo [class*="backdrop-blur"],
+.theme-caboo [class*="backdrop-filter"] {
   backdrop-filter: none;
 }
 
 /* Modal overlay */
-.theme-forge .fixed[class*="backdrop-blur"] {
+.theme-caboo .fixed[class*="backdrop-blur"] {
   background-color: rgba(26, 30, 20, 0.92) !important;
   backdrop-filter: none !important;
 }
 
 /* Modal content panels */
-.theme-forge .fixed [class*="bg-surface"] {
-  border: 2px solid var(--forge-border) !important;
-  box-shadow: 4px 4px 0 var(--forge-accent-brown) !important;
+.theme-caboo .fixed [class*="bg-surface"] {
+  border: 2px solid var(--caboo-border) !important;
+  box-shadow: 4px 4px 0 var(--caboo-accent-brown) !important;
 }
 
 /* ─── Project Cards — Boxy Tiles ─────────────────────── */
 
-.theme-forge main .rounded-xl {
+.theme-caboo main .rounded-xl {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.theme-forge main .rounded-xl:hover {
+.theme-caboo main .rounded-xl:hover {
   transform: translateY(-2px);
-  box-shadow: 2px 2px 0px var(--forge-accent-brown) !important;
+  box-shadow: 2px 2px 0px var(--caboo-accent-brown) !important;
 }
 
 /* Project card borders */
-.theme-forge main [class*="bg-white/\\[0.03\\]"] {
-  background-color: var(--forge-bg-surface) !important;
-  border: 2px solid var(--forge-border) !important;
+.theme-caboo main [class*="bg-white/\\[0.03\\]"] {
+  background-color: var(--caboo-bg-surface) !important;
+  border: 2px solid var(--caboo-border) !important;
   border-style: outset !important;
 }
 
-.theme-forge main [class*="bg-white/\\[0.03\\]"]:hover {
-  border-color: var(--forge-border-strong) !important;
-  box-shadow: 2px 2px 0 var(--forge-accent-brown) !important;
+.theme-caboo main [class*="bg-white/\\[0.03\\]"]:hover {
+  border-color: var(--caboo-border-strong) !important;
+  box-shadow: 2px 2px 0 var(--caboo-accent-brown) !important;
 }
 
 /* Card footer border */
-.theme-forge main [class*="border-white/\\[0.04\\]"] {
-  border-color: var(--forge-border) !important;
+.theme-caboo main [class*="border-white/\\[0.04\\]"] {
+  border-color: var(--caboo-border) !important;
 }
 
 /* ─── Tags / Pills ───────────────────────────────────── */
 
-.theme-forge [class*="rounded-full"][class*="bg-white/5"] {
+.theme-caboo [class*="rounded-full"][class*="bg-white/5"] {
   background-color: rgba(90, 122, 58, 0.15) !important;
-  border: 1px solid var(--forge-border) !important;
-  font-family: var(--forge-font-body);
+  border: 1px solid var(--caboo-border) !important;
+  font-family: var(--caboo-font-body);
   font-size: 10px;
 }
 
 /* ─── Pixel Button 88x31 ─────────────────────────────── */
 
-.forge-88x31 {
+.caboo-88x31 {
   width: 88px;
   height: 31px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--forge-font-heading);
+  font-family: var(--caboo-font-heading);
   font-size: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -576,59 +576,59 @@
   box-sizing: border-box;
 }
 
-.forge-88x31.green {
-  background: var(--forge-accent-green);
-  border-color: var(--forge-accent-green-bright);
-  color: var(--forge-text-heading);
+.caboo-88x31.green {
+  background: var(--caboo-accent-green);
+  border-color: var(--caboo-accent-green-bright);
+  color: var(--caboo-text-heading);
 }
 
-.forge-88x31.brown {
-  background: var(--forge-accent-brown);
-  border-color: var(--forge-accent-brown-light);
-  color: var(--forge-text-primary);
+.caboo-88x31.brown {
+  background: var(--caboo-accent-brown);
+  border-color: var(--caboo-accent-brown-light);
+  color: var(--caboo-text-primary);
 }
 
-.forge-88x31.amber {
-  background: var(--forge-accent-amber);
-  border-color: var(--forge-accent-amber-bright);
-  color: var(--forge-bg-deep);
+.caboo-88x31.amber {
+  background: var(--caboo-accent-amber);
+  border-color: var(--caboo-accent-amber-bright);
+  color: var(--caboo-bg-deep);
 }
 
 /* ─── Forge Counter (Hit Counter) ────────────────────── */
 
-.forge-counter {
-  font-family: var(--forge-font-heading);
+.caboo-counter {
+  font-family: var(--caboo-font-heading);
   font-size: 10px;
-  border: 2px solid var(--forge-border);
-  background: var(--forge-bg-deep);
+  border: 2px solid var(--caboo-border);
+  background: var(--caboo-bg-deep);
   padding: 6px 8px;
 }
 
-.forge-counter-digit {
+.caboo-counter-digit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 14px;
   height: 18px;
   background: #0f120b;
-  border: 1px inset var(--forge-border);
-  font-family: var(--forge-font-heading);
+  border: 1px inset var(--caboo-border);
+  font-family: var(--caboo-font-heading);
   font-size: 10px;
-  color: var(--forge-accent-amber-bright);
+  color: var(--caboo-accent-amber-bright);
   text-shadow: 0 0 4px rgba(218, 165, 32, 0.4);
   margin: 0 1px;
 }
 
-.forge-counter-label {
-  font-family: var(--forge-font-body);
+.caboo-counter-label {
+  font-family: var(--caboo-font-body);
   font-size: 10px;
-  color: var(--forge-text-secondary);
+  color: var(--caboo-text-secondary);
   flex: 1;
 }
 
 /* ─── Forge Fire (CSS Pixel Animation) ───────────────── */
 
-.forge-fire {
+.caboo-fire {
   position: relative;
   width: 24px;
   height: 24px;
@@ -637,32 +637,32 @@
   justify-content: center;
 }
 
-.forge-fire-log {
+.caboo-fire-log {
   position: absolute;
   bottom: 2px;
-  background: var(--forge-accent-brown);
+  background: var(--caboo-accent-brown);
 }
 
-.forge-fire-log-1 {
+.caboo-fire-log-1 {
   width: 14px;
   height: 4px;
   left: 3px;
 }
 
-.forge-fire-log-2 {
+.caboo-fire-log-2 {
   width: 10px;
   height: 3px;
   left: 7px;
   bottom: 5px;
-  background: var(--forge-accent-brown-light);
+  background: var(--caboo-accent-brown-light);
 }
 
-.forge-fire-flame {
+.caboo-fire-flame {
   position: absolute;
   animation: forge-flame-dance 1.5s ease-in-out infinite;
 }
 
-.forge-fire-flame-1 {
+.caboo-fire-flame-1 {
   width: 4px;
   height: 8px;
   background: #daa520;
@@ -671,7 +671,7 @@
   animation-delay: 0s;
 }
 
-.forge-fire-flame-2 {
+.caboo-fire-flame-2 {
   width: 3px;
   height: 6px;
   background: #b8860b;
@@ -680,7 +680,7 @@
   animation-delay: 0.3s;
 }
 
-.forge-fire-flame-3 {
+.caboo-fire-flame-3 {
   width: 4px;
   height: 10px;
   background: #cd853f;
@@ -689,7 +689,7 @@
   animation-delay: 0.6s;
 }
 
-.forge-fire-flame-4 {
+.caboo-fire-flame-4 {
   width: 3px;
   height: 5px;
   background: #daa520;
@@ -707,17 +707,17 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .forge-fire-flame {
+  .caboo-fire-flame {
     animation: none !important;
   }
 }
 
 /* ─── ASCII Divider ──────────────────────────────────── */
 
-.forge-ascii-divider {
-  font-family: var(--forge-font-body);
+.caboo-ascii-divider {
+  font-family: var(--caboo-font-body);
   font-size: 11px;
-  color: var(--forge-border-light);
+  color: var(--caboo-border-light);
   text-align: center;
   user-select: none;
   padding: 4px 0;
@@ -728,7 +728,7 @@
 
 /* ─── Blinking Cursor (Splash Screen) ────────────────── */
 
-.forge-blink-cursor {
+.caboo-blink-cursor {
   animation: forge-blink 1s step-end infinite;
 }
 
@@ -738,40 +738,40 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .forge-blink-cursor {
+  .caboo-blink-cursor {
     animation: none !important;
   }
 }
 
 /* ─── Settings Page — Section Headers ────────────────── */
 
-.theme-forge h2[class*="text-lg"],
-.theme-forge h3[class*="text-base"] {
-  font-family: var(--forge-font-heading) !important;
+.theme-caboo h2[class*="text-lg"],
+.theme-caboo h3[class*="text-base"] {
+  font-family: var(--caboo-font-heading) !important;
   letter-spacing: 0.5px;
 }
 
 /* Settings form controls — boxy */
-.theme-forge [role="switch"],
-.theme-forge [type="checkbox"] + span {
-  border: 2px outset var(--forge-border) !important;
+.theme-caboo [role="switch"],
+.theme-caboo [type="checkbox"] + span {
+  border: 2px outset var(--caboo-border) !important;
 }
 
 /* ─── New Project Wizard ─────────────────────────────── */
 
 /* Template selection cards */
-.theme-forge [class*="cursor-pointer"][class*="border-2"] {
+.theme-caboo [class*="cursor-pointer"][class*="border-2"] {
   border-style: outset !important;
 }
 
-.theme-forge [class*="cursor-pointer"][class*="border-2"]:hover {
-  border-color: var(--forge-accent-green) !important;
-  box-shadow: 2px 2px 0 var(--forge-accent-brown);
+.theme-caboo [class*="cursor-pointer"][class*="border-2"]:hover {
+  border-color: var(--caboo-accent-green) !important;
+  box-shadow: 2px 2px 0 var(--caboo-accent-brown);
 }
 
 /* Wizard button bar */
-.theme-forge [class*="justify-between"] button[class*="bg-accent"] {
-  font-family: var(--forge-font-heading);
+.theme-caboo [class*="justify-between"] button[class*="bg-accent"] {
+  font-family: var(--caboo-font-heading);
   text-transform: uppercase;
   font-size: 12px;
 }
@@ -779,165 +779,165 @@
 /* ─── File Explorer — ASCII Tree ─────────────────────── */
 
 /* Tree indentation lines */
-.theme-forge [class*="border-l"] {
+.theme-caboo [class*="border-l"] {
   border-left-style: solid !important;
 }
 
 /* File preview header */
-.theme-forge [class*="font-mono"][class*="text-xs"] {
-  font-family: var(--forge-font-body);
+.theme-caboo [class*="font-mono"][class*="text-xs"] {
+  font-family: var(--caboo-font-body);
 }
 
 /* ─── Command Palette ────────────────────────────────── */
 
-.theme-forge [class*="command-palette"],
-.theme-forge [role="dialog"][class*="fixed"] {
-  border: 2px solid var(--forge-border) !important;
-  box-shadow: 4px 4px 0 var(--forge-accent-brown) !important;
+.theme-caboo [class*="command-palette"],
+.theme-caboo [role="dialog"][class*="fixed"] {
+  border: 2px solid var(--caboo-border) !important;
+  box-shadow: 4px 4px 0 var(--caboo-accent-brown) !important;
 }
 
 /* Command palette input */
-.theme-forge [role="dialog"] input {
-  border-bottom: 2px solid var(--forge-border) !important;
-  background-color: var(--forge-bg-input) !important;
+.theme-caboo [role="dialog"] input {
+  border-bottom: 2px solid var(--caboo-border) !important;
+  background-color: var(--caboo-bg-input) !important;
 }
 
 /* ─── Context Menu ───────────────────────────────────── */
 
-.theme-forge [role="menu"] {
-  border: 2px solid var(--forge-border) !important;
-  background-color: var(--forge-bg-surface) !important;
-  box-shadow: 2px 2px 0 var(--forge-accent-brown) !important;
+.theme-caboo [role="menu"] {
+  border: 2px solid var(--caboo-border) !important;
+  background-color: var(--caboo-bg-surface) !important;
+  box-shadow: 2px 2px 0 var(--caboo-accent-brown) !important;
 }
 
-.theme-forge [role="menuitem"]:hover {
+.theme-caboo [role="menuitem"]:hover {
   background-color: rgba(90, 122, 58, 0.2) !important;
 }
 
 /* ─── Shadow overrides ───────────────────────────────── */
 
 /* Replace all soft shadows with hard pixel shadows */
-.theme-forge [class*="shadow-lg"],
-.theme-forge [class*="shadow-xl"] {
-  box-shadow: 2px 2px 0 var(--forge-accent-brown) !important;
+.theme-caboo [class*="shadow-lg"],
+.theme-caboo [class*="shadow-xl"] {
+  box-shadow: 2px 2px 0 var(--caboo-accent-brown) !important;
 }
 
-.theme-forge [class*="shadow-sm"] {
-  box-shadow: 1px 1px 0 var(--forge-accent-brown) !important;
+.theme-caboo [class*="shadow-sm"] {
+  box-shadow: 1px 1px 0 var(--caboo-accent-brown) !important;
 }
 
 /* Remove glow shadows */
-.theme-forge [class*="shadow-\\[0_0"] {
+.theme-caboo [class*="shadow-\\[0_0"] {
   box-shadow: none !important;
 }
 
 /* ─── Hover glow removal ─────────────────────────────── */
 
-.theme-forge [class*="hover:shadow-"] {
+.theme-caboo [class*="hover:shadow-"] {
   box-shadow: none;
 }
 
-.theme-forge [class*="hover:shadow-"]:hover {
-  box-shadow: 2px 2px 0 var(--forge-accent-brown) !important;
+.theme-caboo [class*="hover:shadow-"]:hover {
+  box-shadow: 2px 2px 0 var(--caboo-accent-brown) !important;
 }
 
 /* ─── Backdrop filter removal ────────────────────────── */
 
-.theme-forge [class*="backdrop-blur"],
-.theme-forge [class*="backdrop-filter"],
-.theme-forge [class*="backdrop-saturate"] {
+.theme-caboo [class*="backdrop-blur"],
+.theme-caboo [class*="backdrop-filter"],
+.theme-caboo [class*="backdrop-saturate"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
 /* ─── Gradient removal ───────────────────────────────── */
 
-.theme-forge [class*="bg-gradient"],
-.theme-forge [style*="linear-gradient"] {
+.theme-caboo [class*="bg-gradient"],
+.theme-caboo [style*="linear-gradient"] {
   background-image: none !important;
 }
 
 /* ─── Update Notification ────────────────────────────── */
 
-.theme-forge [class*="update-notification"] {
-  border: 2px solid var(--forge-border) !important;
-  background-color: var(--forge-bg-surface) !important;
+.theme-caboo [class*="update-notification"] {
+  border: 2px solid var(--caboo-border) !important;
+  background-color: var(--caboo-bg-surface) !important;
 }
 
 /* ─── Setup Wizard ───────────────────────────────────── */
 
-.theme-forge [class*="setup-assistant"] {
-  background-color: var(--forge-bg-mid) !important;
+.theme-caboo [class*="setup-assistant"] {
+  background-color: var(--caboo-bg-mid) !important;
 }
 
 /* ─── Onboarding Tutorial ────────────────────────────── */
 
-.theme-forge [class*="tutorial-highlight"] {
-  border: 2px solid var(--forge-accent-amber) !important;
+.theme-caboo [class*="tutorial-highlight"] {
+  border: 2px solid var(--caboo-accent-amber) !important;
   box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.3) !important;
 }
 
 /* ─── Monaco Editor Theme Integration ────────────────── */
 
-.theme-forge .monaco-editor {
-  font-family: var(--forge-font-body) !important;
+.theme-caboo .monaco-editor {
+  font-family: var(--caboo-font-body) !important;
 }
 
-.theme-forge .monaco-editor .margin {
-  background-color: var(--forge-bg-input) !important;
+.theme-caboo .monaco-editor .margin {
+  background-color: var(--caboo-bg-input) !important;
 }
 
 /* ─── Action Buttons on Project Cards ────────────────── */
 
-.theme-forge main button[class*="rounded-lg"][class*="bg-white/5"] {
+.theme-caboo main button[class*="rounded-lg"][class*="bg-white/5"] {
   background-color: rgba(90, 122, 58, 0.15) !important;
-  border: 1px outset var(--forge-border) !important;
+  border: 1px outset var(--caboo-border) !important;
 }
 
-.theme-forge main button[class*="rounded-lg"][class*="bg-white/5"]:hover {
+.theme-caboo main button[class*="rounded-lg"][class*="bg-white/5"]:hover {
   background-color: rgba(90, 122, 58, 0.25) !important;
-  border-color: var(--forge-border-light) !important;
+  border-color: var(--caboo-border-light) !important;
 }
 
 /* ─── Agent install progress log ─────────────────────── */
 
-.theme-forge [class*="font-mono"][class*="text-\\[9px\\]"] {
-  background-color: var(--forge-bg-input) !important;
-  border: 1px inset var(--forge-border) !important;
+.theme-caboo [class*="font-mono"][class*="text-\\[9px\\]"] {
+  background-color: var(--caboo-bg-input) !important;
+  border: 1px inset var(--caboo-border) !important;
 }
 
 /* ─── Spinner override ───────────────────────────────── */
 
-.theme-forge [class*="border-t-accent"] {
-  border-top-color: var(--forge-accent-green) !important;
+.theme-caboo [class*="border-t-accent"] {
+  border-top-color: var(--caboo-accent-green) !important;
 }
 
 /* ─── Section headers — uppercase in forge ───────────── */
 
-.theme-forge [class*="uppercase"][class*="tracking-wider"] {
-  font-family: var(--forge-font-heading);
+.theme-caboo [class*="uppercase"][class*="tracking-wider"] {
+  font-family: var(--caboo-font-heading);
   font-size: 9px;
   letter-spacing: 1px;
 }
 
 /* ─── Settings page toggle buttons ───────────────────── */
 
-.theme-forge [class*="rounded-md"][class*="bg-white/\\[0.03\\]"] {
+.theme-caboo [class*="rounded-md"][class*="bg-white/\\[0.03\\]"] {
   background-color: rgba(90, 122, 58, 0.08) !important;
-  border: 1px outset var(--forge-border) !important;
+  border: 1px outset var(--caboo-border) !important;
 }
 
-.theme-forge [class*="rounded-md"][class*="bg-white/\\[0.03\\]"]:hover {
+.theme-caboo [class*="rounded-md"][class*="bg-white/\\[0.03\\]"]:hover {
   background-color: rgba(90, 122, 58, 0.12) !important;
 }
 
 /* ─── Help tooltips ──────────────────────────────────── */
 
-.theme-forge [class*="tooltip"],
-.theme-forge [class*="Tooltip"] {
-  font-family: var(--forge-font-body);
-  border: 1px solid var(--forge-border) !important;
-  background-color: var(--forge-bg-deep) !important;
+.theme-caboo [class*="tooltip"],
+.theme-caboo [class*="Tooltip"] {
+  font-family: var(--caboo-font-body);
+  border: 1px solid var(--caboo-border) !important;
+  background-color: var(--caboo-bg-deep) !important;
 }
 
 /* ─── Conductor Mode Animations ─────────────────────── */
@@ -991,11 +991,11 @@
 /* ─── Time Machine Track ─────────────────────────────── */
 
 .time-machine-track-line {
-  background: var(--forge-border);
+  background: var(--caboo-border);
 }
 
 .time-machine-track-line-completed {
-  background: var(--forge-accent-green);
+  background: var(--caboo-accent-green);
   transition: width 0.3s ease;
 }
 

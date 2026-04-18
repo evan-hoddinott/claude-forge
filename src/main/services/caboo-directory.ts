@@ -1,6 +1,6 @@
 /**
- * forge-directory.ts
- * Manages the .forge/ orchestration directory for each project.
+ * caboo-directory.ts
+ * Manages the .caboo/ orchestration directory for each project.
  * All I/O is node:fs/promises — no external dependencies.
  */
 
@@ -10,25 +10,25 @@ import type {
   AgentType,
   AgentRole,
   AgentOrchestratorStatus,
-  ForgeManifest,
-  ForgeRegistry,
-  ForgeAgentEntry,
-  ForgeState,
+  CabooManifest,
+  CabooRegistry,
+  CabooAgentEntry,
+  CabooState,
 } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 
-const FORGE_VERSION = '2.0.0';
+const CABOO_VERSION = '2.0.0';
 
-const FORGE_GITIGNORE_MARKER = '# Claude Forge — ephemeral orchestration state';
-const FORGE_GITIGNORE_RULES = `${FORGE_GITIGNORE_MARKER}
-.forge/blackboard/
-.forge/snapshots/
-.forge/security/audit-log.jsonl
-.forge/agents/*/session-log/
+const CABOO_GITIGNORE_MARKER = '# Caboo — ephemeral orchestration state';
+const CABOO_GITIGNORE_RULES = `${CABOO_GITIGNORE_MARKER}
+.caboo/blackboard/
+.caboo/snapshots/
+.caboo/security/audit-log.jsonl
+.caboo/agents/*/session-log/
 `;
 
-function forgePath(projectPath: string, ...parts: string[]): string {
-  return path.join(projectPath, '.forge', ...parts);
+function cabooPath(projectPath: string, ...parts: string[]): string {
+  return path.join(projectPath, '.caboo', ...parts);
 }
 
 async function writeJson(filePath: string, data: unknown): Promise<void> {
@@ -44,7 +44,7 @@ async function readJson<T>(filePath: string): Promise<T | null> {
   }
 }
 
-function buildDefaultEntry(agentType: AgentType, role: AgentRole): ForgeAgentEntry {
+function buildDefaultEntry(agentType: AgentType, role: AgentRole): CabooAgentEntry {
   return {
     type: agentType,
     role,
@@ -75,7 +75,7 @@ function buildInitialMemory(agentType: AgentType, projectName: string, seed?: st
 
 export async function exists(projectPath: string): Promise<boolean> {
   try {
-    await fs.access(forgePath(projectPath, 'manifest.json'));
+    await fs.access(cabooPath(projectPath, 'manifest.json'));
     return true;
   } catch {
     return false;
@@ -89,24 +89,24 @@ export async function initialize(projectPath: string, agents: AgentType[]): Prom
 
   // Create directory structure
   const dirs = [
-    forgePath(projectPath, 'agents'),
-    forgePath(projectPath, 'blackboard', 'artifacts'),
-    forgePath(projectPath, 'blackboard', 'mailboxes'),
-    forgePath(projectPath, 'snapshots', 'hashes'),
-    forgePath(projectPath, 'conductor', 'history'),
-    forgePath(projectPath, 'conductor', 'playbooks'),
-    forgePath(projectPath, 'security'),
+    cabooPath(projectPath, 'agents'),
+    cabooPath(projectPath, 'blackboard', 'artifacts'),
+    cabooPath(projectPath, 'blackboard', 'mailboxes'),
+    cabooPath(projectPath, 'snapshots', 'hashes'),
+    cabooPath(projectPath, 'conductor', 'history'),
+    cabooPath(projectPath, 'conductor', 'playbooks'),
+    cabooPath(projectPath, 'security'),
   ];
   for (const dir of dirs) {
     await fs.mkdir(dir, { recursive: true });
   }
   for (const agentType of activeAgents) {
-    await fs.mkdir(forgePath(projectPath, 'agents', agentType, 'session-log'), { recursive: true });
+    await fs.mkdir(cabooPath(projectPath, 'agents', agentType, 'session-log'), { recursive: true });
   }
 
   // manifest.json
-  const manifest: ForgeManifest = {
-    forgeVersion: FORGE_VERSION,
+  const manifest: CabooManifest = {
+    cabooVersion: CABOO_VERSION,
     projectName,
     created: new Date().toISOString(),
     orchestrationMode: 'manual',
@@ -116,20 +116,20 @@ export async function initialize(projectPath: string, agents: AgentType[]): Prom
     shadowGitEnabled: false,
     schemaGatingEnabled: false,
   };
-  await writeJson(forgePath(projectPath, 'manifest.json'), manifest);
+  await writeJson(cabooPath(projectPath, 'manifest.json'), manifest);
 
   // agents/registry.json
-  const registryAgents: Partial<Record<AgentType, ForgeAgentEntry>> = {};
+  const registryAgents: Partial<Record<AgentType, CabooAgentEntry>> = {};
   activeAgents.forEach((agentType, idx) => {
     registryAgents[agentType] = buildDefaultEntry(agentType, idx === 0 ? 'lead' : 'engineer');
   });
-  const registry: ForgeRegistry = { agents: registryAgents };
-  await writeJson(forgePath(projectPath, 'agents', 'registry.json'), registry);
+  const registry: CabooRegistry = { agents: registryAgents };
+  await writeJson(cabooPath(projectPath, 'agents', 'registry.json'), registry);
 
   // Per-agent files
   for (const agentType of activeAgents) {
     // identity.json
-    await writeJson(forgePath(projectPath, 'agents', agentType, 'identity.json'), {
+    await writeJson(cabooPath(projectPath, 'agents', agentType, 'identity.json'), {
       type: agentType,
       displayName: AGENTS[agentType]?.displayName ?? agentType,
       contextFileName: AGENTS[agentType]?.contextFileName ?? null,
@@ -145,7 +145,7 @@ export async function initialize(projectPath: string, agents: AgentType[]): Prom
         // no existing context file — that's fine
       }
     }
-    const memoryPath = forgePath(projectPath, 'agents', agentType, 'memory.md');
+    const memoryPath = cabooPath(projectPath, 'agents', agentType, 'memory.md');
     try {
       await fs.access(memoryPath);
       // already exists — don't overwrite
@@ -155,11 +155,11 @@ export async function initialize(projectPath: string, agents: AgentType[]): Prom
   }
 
   // blackboard/tasks.json
-  await writeJson(forgePath(projectPath, 'blackboard', 'tasks.json'), { tasks: [] });
+  await writeJson(cabooPath(projectPath, 'blackboard', 'tasks.json'), { tasks: [] });
 
   // blackboard/mailboxes/<agent>.jsonl — one per active agent
   for (const agentType of activeAgents) {
-    const mailboxPath = forgePath(projectPath, 'blackboard', 'mailboxes', `${agentType}.jsonl`);
+    const mailboxPath = cabooPath(projectPath, 'blackboard', 'mailboxes', `${agentType}.jsonl`);
     try {
       await fs.access(mailboxPath);
     } catch {
@@ -169,39 +169,39 @@ export async function initialize(projectPath: string, agents: AgentType[]): Prom
 
   // security/roles.json — full definitions consumed by schema-gate
   const { ROLE_DEFINITIONS } = await import('./schema-gate');
-  await writeJson(forgePath(projectPath, 'security', 'roles.json'), { roles: ROLE_DEFINITIONS });
+  await writeJson(cabooPath(projectPath, 'security', 'roles.json'), { roles: ROLE_DEFINITIONS });
 
   // snapshots/index.json
-  await writeJson(forgePath(projectPath, 'snapshots', 'index.json'), { snapshots: [] });
+  await writeJson(cabooPath(projectPath, 'snapshots', 'index.json'), { snapshots: [] });
 
   // config.json
-  await writeJson(forgePath(projectPath, 'config.json'), {});
+  await writeJson(cabooPath(projectPath, 'config.json'), {});
 
-  // .gitignore — append forge rules once
+  // .gitignore — append Caboo rules once
   const gitignorePath = path.join(projectPath, '.gitignore');
   let gitignoreContent = '';
   try {
     gitignoreContent = await fs.readFile(gitignorePath, 'utf8');
   } catch { /* file doesn't exist yet */ }
-  if (!gitignoreContent.includes(FORGE_GITIGNORE_MARKER)) {
-    await fs.appendFile(gitignorePath, `\n${FORGE_GITIGNORE_RULES}`, 'utf8');
+  if (!gitignoreContent.includes(CABOO_GITIGNORE_MARKER)) {
+    await fs.appendFile(gitignorePath, `\n${CABOO_GITIGNORE_RULES}`, 'utf8');
   }
 }
 
-export async function getState(projectPath: string): Promise<ForgeState | null> {
-  const manifest = await readJson<ForgeManifest>(forgePath(projectPath, 'manifest.json'));
+export async function getState(projectPath: string): Promise<CabooState | null> {
+  const manifest = await readJson<CabooManifest>(cabooPath(projectPath, 'manifest.json'));
   if (!manifest) return null;
 
-  const registry = (await readJson<ForgeRegistry>(forgePath(projectPath, 'agents', 'registry.json'))) ?? { agents: {} };
+  const registry = (await readJson<CabooRegistry>(cabooPath(projectPath, 'agents', 'registry.json'))) ?? { agents: {} };
 
   // Count blackboard tasks
-  const tasks = await readJson<{ tasks: unknown[] }>(forgePath(projectPath, 'blackboard', 'tasks.json'));
+  const tasks = await readJson<{ tasks: unknown[] }>(cabooPath(projectPath, 'blackboard', 'tasks.json'));
   const blackboardTaskCount = tasks?.tasks?.length ?? 0;
 
   // Find most recent session log timestamp
   let lastSessionTime: string | null = null;
   for (const agentType of manifest.activeAgents) {
-    const logDir = forgePath(projectPath, 'agents', agentType, 'session-log');
+    const logDir = cabooPath(projectPath, 'agents', agentType, 'session-log');
     try {
       const entries = await fs.readdir(logDir);
       const sorted = entries.sort().reverse();
@@ -220,14 +220,14 @@ export async function getState(projectPath: string): Promise<ForgeState | null> 
 
 export async function getAgentMemory(projectPath: string, agent: AgentType): Promise<string> {
   try {
-    return await fs.readFile(forgePath(projectPath, 'agents', agent, 'memory.md'), 'utf8');
+    return await fs.readFile(cabooPath(projectPath, 'agents', agent, 'memory.md'), 'utf8');
   } catch {
     return '';
   }
 }
 
 export async function appendToMemory(projectPath: string, agent: AgentType, entry: string): Promise<void> {
-  const memPath = forgePath(projectPath, 'agents', agent, 'memory.md');
+  const memPath = cabooPath(projectPath, 'agents', agent, 'memory.md');
   await fs.appendFile(memPath, `\n\n${entry}`, 'utf8');
 }
 
@@ -236,8 +236,8 @@ export async function updateAgentStatus(
   agent: AgentType,
   status: AgentOrchestratorStatus,
 ): Promise<void> {
-  const regPath = forgePath(projectPath, 'agents', 'registry.json');
-  const registry = (await readJson<ForgeRegistry>(regPath)) ?? { agents: {} };
+  const regPath = cabooPath(projectPath, 'agents', 'registry.json');
+  const registry = (await readJson<CabooRegistry>(regPath)) ?? { agents: {} };
   const entry = registry.agents[agent];
   if (entry) {
     entry.status = status;
@@ -264,7 +264,7 @@ export async function startSession(
   const rand = Math.random().toString(36).slice(2, 6);
   const sessionId = `${agent}-${ts}-${rand}`;
 
-  const logDir = forgePath(projectPath, 'agents', agent, 'session-log');
+  const logDir = cabooPath(projectPath, 'agents', agent, 'session-log');
   await fs.mkdir(logDir, { recursive: true });
 
   const logContent =
@@ -292,7 +292,7 @@ export async function endSession(
 ): Promise<void> {
   // Agent is the first segment of the session ID (e.g. "claude-20260416T…")
   const agentType = sessionId.split('-')[0] as AgentType;
-  const sessionFile = forgePath(projectPath, 'agents', agentType, 'session-log', `${sessionId}.md`);
+  const sessionFile = cabooPath(projectPath, 'agents', agentType, 'session-log', `${sessionId}.md`);
 
   try {
     const existing = await fs.readFile(sessionFile, 'utf8');
@@ -305,8 +305,8 @@ export async function endSession(
   }
 
   // Update registry: set idle, increment sessionsCompleted
-  const regPath = forgePath(projectPath, 'agents', 'registry.json');
-  const registry = (await readJson<ForgeRegistry>(regPath)) ?? { agents: {} };
+  const regPath = cabooPath(projectPath, 'agents', 'registry.json');
+  const registry = (await readJson<CabooRegistry>(regPath)) ?? { agents: {} };
   const entry = registry.agents[agentType];
   if (entry) {
     entry.status = 'idle';

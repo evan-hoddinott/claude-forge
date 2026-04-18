@@ -1,7 +1,7 @@
-appId: com.evanhoddinott.claudeforge
-productName: Claude Forge
+appId: com.evanhoddinott.caboo
+productName: Caboo
 copyright: Copyright © 2026 Evan Hoddinott
-artifactName: Claude-Forge-${version}-${os}-${arch}.${ext}
+artifactName: Caboo-${version}-${os}-${arch}.${ext}
 
 directories:
   output: release
@@ -40,12 +40,12 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Claude Forge
+  shortcutName: Caboo
   runAfterFinish: true
   installerIcon: assets/icons/icon.ico
   uninstallerIcon: assets/icons/icon.ico
-  uninstallDisplayName: Claude Forge
-  artifactName: Claude-Forge-Setup-${version}.${ext}
+  uninstallDisplayName: Caboo
+  artifactName: Caboo-Setup-${version}.${ext}
 
 # ── Linux ────────────────────────────────────────────────────
 linux:
@@ -60,8 +60,8 @@ linux:
         - x64
   desktop:
     entry:
-      Name: Claude Forge
-      Comment: AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex
+      Name: Caboo
+      Comment: Multi-agent AI coding orchestrator
       Categories: Development;IDE;
 
 deb:
@@ -72,10 +72,10 @@ deb:
     - git
   packageCategory: devel
   priority: optional
-  artifactName: claude-forge_${version}_${arch}.${ext}
+  artifactName: Caboo-${version}-${arch}.${ext}
 
 appImage:
-  artifactName: Claude-Forge-${version}.${ext}
+  artifactName: Caboo-${version}.${ext}
 
 # ── macOS ────────────────────────────────────────────────────
 # Note: .dmg can only be built on macOS. From Linux/WSL, build .zip instead.
@@ -98,7 +98,7 @@ dmg:
       "y": 220
       type: link
       path: /Applications
-  artifactName: Claude-Forge-${version}-mac-${arch}.dmg
+  artifactName: Caboo-${version}-mac-${arch}.dmg
 
 # ── Auto-update ─────────────────────────────────────────────
 publish:

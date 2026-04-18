@@ -90,6 +90,6 @@
     </circle>
   </g>
 
-  <!-- "CF" monogram watermark (very subtle) -->
-  <text x="512" y="740" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="700" font-size="48" fill="#38bdf8" opacity="0.12" letter-spacing="8">CLAUDE FORGE</text>
+  <!-- Caboo wordmark watermark (very subtle) -->
+  <text x="512" y="740" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="700" font-size="48" fill="#38bdf8" opacity="0.12" letter-spacing="8">CABOO</text>
 </svg>

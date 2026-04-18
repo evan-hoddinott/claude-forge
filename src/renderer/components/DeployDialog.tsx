@@ -55,7 +55,7 @@ export default function DeployDialog({ project, onClose, onSuccess }: Props) {
   const [repoUrl, setRepoUrl] = useState(project.githubUrl ?? '');
   const [includeContextFiles, setIncludeContextFiles] = useState(true);
   const [includeEnvFiles, setIncludeEnvFiles] = useState(false);
-  const [commitMessage, setCommitMessage] = useState('Initial commit from Claude Forge');
+  const [commitMessage, setCommitMessage] = useState('Initial commit from Caboo');
 
   const [deploying, setDeploying] = useState(false);
   const [steps, setSteps] = useState<DeployStep[]>([]);

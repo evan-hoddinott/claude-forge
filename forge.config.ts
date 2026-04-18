@@ -15,12 +15,12 @@ const iconDir = path.resolve(__dirname, 'assets', 'icons');
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    name: 'Claude Forge',
-    executableName: 'claude-forge',
+    name: 'Caboo',
+    executableName: 'caboo',
     // electron-packager resolves platform-specific extensions automatically:
     //   macOS → icon.icns, Windows → icon.ico, Linux → icon.png
     icon: path.join(iconDir, 'icon'),
-    appBundleId: 'com.claudeforge.app',
+    appBundleId: 'com.evanhoddinott.caboo',
     appCategoryType: 'public.app-category.developer-tools',
     extraResource: [path.join(iconDir, 'icon.png')],
   },
@@ -35,18 +35,18 @@ const config: ForgeConfig = {
     new MakerZIP({}, ['darwin']),
     // Windows — Squirrel .exe installer
     new MakerSquirrel({
-      name: 'ClaudeForge',
+      name: 'Caboo',
       setupIcon: path.join(iconDir, 'icon.ico'),
       iconUrl: 'https://raw.githubusercontent.com/evan-hoddinott/claude-forge/master/assets/icons/icon.ico',
-      description: 'AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex',
+      description: 'Multi-agent AI coding orchestrator',
     }),
     // Linux — .deb package
     new MakerDeb({
       options: {
-        name: 'claude-forge',
-        productName: 'Claude Forge',
-        genericName: 'Developer Tool',
-        description: 'AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex',
+        name: 'caboo',
+        productName: 'Caboo',
+        genericName: 'AI Coding Orchestrator',
+        description: 'Multi-agent AI coding orchestrator',
         categories: ['Development', 'Utility'],
         icon: path.join(iconDir, 'icon.png'),
         section: 'devel',
@@ -56,10 +56,10 @@ const config: ForgeConfig = {
     // Linux — .rpm package
     new MakerRpm({
       options: {
-        name: 'claude-forge',
-        productName: 'Claude Forge',
-        genericName: 'Developer Tool',
-        description: 'AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex',
+        name: 'caboo',
+        productName: 'Caboo',
+        genericName: 'AI Coding Orchestrator',
+        description: 'Multi-agent AI coding orchestrator',
         categories: ['Development', 'Utility'],
         icon: path.join(iconDir, 'icon.png'),
       },

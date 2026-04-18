@@ -1,7 +1,7 @@
-# Claude Forge
+# Caboo
 
 ## What This Is
-An Electron desktop app for managing AI coding agent projects. Users can view
+Caboo is a multi-agent AI coding orchestrator. Users can view
 all their projects in a dashboard, create new projects with flexible inputs,
 launch Claude Code / Gemini CLI / OpenAI Codex on them, and connect them to
 GitHub repos.

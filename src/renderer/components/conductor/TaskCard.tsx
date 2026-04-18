@@ -24,15 +24,15 @@ const AGENT_LABELS: Record<AgentType, string> = {
 
 function StatusBadge({ status }: { status: ConductorTask['status'] }) {
   const styles: Record<ConductorTask['status'], { color: string; label: string }> = {
-    pending:   { color: 'var(--forge-text-muted)', label: 'waiting' },
-    running:   { color: 'var(--forge-accent-amber)', label: 'running...' },
-    completed: { color: 'var(--forge-accent-green)', label: '✅ done' },
-    failed:    { color: 'var(--forge-accent-rust)', label: '❌ failed' },
-    skipped:   { color: 'var(--forge-text-muted)', label: 'skipped' },
+    pending:   { color: 'var(--caboo-text-muted)', label: 'waiting' },
+    running:   { color: 'var(--caboo-accent-amber)', label: 'running...' },
+    completed: { color: 'var(--caboo-accent-green)', label: '✅ done' },
+    failed:    { color: 'var(--caboo-accent-rust)', label: '❌ failed' },
+    skipped:   { color: 'var(--caboo-text-muted)', label: 'skipped' },
   };
   const s = styles[status];
   return (
-    <span style={{ color: s.color, fontSize: '9px', fontFamily: 'var(--forge-font-body)' }}>
+    <span style={{ color: s.color, fontSize: '9px', fontFamily: 'var(--caboo-font-body)' }}>
       {s.label}
     </span>
   );
@@ -45,7 +45,7 @@ function formatDuration(ms?: number): string {
 }
 
 export default function TaskCard({ task, onClick, onContextMenu }: TaskCardProps) {
-  const agentColor = AGENT_COLORS[task.assignedAgent] ?? 'var(--forge-border)';
+  const agentColor = AGENT_COLORS[task.assignedAgent] ?? 'var(--caboo-border)';
 
   return (
     <div
@@ -53,15 +53,15 @@ export default function TaskCard({ task, onClick, onContextMenu }: TaskCardProps
       onClick={onClick}
       onContextMenu={onContextMenu}
       style={{
-        border: '2px solid var(--forge-border)',
+        border: '2px solid var(--caboo-border)',
         borderLeft: `4px solid ${agentColor}`,
         background: task.status === 'running'
-          ? 'var(--forge-bg-surface)'
+          ? 'var(--caboo-bg-surface)'
           : task.status === 'completed'
           ? 'rgba(90,122,58,0.08)'
-          : 'var(--forge-bg-mid)',
+          : 'var(--caboo-bg-mid)',
         padding: '8px 10px',
-        fontFamily: 'var(--forge-font-body)',
+        fontFamily: 'var(--caboo-font-body)',
         transition: 'background 0.15s',
       }}
     >
@@ -69,7 +69,7 @@ export default function TaskCard({ task, onClick, onContextMenu }: TaskCardProps
       <div
         style={{
           fontSize: '10px',
-          color: task.status === 'completed' ? 'var(--forge-text-muted)' : 'var(--forge-text-primary)',
+          color: task.status === 'completed' ? 'var(--caboo-text-muted)' : 'var(--caboo-text-primary)',
           marginBottom: '6px',
           lineHeight: '1.4',
         }}
@@ -88,13 +88,13 @@ export default function TaskCard({ task, onClick, onContextMenu }: TaskCardProps
               background: agentColor,
             }}
           />
-          <span style={{ fontSize: '9px', color: agentColor, fontFamily: 'var(--forge-font-heading)' }}>
+          <span style={{ fontSize: '9px', color: agentColor, fontFamily: 'var(--caboo-font-heading)' }}>
             {AGENT_LABELS[task.assignedAgent] ?? task.assignedAgent}
           </span>
         </div>
         <div className="flex items-center gap-2">
           {task.duration && (
-            <span style={{ fontSize: '9px', color: 'var(--forge-text-muted)' }}>
+            <span style={{ fontSize: '9px', color: 'var(--caboo-text-muted)' }}>
               {formatDuration(task.duration)}
             </span>
           )}
@@ -108,7 +108,7 @@ export default function TaskCard({ task, onClick, onContextMenu }: TaskCardProps
           className="mt-1"
           style={{
             height: '2px',
-            background: 'linear-gradient(90deg, transparent, var(--forge-accent-amber), transparent)',
+            background: 'linear-gradient(90deg, transparent, var(--caboo-accent-amber), transparent)',
             backgroundSize: '200% 100%',
             animation: 'conductor-loading 1.5s linear infinite',
           }}

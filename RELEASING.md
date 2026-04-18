@@ -1,4 +1,6 @@
-# Releasing Claude Forge
+# Releasing Caboo
+
+Releases still publish from the `evan-hoddinott/claude-forge` GitHub repository until the repo rename is handled separately.
 
 ## Quick release (one command)
 

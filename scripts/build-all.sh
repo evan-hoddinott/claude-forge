@@ -2,7 +2,7 @@
 set -e
 
 echo "========================================"
-echo "  Claude Forge - Building all platforms"
+echo "  Caboo - Building all platforms"
 echo "========================================"
 echo ""
 

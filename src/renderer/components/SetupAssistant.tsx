@@ -263,7 +263,7 @@ function StepWelcome({ onNext, onSkip }: { onNext: () => void; onSkip: () => voi
         transition={{ delay: 0.2 }}
         className="text-2xl font-bold text-text-primary mb-3"
       >
-        Welcome to Claude Forge
+        Welcome to Caboo
       </motion.h1>
 
       <motion.p

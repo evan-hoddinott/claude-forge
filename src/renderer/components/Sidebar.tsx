@@ -6,8 +6,8 @@ import { AGENTS } from '../../shared/types';
 import { useAPI, useQuery } from '../hooks/useAPI';
 import { setMode as setLanguageMode } from '../utils/language';
 import { useVisibleInterval, useDeferredInit } from '../hooks/usePerformance';
-import ForgeFire from './retro/ForgeFire';
-import ForgeCounter from './retro/ForgeCounter';
+import CabooFire from './retro/CabooFire';
+import CabooCounter from './retro/CabooCounter';
 import AsciiDivider from './retro/AsciiDivider';
 import FuelGauge from './FuelGauge';
 
@@ -863,10 +863,10 @@ export default function Sidebar({
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-14 shrink-0">
-        <ForgeFire size={collapsed ? 28 : 24} className="shrink-0" />
+        <CabooFire size={collapsed ? 28 : 24} className="shrink-0" />
         {!collapsed && (
-          <span className="forge-logo-text font-semibold text-sm tracking-tight whitespace-nowrap text-text-primary">
-            Claude Forge
+          <span className="caboo-logo-text font-semibold text-sm tracking-tight whitespace-nowrap text-text-primary">
+            CABOO
           </span>
         )}
       </div>
@@ -896,7 +896,7 @@ export default function Sidebar({
               <path d="M1 1h1.5l.5 2" />
             </svg>
           }
-          label="Skill Store"
+          label="Caboo Skills"
           active={activePage === 'store'}
           onClick={() => onNavigate('store')}
           collapsed={collapsed}
@@ -910,7 +910,7 @@ export default function Sidebar({
               <line x1="1.5" y1="10" x2="14.5" y2="10" />
             </svg>
           }
-          label="Forge Hub"
+          label="Caboo Hub"
           active={activePage === 'hub'}
           onClick={() => onNavigate('hub')}
           collapsed={collapsed}
@@ -968,8 +968,8 @@ export default function Sidebar({
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Forge Stats Counter */}
-      {!collapsed && <ForgeCounter className="mx-3 mb-2" />}
+      {/* Caboo Stats Counter */}
+      {!collapsed && <CabooCounter className="mx-3 mb-2" />}
 
       {/* Fuel Gauge */}
       {!collapsed && <FuelGaugeWidget className="mx-3 mb-2" />}

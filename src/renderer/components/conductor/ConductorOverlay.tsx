@@ -158,43 +158,43 @@ export default function ConductorOverlay({
       <div
         className="flex flex-col w-full h-full"
         style={{
-          border: '2px solid var(--forge-border)',
-          background: 'var(--forge-bg-deep)',
-          fontFamily: 'var(--forge-font-body)',
+          border: '2px solid var(--caboo-border)',
+          background: 'var(--caboo-bg-deep)',
+          fontFamily: 'var(--caboo-font-body)',
         }}
       >
         {/* Top bar */}
         <div
           className="shrink-0 flex items-center justify-between px-4 py-2"
           style={{
-            borderBottom: '2px solid var(--forge-border)',
-            background: 'var(--forge-bg-mid)',
+            borderBottom: '2px solid var(--caboo-border)',
+            background: 'var(--caboo-bg-mid)',
           }}
         >
           <div className="flex items-center gap-3">
             <span
               style={{
-                fontFamily: 'var(--forge-font-heading)',
+                fontFamily: 'var(--caboo-font-heading)',
                 fontSize: '12px',
-                color: 'var(--forge-text-heading)',
+                color: 'var(--caboo-text-heading)',
                 letterSpacing: '1px',
               }}
             >
               🚂 CONDUCTOR
             </span>
-            <span style={{ color: 'var(--forge-border)' }}>|</span>
+            <span style={{ color: 'var(--caboo-border)' }}>|</span>
             <span
               style={{
-                fontFamily: 'var(--forge-font-body)',
+                fontFamily: 'var(--caboo-font-body)',
                 fontSize: '11px',
-                color: 'var(--forge-text-muted)',
+                color: 'var(--caboo-text-muted)',
               }}
             >
               {projectName}
             </span>
             {plan && (
               <>
-                <span style={{ color: 'var(--forge-border)' }}>|</span>
+                <span style={{ color: 'var(--caboo-border)' }}>|</span>
                 <StepBreadcrumb step={step} />
               </>
             )}
@@ -202,12 +202,12 @@ export default function ConductorOverlay({
           <button
             onClick={onClose}
             style={{
-              color: 'var(--forge-text-muted)',
+              color: 'var(--caboo-text-muted)',
               background: 'none',
-              border: '1px solid var(--forge-border)',
+              border: '1px solid var(--caboo-border)',
               padding: '2px 8px',
               cursor: 'pointer',
-              fontFamily: 'var(--forge-font-heading)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '10px',
             }}
           >
@@ -221,8 +221,8 @@ export default function ConductorOverlay({
             className="shrink-0 px-4 py-2 text-[11px]"
             style={{
               background: 'rgba(139,69,19,0.15)',
-              borderBottom: '1px solid var(--forge-accent-rust)',
-              color: 'var(--forge-accent-rust)',
+              borderBottom: '1px solid var(--caboo-accent-rust)',
+              color: 'var(--caboo-accent-rust)',
             }}
           >
             ⚠ {error}
@@ -327,20 +327,20 @@ function StepBreadcrumb({ step }: { step: Step }) {
   const currentIdx = steps.indexOf(step);
 
   return (
-    <div className="flex items-center gap-1 text-[10px]" style={{ fontFamily: 'var(--forge-font-heading)' }}>
+    <div className="flex items-center gap-1 text-[10px]" style={{ fontFamily: 'var(--caboo-font-heading)' }}>
       {steps.map((s, idx) => (
         <span
           key={s}
           style={{
             color:
               s === step
-                ? 'var(--forge-accent-amber)'
+                ? 'var(--caboo-accent-amber)'
                 : idx < currentIdx
-                ? 'var(--forge-accent-green)'
-                : 'var(--forge-text-muted)',
+                ? 'var(--caboo-accent-green)'
+                : 'var(--caboo-text-muted)',
           }}
         >
-          {idx > 0 && <span style={{ color: 'var(--forge-text-muted)', margin: '0 2px' }}>›</span>}
+          {idx > 0 && <span style={{ color: 'var(--caboo-text-muted)', margin: '0 2px' }}>›</span>}
           {STEP_LABELS[s]}
         </span>
       ))}

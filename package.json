@@ -1,10 +1,14 @@
 {
-  "name": "claude-forge",
-  "productName": "Claude Forge",
+  "name": "caboo",
+  "productName": "Caboo",
   "version": "1.0.4",
-  "description": "AI-powered project manager for Claude Code, Gemini CLI, and OpenAI Codex",
+  "description": "Caboo is a multi-agent AI coding orchestrator for Claude Code, Gemini CLI, and OpenAI Codex",
   "main": ".vite/build/main.js",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evan-hoddinott/claude-forge.git"
+  },
   "scripts": {
     "start": "electron-forge start",
     "start:wsl": "electron-forge start -- --no-sandbox --disable-gpu --disable-dev-shm-usage",
@@ -64,6 +68,7 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "@emotion/is-prop-valid": "^1.4.0",
     "@monaco-editor/react": "^4.7.0",
     "@tailwindcss/postcss": "^4.2.1",
     "adm-zip": "^0.5.17",

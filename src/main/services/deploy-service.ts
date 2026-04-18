@@ -51,11 +51,11 @@ npm-debug.log*
 # Misc
 *.tsbuildinfo
 
-# Claude Forge orchestration (ephemeral state — keep config & memory)
-.forge/blackboard/
-.forge/snapshots/
-.forge/security/audit-log.jsonl
-.forge/agents/*/session-log/
+# Caboo orchestration (ephemeral state — keep config & memory)
+.caboo/blackboard/
+.caboo/snapshots/
+.caboo/security/audit-log.jsonl
+.caboo/agents/*/session-log/
 `;
 
 async function hasGit(projectPath: string): Promise<boolean> {

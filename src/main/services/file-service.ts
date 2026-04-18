@@ -114,8 +114,8 @@ export async function buildFileTree(projectPath: string): Promise<FileTreeNode[]
       const fullPath = path.join(dirPath, entry.name);
       const relativePath = path.relative(resolvedRoot, fullPath);
 
-      // Skip hidden files (starting with .) except context files and .forge
-      if (entry.name.startsWith('.') && !['CLAUDE.md', 'GEMINI.md', 'codex.md', '.forge'].includes(entry.name)) {
+      // Skip hidden files (starting with .) except context files and .caboo
+      if (entry.name.startsWith('.') && !['CLAUDE.md', 'GEMINI.md', 'codex.md', '.caboo'].includes(entry.name)) {
         continue;
       }
 
@@ -534,7 +534,7 @@ export async function openInTerminal(filePath: string, projectPath: string): Pro
 
 // --- Backup & Save File ---
 
-const BACKUP_DIR = '.claude-forge-backup';
+const BACKUP_DIR = '.caboo-backup';
 const MAX_BACKUPS_PER_FILE = 5;
 
 async function createBackup(filePath: string, projectPath: string): Promise<void> {

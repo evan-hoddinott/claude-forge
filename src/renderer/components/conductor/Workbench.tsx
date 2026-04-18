@@ -55,7 +55,7 @@ export default function Workbench({ plan, onReassignTask }: WorkbenchProps) {
   };
 
   return (
-    <div className="h-full flex flex-col" style={{ fontFamily: 'var(--forge-font-body)' }}>
+    <div className="h-full flex flex-col" style={{ fontFamily: 'var(--caboo-font-body)' }}>
       {/* Column layout */}
       <div className="flex-1 flex gap-0 overflow-hidden">
         {COLUMNS.map((col, ci) => (
@@ -63,7 +63,7 @@ export default function Workbench({ plan, onReassignTask }: WorkbenchProps) {
             key={col.id}
             className="flex-1 flex flex-col overflow-hidden"
             style={{
-              borderRight: ci < COLUMNS.length - 1 ? '2px solid var(--forge-border)' : 'none',
+              borderRight: ci < COLUMNS.length - 1 ? '2px solid var(--caboo-border)' : 'none',
               background: col.glowColor ?? 'transparent',
             }}
           >
@@ -71,16 +71,16 @@ export default function Workbench({ plan, onReassignTask }: WorkbenchProps) {
             <div
               className="shrink-0 px-3 py-2 flex items-center gap-1"
               style={{
-                borderBottom: '2px solid var(--forge-border)',
-                background: 'var(--forge-bg-mid)',
+                borderBottom: '2px solid var(--caboo-border)',
+                background: 'var(--caboo-bg-mid)',
               }}
             >
               <span style={{ fontSize: '11px' }}>{col.icon}</span>
               <span
                 style={{
-                  fontFamily: 'var(--forge-font-heading)',
+                  fontFamily: 'var(--caboo-font-heading)',
                   fontSize: '9px',
-                  color: col.id === 'forging' ? 'var(--forge-accent-amber)' : 'var(--forge-text-secondary)',
+                  color: col.id === 'forging' ? 'var(--caboo-accent-amber)' : 'var(--caboo-text-secondary)',
                   letterSpacing: '1px',
                 }}
               >
@@ -90,8 +90,8 @@ export default function Workbench({ plan, onReassignTask }: WorkbenchProps) {
                 style={{
                   marginLeft: 'auto',
                   fontSize: '9px',
-                  color: 'var(--forge-text-muted)',
-                  border: '1px solid var(--forge-border)',
+                  color: 'var(--caboo-text-muted)',
+                  border: '1px solid var(--caboo-border)',
                   padding: '0 3px',
                 }}
               >
@@ -105,8 +105,8 @@ export default function Workbench({ plan, onReassignTask }: WorkbenchProps) {
                 <div
                   className="text-center py-6 text-[10px]"
                   style={{
-                    color: 'var(--forge-text-muted)',
-                    border: '1px dashed var(--forge-border)',
+                    color: 'var(--caboo-text-muted)',
+                    border: '1px dashed var(--caboo-border)',
                   }}
                 >
                   {col.id === 'done' ? '─' : '...'}
@@ -130,8 +130,8 @@ export default function Workbench({ plan, onReassignTask }: WorkbenchProps) {
         <div
           className="shrink-0 p-4"
           style={{
-            borderTop: '2px solid var(--forge-border)',
-            background: 'var(--forge-bg-mid)',
+            borderTop: '2px solid var(--caboo-border)',
+            background: 'var(--caboo-bg-mid)',
             maxHeight: '200px',
             overflow: 'auto',
           }}
@@ -139,16 +139,16 @@ export default function Workbench({ plan, onReassignTask }: WorkbenchProps) {
           <div className="flex items-center justify-between mb-2">
             <div
               style={{
-                fontFamily: 'var(--forge-font-heading)',
+                fontFamily: 'var(--caboo-font-heading)',
                 fontSize: '10px',
-                color: 'var(--forge-text-heading)',
+                color: 'var(--caboo-text-heading)',
               }}
             >
               {selectedTask.station.name} → {selectedTask.task.description}
             </div>
             <button
               onClick={() => setSelectedTask(null)}
-              style={{ color: 'var(--forge-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+              style={{ color: 'var(--caboo-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
             >
               ✕
             </button>
@@ -157,7 +157,7 @@ export default function Workbench({ plan, onReassignTask }: WorkbenchProps) {
             <pre
               style={{
                 fontSize: '10px',
-                color: 'var(--forge-text-secondary)',
+                color: 'var(--caboo-text-secondary)',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
                 maxHeight: '120px',
@@ -171,16 +171,16 @@ export default function Workbench({ plan, onReassignTask }: WorkbenchProps) {
             <div
               style={{
                 fontSize: '10px',
-                color: 'var(--forge-accent-rust)',
+                color: 'var(--caboo-accent-rust)',
                 padding: '4px',
-                border: '1px solid var(--forge-accent-rust)',
+                border: '1px solid var(--caboo-accent-rust)',
               }}
             >
               Error: {selectedTask.task.error}
             </div>
           )}
           {selectedTask.task.filesChanged && selectedTask.task.filesChanged.length > 0 && (
-            <div style={{ fontSize: '10px', color: 'var(--forge-text-muted)', marginTop: '4px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--caboo-text-muted)', marginTop: '4px' }}>
               Files: {selectedTask.task.filesChanged.join(', ')}
             </div>
           )}

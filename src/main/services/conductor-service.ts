@@ -623,7 +623,7 @@ async function executeAll(state: ExecutionState): Promise<void> {
           to: task.assignedAgent,
           type: 'system',
           subject: `Task assigned: ${task.description.slice(0, 60)}`,
-          body: `You have been assigned blackboard task ${bbTaskId}. Check .forge/blackboard/artifacts/ for relevant artifacts from previous tasks.`,
+          body: `You have been assigned blackboard task ${bbTaskId}. Check .caboo/blackboard/artifacts/ for relevant artifacts from previous tasks.`,
         }).catch(() => { /* best-effort blackboard sync */ });
       }
       broadcastPlan(plan);

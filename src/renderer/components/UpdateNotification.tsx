@@ -29,9 +29,9 @@ export default function UpdateNotification({ mode }: Props) {
   if (status.status === 'checking' || status.status === 'up-to-date' || status.status === 'error') return null;
 
   const btnBase =
-    'px-3 py-1 border border-[var(--forge-border)] text-[10px] tracking-wide uppercase transition-colors';
-  const btnPrimary = `${btnBase} bg-[var(--forge-accent-green)] text-[var(--forge-text-heading)] hover:bg-[var(--forge-accent-green-bright)]`;
-  const btnGhost = `${btnBase} bg-transparent text-[var(--forge-text-secondary)] hover:text-[var(--forge-text-primary)] hover:border-[var(--forge-border-light)]`;
+    'px-3 py-1 border border-[var(--caboo-border)] text-[10px] tracking-wide uppercase transition-colors';
+  const btnPrimary = `${btnBase} bg-[var(--caboo-accent-green)] text-[var(--caboo-text-heading)] hover:bg-[var(--caboo-accent-green-bright)]`;
+  const btnGhost = `${btnBase} bg-transparent text-[var(--caboo-text-secondary)] hover:text-[var(--caboo-text-primary)] hover:border-[var(--caboo-border-light)]`;
 
   return (
     <AnimatePresence>
@@ -40,10 +40,10 @@ export default function UpdateNotification({ mode }: Props) {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -40, opacity: 0 }}
         transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-        className="relative z-40 border-y-2 border-[var(--forge-border)]"
+        className="relative z-40 border-y-2 border-[var(--caboo-border)]"
         style={{
-          background: 'var(--forge-bg-surface)',
-          fontFamily: 'var(--forge-font-body)',
+          background: 'var(--caboo-bg-surface)',
+          fontFamily: 'var(--caboo-font-body)',
         }}
       >
         <div className="max-w-4xl mx-auto px-4 py-2.5 flex items-center gap-3">
@@ -52,18 +52,18 @@ export default function UpdateNotification({ mode }: Props) {
             <>
               <span
                 className="text-xs"
-                style={{ color: 'var(--forge-accent-green-bright)' }}
+                style={{ color: 'var(--caboo-accent-green-bright)' }}
               >
                 {'>>'}
               </span>
               <span
                 className="text-[11px] flex-1"
-                style={{ color: 'var(--forge-text-primary)' }}
+                style={{ color: 'var(--caboo-text-primary)' }}
               >
                 {mode === 'simple' ? (
-                  <>A new version of Claude Forge is ready!</>
+                  <>A new version of Caboo is ready!</>
                 ) : (
-                  <>Claude Forge v{status.version} available (current: v{status.currentVersion})</>
+                  <>Caboo v{status.version} available (current: v{status.currentVersion})</>
                 )}
               </span>
               <div className="flex items-center gap-2">
@@ -96,23 +96,23 @@ export default function UpdateNotification({ mode }: Props) {
             <>
               <span
                 className="text-xs"
-                style={{ color: 'var(--forge-accent-amber-bright)' }}
+                style={{ color: 'var(--caboo-accent-amber-bright)' }}
               >
                 {'<<'}
               </span>
               <span
                 className="text-[11px]"
-                style={{ color: 'var(--forge-text-primary)' }}
+                style={{ color: 'var(--caboo-text-primary)' }}
               >
                 Downloading update... {status.percent}%
               </span>
               <div
-                className="flex-1 h-2 overflow-hidden border border-[var(--forge-border)]"
-                style={{ background: 'var(--forge-bg-deep)' }}
+                className="flex-1 h-2 overflow-hidden border border-[var(--caboo-border)]"
+                style={{ background: 'var(--caboo-bg-deep)' }}
               >
                 <motion.div
                   className="h-full"
-                  style={{ background: 'var(--forge-accent-green)' }}
+                  style={{ background: 'var(--caboo-accent-green)' }}
                   initial={{ width: 0 }}
                   animate={{ width: `${status.percent ?? 0}%` }}
                   transition={{ duration: 0.3 }}
@@ -126,13 +126,13 @@ export default function UpdateNotification({ mode }: Props) {
             <>
               <span
                 className="text-xs"
-                style={{ color: 'var(--forge-accent-green-bright)' }}
+                style={{ color: 'var(--caboo-accent-green-bright)' }}
               >
                 {'OK'}
               </span>
               <span
                 className="text-[11px] flex-1"
-                style={{ color: 'var(--forge-text-primary)' }}
+                style={{ color: 'var(--caboo-text-primary)' }}
               >
                 {mode === 'simple' ? (
                   <>Update ready! Restart to get the latest version.</>
@@ -166,14 +166,14 @@ export default function UpdateNotification({ mode }: Props) {
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="overflow-hidden border-t border-[var(--forge-border)]"
+              className="overflow-hidden border-t border-[var(--caboo-border)]"
             >
               <div className="max-w-4xl mx-auto px-4 py-3">
                 <pre
                   className="text-[11px] whitespace-pre-wrap leading-relaxed"
                   style={{
-                    color: 'var(--forge-text-secondary)',
-                    fontFamily: 'var(--forge-font-body)',
+                    color: 'var(--caboo-text-secondary)',
+                    fontFamily: 'var(--caboo-font-body)',
                   }}
                 >
                   {status.releaseNotes}

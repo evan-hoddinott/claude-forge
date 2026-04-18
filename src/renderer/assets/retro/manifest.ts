@@ -1,5 +1,5 @@
 /**
- * Retro asset manifest — GIFs and CSS pixel art for the Forge theme.
+ * Retro asset manifest — GIFs and CSS pixel art for the Caboo theme.
  *
  * All GIFs are tiny (under 20 KB) GeoCities-era animated images.
  * CSS pixel art is generated inline for decorative accents.
@@ -22,7 +22,7 @@ import newBlink from './gifs/new-blink.gif';
 export const retroAssets = {
   /** Animated flame — sidebar logo, loading states (41×93, 5 KB) */
   fire,
-  /** Bubbling cauldron — forge/build metaphor (63×77, 14 KB) */
+  /** Bubbling cauldron — build-room metaphor (63×77, 14 KB) */
   cauldron,
   /** Twinkling sparkle — success states, celebrations (32×32, 1.3 KB) */
   sparkle,
@@ -65,7 +65,7 @@ function pixelArt(
 /**
  * "NEW!" pixel text — CSS box-shadow art.
  * Apply on a 1×1 element with the returned box-shadow value.
- * Pair with animation: forge-blink 1s step-end infinite;
+ * Pair with animation: caboo-blink 1s step-end infinite;
  */
 export const newBadgePixels = pixelArt([
   // N

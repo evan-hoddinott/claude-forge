@@ -1,6 +1,6 @@
 /**
  * BlackboardTab.tsx
- * Visualises the .forge/blackboard/ state for a project.
+ * Visualises the .caboo/blackboard/ state for a project.
  *
  * Three panels:
  *   1. Kanban board — tasks grouped by status

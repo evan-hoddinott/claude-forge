@@ -33,8 +33,8 @@ function formatRelativeDate(iso: string): string {
 }
 
 const TYPE_COLORS: Record<HubItemType, string> = {
-  skill: 'text-[var(--forge-accent-green)] border-[var(--forge-accent-green)]/40 bg-[var(--forge-accent-green)]/10',
-  template: 'text-[var(--forge-accent-amber)] border-[var(--forge-accent-amber)]/40 bg-[var(--forge-accent-amber)]/10',
+  skill: 'text-[var(--caboo-accent-green)] border-[var(--caboo-accent-green)]/40 bg-[var(--caboo-accent-green)]/10',
+  template: 'text-[var(--caboo-accent-amber)] border-[var(--caboo-accent-amber)]/40 bg-[var(--caboo-accent-amber)]/10',
   constraint: 'text-orange-400 border-orange-400/40 bg-orange-400/10',
   playbook: 'text-sky-400 border-sky-400/40 bg-sky-400/10',
 };
@@ -208,7 +208,7 @@ function FilterTabs({ active, onChange, counts }: {
           onClick={() => onChange(tab.id)}
           className={`px-3 py-1.5 text-[11px] font-mono rounded-lg transition-all ${
             active === tab.id
-              ? 'bg-[var(--forge-accent-amber)] text-black font-bold'
+              ? 'bg-[var(--caboo-accent-amber)] text-black font-bold'
               : 'text-text-muted hover:text-text-primary hover:bg-white/5'
           }`}
         >
@@ -358,7 +358,7 @@ function ItemDetailView({
               <button
                 onClick={() => setShowProjectPicker((v) => !v)}
                 disabled={installing}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--forge-accent-amber)] text-black text-sm font-bold rounded-lg hover:brightness-110 transition-all disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 bg-[var(--caboo-accent-amber)] text-black text-sm font-bold rounded-lg hover:brightness-110 transition-all disabled:opacity-50"
               >
                 {installing ? (
                   <>
@@ -468,7 +468,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-text-primary">Publish to Forge Hub</h2>
+            <h2 className="font-bold text-text-primary">Publish to Caboo Hub</h2>
             <p className="text-[11px] text-text-muted">Step {step + 1} of {PUBLISH_STEPS.length}: {PUBLISH_STEPS[step]}</p>
           </div>
           <button onClick={onClose} className="text-text-muted hover:text-text-primary text-lg">×</button>
@@ -479,7 +479,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
           {PUBLISH_STEPS.map((_, i) => (
             <div
               key={i}
-              className={`h-1 flex-1 rounded-full transition-all ${i <= step ? 'bg-[var(--forge-accent-amber)]' : 'bg-white/10'}`}
+              className={`h-1 flex-1 rounded-full transition-all ${i <= step ? 'bg-[var(--caboo-accent-amber)]' : 'bg-white/10'}`}
             />
           ))}
         </div>
@@ -496,7 +496,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
                     onClick={() => setField('type', t)}
                     className={`p-3 rounded-xl border text-sm font-mono capitalize transition-all ${
                       form.type === t
-                        ? 'border-[var(--forge-accent-amber)] bg-[var(--forge-accent-amber)]/10 text-[var(--forge-accent-amber)]'
+                        ? 'border-[var(--caboo-accent-amber)] bg-[var(--caboo-accent-amber)]/10 text-[var(--caboo-accent-amber)]'
                         : 'border-white/8 text-text-muted hover:border-white/16'
                     }`}
                   >
@@ -515,7 +515,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
                   value={form.name}
                   onChange={(e) => setField('name', e.target.value)}
                   placeholder="My Awesome Skill"
-                  className="w-full bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--forge-accent-amber)]/60"
+                  className="w-full bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--caboo-accent-amber)]/60"
                 />
               </div>
               <div>
@@ -524,7 +524,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
                   value={form.description}
                   onChange={(e) => setField('description', e.target.value)}
                   placeholder="One-line summary of what it does"
-                  className="w-full bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--forge-accent-amber)]/60"
+                  className="w-full bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--caboo-accent-amber)]/60"
                 />
               </div>
               <div>
@@ -533,7 +533,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
                   value={form.category}
                   onChange={(e) => setField('category', e.target.value)}
                   placeholder="e.g. security, design, testing"
-                  className="w-full bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--forge-accent-amber)]/60"
+                  className="w-full bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--caboo-accent-amber)]/60"
                 />
               </div>
               <div>
@@ -543,7 +543,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
                   onChange={(e) => setField('longDescription', e.target.value)}
                   placeholder="Detailed description of features, use cases, and how it works"
                   rows={3}
-                  className="w-full bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--forge-accent-amber)]/60 resize-none"
+                  className="w-full bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--caboo-accent-amber)]/60 resize-none"
                 />
               </div>
             </div>
@@ -558,7 +558,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(); } }}
                   placeholder="Type a tag and press Enter"
-                  className="flex-1 bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--forge-accent-amber)]/60"
+                  className="flex-1 bg-surface border border-white/8 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-[var(--caboo-accent-amber)]/60"
                 />
                 <button
                   onClick={addTag}
@@ -613,7 +613,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
               </div>
               <p className="text-[11px] text-text-muted">
                 Clicking Submit will open a GitHub issue in your browser pre-filled with your submission details.
-                The Forge Hub maintainers will review and add it to the catalog.
+                The Caboo Hub maintainers will review and add it to the catalog.
               </p>
             </div>
           )}
@@ -624,7 +624,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
               <p className="text-sm font-semibold text-text-primary">Ready to submit!</p>
               <p className="text-[11px] text-text-muted leading-relaxed">
                 We'll open a GitHub issue pre-filled with your submission.
-                After review, your {form.type} will appear in Forge Hub for the community.
+                After review, your {form.type} will appear in Caboo Hub for the community.
               </p>
             </div>
           )}
@@ -641,7 +641,7 @@ function PublisherWizard({ onClose }: { onClose: () => void }) {
           <button
             disabled={!canAdvance || submitting}
             onClick={() => step < PUBLISH_STEPS.length - 1 ? setStep(s => s + 1) : handleSubmit()}
-            className="px-5 py-2 bg-[var(--forge-accent-amber)] text-black text-sm font-bold rounded-lg hover:brightness-110 transition-all disabled:opacity-40"
+            className="px-5 py-2 bg-[var(--caboo-accent-amber)] text-black text-sm font-bold rounded-lg hover:brightness-110 transition-all disabled:opacity-40"
           >
             {submitting ? 'Opening…' : step < PUBLISH_STEPS.length - 1 ? 'Next →' : 'Submit to Hub'}
           </button>
@@ -693,7 +693,7 @@ export default function Hub({ projects }: HubProps) {
       setCatalog(cat);
       setLastSynced(new Date());
     }).catch(() => {
-      toast('Could not reach Forge Hub — showing built-in items', 'info');
+      toast('Could not reach Caboo Hub — showing built-in items', 'info');
     }).finally(() => setLoading(false));
   }, [api, toast]);
 
@@ -762,7 +762,7 @@ export default function Hub({ projects }: HubProps) {
       <div className="shrink-0 px-6 py-4 border-b border-white/6 flex items-center gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
-            <h1 className="text-lg font-bold text-text-primary forge-logo-text">⚒ FORGE HUB</h1>
+            <h1 className="text-lg font-bold text-text-primary caboo-logo-text">⚒ CABOO HUB</h1>
             {lastSynced && !loading && (
               <span className="text-[10px] font-mono text-text-muted">
                 Last synced {formatRelativeDate(lastSynced.toISOString())}
@@ -778,7 +778,7 @@ export default function Hub({ projects }: HubProps) {
               placeholder="Search hub…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-44 bg-surface border border-white/8 rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-[var(--forge-accent-amber)]/60"
+              className="w-44 bg-surface border border-white/8 rounded-lg px-3 py-1.5 text-sm text-text-primary placeholder-text-muted focus:outline-none focus:border-[var(--caboo-accent-amber)]/60"
             />
           )}
           <button
@@ -791,7 +791,7 @@ export default function Hub({ projects }: HubProps) {
           </button>
           <button
             onClick={() => setShowPublisher(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--forge-accent-amber)] text-black text-[11px] font-bold rounded-lg hover:brightness-110 transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--caboo-accent-amber)] text-black text-[11px] font-bold rounded-lg hover:brightness-110 transition-all"
           >
             📦 Publish
           </button>
@@ -933,11 +933,11 @@ export default function Hub({ projects }: HubProps) {
                   <motion.div
                     whileHover={{ scale: 1.005 }}
                     onClick={() => setShowPublisher(true)}
-                    className="cursor-pointer bg-gradient-to-r from-[var(--forge-accent-amber)]/10 to-transparent border border-[var(--forge-accent-amber)]/20 rounded-xl p-5 flex items-center gap-4"
+                    className="cursor-pointer bg-gradient-to-r from-[var(--caboo-accent-amber)]/10 to-transparent border border-[var(--caboo-accent-amber)]/20 rounded-xl p-5 flex items-center gap-4"
                   >
                     <div className="text-3xl">📦</div>
                     <div className="flex-1">
-                      <div className="text-sm font-bold text-[var(--forge-accent-amber)]">Publish Your Own →</div>
+                      <div className="text-sm font-bold text-[var(--caboo-accent-amber)]">Publish Your Own →</div>
                       <div className="text-[11px] text-text-muted mt-0.5">
                         Share your skills, templates, and playbooks with the community
                       </div>

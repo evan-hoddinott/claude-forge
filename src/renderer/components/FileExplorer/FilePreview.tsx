@@ -359,7 +359,7 @@ function MonacoWithFallback({
         language={language}
         value={value}
         onChange={onChange}
-        theme="claude-forge-retro"
+        theme="caboo-retro"
         onMount={() => { mountedRef.current = true; }}
         options={{
           readOnly: !editMode,
@@ -384,7 +384,7 @@ function MonacoWithFallback({
           },
         }}
         beforeMount={(monaco) => {
-          monaco.editor.defineTheme('claude-forge-retro', {
+          monaco.editor.defineTheme('caboo-retro', {
             base: 'vs-dark',
             inherit: true,
             rules: [],

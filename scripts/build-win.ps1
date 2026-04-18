@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  Claude Forge - Windows NSIS Build"     -ForegroundColor Cyan
+Write-Host "  Caboo - Windows NSIS Build"     -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -59,7 +59,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 
 # Step 3: Show results
-$setupExe = Get-ChildItem -Path "release" -Filter "Claude-Forge-Setup-*.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+$setupExe = Get-ChildItem -Path "release" -Filter "Caboo-Setup-*.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($setupExe) {
     $sizeMB = [math]::Round($setupExe.Length / 1MB, 2)
     Write-Host "========================================" -ForegroundColor Green

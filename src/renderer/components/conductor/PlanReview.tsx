@@ -12,7 +12,7 @@ interface PlanReviewProps {
 }
 
 const AGENT_COLORS: Record<AgentType, string> = {
-  claude:  'var(--forge-accent-amber)',
+  claude:  'var(--caboo-accent-amber)',
   gemini:  '#4285F4',
   codex:   '#10A37F',
   copilot: '#6e40c9',
@@ -87,14 +87,14 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
       {/* Header */}
       <div
         className="shrink-0 px-6 py-4 flex items-center justify-between"
-        style={{ borderBottom: '2px solid var(--forge-border)' }}
+        style={{ borderBottom: '2px solid var(--caboo-border)' }}
       >
         <div>
           <div
             style={{
-              fontFamily: 'var(--forge-font-heading)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '16px',
-              color: 'var(--forge-text-heading)',
+              color: 'var(--caboo-text-heading)',
               letterSpacing: '1px',
             }}
           >
@@ -102,16 +102,16 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
           </div>
           <div
             style={{
-              fontFamily: 'var(--forge-font-body)',
+              fontFamily: 'var(--caboo-font-body)',
               fontSize: '11px',
-              color: 'var(--forge-text-muted)',
+              color: 'var(--caboo-text-muted)',
               marginTop: '2px',
             }}
           >
             {plan.goal}
           </div>
         </div>
-        <div className="flex gap-3 text-[10px]" style={{ color: 'var(--forge-text-muted)', fontFamily: 'var(--forge-font-body)' }}>
+        <div className="flex gap-3 text-[10px]" style={{ color: 'var(--caboo-text-muted)', fontFamily: 'var(--caboo-font-body)' }}>
           {totalTime > 0 && (
             <div>⏱ ~{totalTime} min total</div>
           )}
@@ -131,26 +131,26 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
             <div
               className="flex items-center justify-between cursor-pointer py-2 px-3"
               style={{
-                border: '2px solid var(--forge-border)',
-                background: 'var(--forge-bg-mid)',
+                border: '2px solid var(--caboo-border)',
+                background: 'var(--caboo-bg-mid)',
               }}
               onClick={() => setExpandedStation(expandedStation === station.id ? null : station.id)}
             >
               <div className="flex items-center gap-2">
                 <span
                   style={{
-                    fontFamily: 'var(--forge-font-heading)',
+                    fontFamily: 'var(--caboo-font-heading)',
                     fontSize: '10px',
-                    color: 'var(--forge-accent-amber)',
+                    color: 'var(--caboo-accent-amber)',
                   }}
                 >
                   Station {si + 1}:
                 </span>
                 <span
                   style={{
-                    fontFamily: 'var(--forge-font-heading)',
+                    fontFamily: 'var(--caboo-font-heading)',
                     fontSize: '10px',
-                    color: 'var(--forge-text-heading)',
+                    color: 'var(--caboo-text-heading)',
                   }}
                 >
                   {station.name}
@@ -158,10 +158,10 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
                 {station.hasCheckpoint && (
                   <span
                     style={{
-                      fontFamily: 'var(--forge-font-body)',
+                      fontFamily: 'var(--caboo-font-body)',
                       fontSize: '9px',
-                      color: 'var(--forge-accent-amber)',
-                      border: '1px solid var(--forge-accent-amber)',
+                      color: 'var(--caboo-accent-amber)',
+                      border: '1px solid var(--caboo-accent-amber)',
                       padding: '0 4px',
                     }}
                   >
@@ -171,11 +171,11 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
               </div>
               <div className="flex items-center gap-2">
                 {station.estimatedMinutes && (
-                  <span style={{ color: 'var(--forge-text-muted)', fontSize: '10px', fontFamily: 'var(--forge-font-body)' }}>
+                  <span style={{ color: 'var(--caboo-text-muted)', fontSize: '10px', fontFamily: 'var(--caboo-font-body)' }}>
                     ⏱ {formatMinutes(station.estimatedMinutes)}
                   </span>
                 )}
-                <span style={{ color: 'var(--forge-text-muted)', fontSize: '10px' }}>
+                <span style={{ color: 'var(--caboo-text-muted)', fontSize: '10px' }}>
                   {expandedStation === station.id ? '▲' : '▼'} {station.tasks.length} tasks
                 </span>
               </div>
@@ -185,9 +185,9 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
             {expandedStation === station.id && (
               <div
                 style={{
-                  border: '2px solid var(--forge-border)',
+                  border: '2px solid var(--caboo-border)',
                   borderTop: 'none',
-                  background: 'var(--forge-bg-deep)',
+                  background: 'var(--caboo-bg-deep)',
                 }}
               >
                 {station.tasks.map((task, ti) => (
@@ -209,10 +209,10 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
                   <div
                     className="px-4 py-2 text-[10px]"
                     style={{
-                      borderTop: '1px solid var(--forge-border)',
-                      color: 'var(--forge-accent-amber)',
-                      fontFamily: 'var(--forge-font-body)',
-                      background: 'var(--forge-bg-mid)',
+                      borderTop: '1px solid var(--caboo-border)',
+                      color: 'var(--caboo-accent-amber)',
+                      fontFamily: 'var(--caboo-font-body)',
+                      background: 'var(--caboo-bg-mid)',
                     }}
                   >
                     💡 CHECKPOINT: Review and approve before continuing
@@ -227,19 +227,19 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
       {/* Footer */}
       <div
         className="shrink-0 px-6 py-4 flex items-center justify-between"
-        style={{ borderTop: '2px solid var(--forge-border)' }}
+        style={{ borderTop: '2px solid var(--caboo-border)' }}
       >
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
             disabled={loading}
             style={{
-              fontFamily: 'var(--forge-font-body)',
+              fontFamily: 'var(--caboo-font-body)',
               fontSize: '12px',
               padding: '8px 16px',
-              border: '1px solid var(--forge-border)',
+              border: '1px solid var(--caboo-border)',
               background: 'transparent',
-              color: 'var(--forge-text-muted)',
+              color: 'var(--caboo-text-muted)',
               cursor: 'pointer',
             }}
           >
@@ -251,12 +251,12 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
               onClick={requestBids}
               disabled={bidsLoading || loading}
               style={{
-                fontFamily: 'var(--forge-font-heading)',
+                fontFamily: 'var(--caboo-font-heading)',
                 fontSize: '11px',
                 padding: '8px 14px',
-                border: '1px solid var(--forge-accent-amber)',
+                border: '1px solid var(--caboo-accent-amber)',
                 background: 'transparent',
-                color: 'var(--forge-accent-amber)',
+                color: 'var(--caboo-accent-amber)',
                 cursor: bidsLoading ? 'wait' : 'pointer',
                 letterSpacing: '0.5px',
                 opacity: bidsLoading ? 0.6 : 1,
@@ -270,13 +270,13 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
           onClick={onStart}
           disabled={loading}
           style={{
-            fontFamily: 'var(--forge-font-heading)',
+            fontFamily: 'var(--caboo-font-heading)',
             fontSize: '12px',
             padding: '10px 24px',
-            background: loading ? 'var(--forge-bg-surface)' : 'var(--forge-accent-amber)',
-            color: loading ? 'var(--forge-text-muted)' : 'var(--forge-bg-deep)',
+            background: loading ? 'var(--caboo-bg-surface)' : 'var(--caboo-accent-amber)',
+            color: loading ? 'var(--caboo-text-muted)' : 'var(--caboo-bg-deep)',
             border: '2px solid',
-            borderColor: loading ? 'var(--forge-border)' : 'var(--forge-accent-amber)',
+            borderColor: loading ? 'var(--caboo-border)' : 'var(--caboo-accent-amber)',
             cursor: loading ? 'not-allowed' : 'pointer',
             letterSpacing: '1px',
           }}
@@ -323,17 +323,17 @@ function TaskRow({
   return (
     <div
       className="px-4 py-2"
-      style={{ borderTop: isFirst ? 'none' : '1px solid var(--forge-border)' }}
+      style={{ borderTop: isFirst ? 'none' : '1px solid var(--caboo-border)' }}
     >
       <div className="flex items-center gap-2">
-        <span style={{ color: 'var(--forge-text-muted)', fontSize: '11px', fontFamily: 'var(--forge-font-body)' }}>
+        <span style={{ color: 'var(--caboo-text-muted)', fontSize: '11px', fontFamily: 'var(--caboo-font-body)' }}>
           ├─
         </span>
         <span
           style={{
-            fontFamily: 'var(--forge-font-body)',
+            fontFamily: 'var(--caboo-font-body)',
             fontSize: '11px',
-            color: 'var(--forge-text-secondary)',
+            color: 'var(--caboo-text-secondary)',
             flex: 1,
           }}
         >
@@ -342,10 +342,10 @@ function TaskRow({
         <div className="flex items-center gap-1">
           <span
             style={{
-              fontFamily: 'var(--forge-font-heading)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '9px',
-              color: AGENT_COLORS[task.assignedAgent] ?? 'var(--forge-text-muted)',
-              border: `1px solid ${AGENT_COLORS[task.assignedAgent] ?? 'var(--forge-border)'}`,
+              color: AGENT_COLORS[task.assignedAgent] ?? 'var(--caboo-text-muted)',
+              border: `1px solid ${AGENT_COLORS[task.assignedAgent] ?? 'var(--caboo-border)'}`,
               padding: '0 4px',
               cursor: isFullControl ? 'pointer' : 'default',
             }}
@@ -361,11 +361,11 @@ function TaskRow({
                   key={agent}
                   onClick={() => onReassign(agent)}
                   style={{
-                    fontFamily: 'var(--forge-font-heading)',
+                    fontFamily: 'var(--caboo-font-heading)',
                     fontSize: '9px',
                     color: AGENT_COLORS[agent],
                     border: `1px solid ${AGENT_COLORS[agent]}`,
-                    background: 'var(--forge-bg-deep)',
+                    background: 'var(--caboo-bg-deep)',
                     padding: '0 4px',
                     cursor: 'pointer',
                   }}

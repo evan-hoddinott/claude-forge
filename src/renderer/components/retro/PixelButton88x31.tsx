@@ -14,17 +14,17 @@ export default function PixelButton88x31({
   className = '',
 }: PixelButton88x31Props) {
   const dotColor = dot === 'connected'
-    ? 'var(--forge-accent-green-bright)'
+    ? 'var(--caboo-accent-green-bright)'
     : dot === 'warning'
-      ? 'var(--forge-accent-amber-bright)'
+      ? 'var(--caboo-accent-amber-bright)'
       : dot === 'disconnected'
-        ? 'var(--forge-text-secondary)'
+        ? 'var(--caboo-text-secondary)'
         : undefined;
 
   return (
     <button
       onClick={onClick}
-      className={`forge-88x31 ${color} ${className}`}
+      className={`caboo-88x31 ${color} ${className}`}
       style={{ cursor: onClick ? 'pointer' : 'default' }}
     >
       {dot && (

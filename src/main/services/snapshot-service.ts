@@ -8,7 +8,7 @@ import * as store from '../store';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getForgeVersion(): string {
+function getCabooVersion(): string {
   try {
     return app.getVersion();
   } catch {
@@ -131,7 +131,7 @@ export async function exportSnapshot(options: SnapshotExportOptions): Promise<st
     description: project.description,
     snapshotVersion: '1',
     created: new Date().toISOString(),
-    forgeVersion: getForgeVersion(),
+    cabooVersion: getCabooVersion(),
     projectId: project.id,
     includes: {
       source: options.includeSource,
@@ -165,7 +165,7 @@ export async function exportSnapshot(options: SnapshotExportOptions): Promise<st
       vibeVersion: '1',
       description: project.description,
       created: manifest.created,
-      forgeVersion: manifest.forgeVersion,
+      cabooVersion: manifest.cabooVersion,
       tags: project.tags,
       category: 'snapshot',
       constraints: { hardware: null, os: [], minNodeVersion: '18', requiredTools: [] },
@@ -224,7 +224,7 @@ export async function exportSnapshot(options: SnapshotExportOptions): Promise<st
   if (options.includeGit) {
     let tmpDir: string | null = null;
     try {
-      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cfsnap-git-'));
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cbsnap-git-'));
       const bundlePath = path.join(tmpDir, 'repo.bundle');
 
       const { execFile } = await import('node:child_process');
@@ -265,8 +265,8 @@ export async function exportSnapshot(options: SnapshotExportOptions): Promise<st
   const dateStr = new Date().toISOString().slice(0, 10);
   const result = await dialog.showSaveDialog({
     title: 'Export Project Snapshot',
-    defaultPath: `snapshot-${safeName}-${dateStr}.cfsnap`,
-    filters: [{ name: 'Claude Forge Snapshot', extensions: ['cfsnap'] }],
+    defaultPath: `snapshot-${safeName}-${dateStr}.cbsnap`,
+    filters: [{ name: 'Caboo Snapshot', extensions: ['cbsnap'] }],
   });
 
   if (result.canceled || !result.filePath) return null;
@@ -283,7 +283,7 @@ export async function previewSnapshot(filePath: string): Promise<SnapshotImportP
   const entries = zip.getEntries().map((e) => e.entryName);
 
   const manifestEntry = zip.getEntry('manifest.json');
-  if (!manifestEntry) throw new Error('Invalid .cfsnap file: missing manifest.json');
+  if (!manifestEntry) throw new Error('Invalid snapshot file: missing manifest.json');
 
   const manifest = JSON.parse(manifestEntry.getData().toString('utf-8')) as SnapshotManifest;
 
@@ -314,7 +314,7 @@ export async function importSnapshot(
   const entries = zip.getEntries().map((e) => e.entryName);
 
   const manifestEntry = zip.getEntry('manifest.json');
-  if (!manifestEntry) throw new Error('Invalid .cfsnap file: missing manifest.json');
+  if (!manifestEntry) throw new Error('Invalid snapshot file: missing manifest.json');
   const manifest = JSON.parse(manifestEntry.getData().toString('utf-8')) as SnapshotManifest;
 
   const hasGit = entries.includes('git-bundle/repo.bundle');
@@ -324,7 +324,7 @@ export async function importSnapshot(
   if (hasGit) {
     let tmpDir: string | null = null;
     try {
-      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cfsnap-import-'));
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cbsnap-import-'));
       const bundlePath = path.join(tmpDir, 'repo.bundle');
 
       const bundleEntry = zip.getEntry('git-bundle/repo.bundle');

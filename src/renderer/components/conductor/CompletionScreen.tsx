@@ -28,15 +28,15 @@ export default function CompletionScreen({ plan, onClose }: CompletionScreenProp
   return (
     <div
       className="h-full flex flex-col items-center justify-center px-8 py-12"
-      style={{ fontFamily: 'var(--forge-font-body)', textAlign: 'center' }}
+      style={{ fontFamily: 'var(--caboo-font-body)', textAlign: 'center' }}
     >
       {/* Status */}
       <div
         style={{
-          fontFamily: 'var(--forge-font-heading)',
+          fontFamily: 'var(--caboo-font-heading)',
           fontSize: '32px',
           marginBottom: '8px',
-          color: isSuccess ? 'var(--forge-accent-green)' : 'var(--forge-accent-amber)',
+          color: isSuccess ? 'var(--caboo-accent-green)' : 'var(--caboo-accent-amber)',
         }}
       >
         {isSuccess ? '🚂 ✅' : '🚂 ⚠️'}
@@ -44,9 +44,9 @@ export default function CompletionScreen({ plan, onClose }: CompletionScreenProp
 
       <div
         style={{
-          fontFamily: 'var(--forge-font-heading)',
+          fontFamily: 'var(--caboo-font-heading)',
           fontSize: '18px',
-          color: isSuccess ? 'var(--forge-accent-green)' : 'var(--forge-accent-amber)',
+          color: isSuccess ? 'var(--caboo-accent-green)' : 'var(--caboo-accent-amber)',
           letterSpacing: '2px',
           marginBottom: '4px',
         }}
@@ -56,9 +56,9 @@ export default function CompletionScreen({ plan, onClose }: CompletionScreenProp
 
       <div
         style={{
-          fontFamily: 'var(--forge-font-body)',
+          fontFamily: 'var(--caboo-font-body)',
           fontSize: '12px',
-          color: 'var(--forge-text-muted)',
+          color: 'var(--caboo-text-muted)',
           marginBottom: '24px',
         }}
       >
@@ -69,8 +69,8 @@ export default function CompletionScreen({ plan, onClose }: CompletionScreenProp
       <div
         className="w-full max-w-md mb-6 p-4"
         style={{
-          border: '2px solid var(--forge-border)',
-          background: 'var(--forge-bg-mid)',
+          border: '2px solid var(--caboo-border)',
+          background: 'var(--caboo-bg-mid)',
           textAlign: 'left',
         }}
       >
@@ -92,13 +92,13 @@ export default function CompletionScreen({ plan, onClose }: CompletionScreenProp
       {allFiles.length > 0 && (
         <div
           className="w-full max-w-md mb-6 p-3 text-left"
-          style={{ border: '1px solid var(--forge-border)', background: 'var(--forge-bg-deep)', maxHeight: '180px', overflow: 'auto' }}
+          style={{ border: '1px solid var(--caboo-border)', background: 'var(--caboo-bg-deep)', maxHeight: '180px', overflow: 'auto' }}
         >
-          <div style={{ fontSize: '10px', color: 'var(--forge-text-muted)', marginBottom: '4px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--caboo-text-muted)', marginBottom: '4px' }}>
             {allFiles.length} file{allFiles.length !== 1 ? 's' : ''} changed:
           </div>
           {allFiles.map((f) => (
-            <div key={f} style={{ fontSize: '10px', color: 'var(--forge-text-secondary)', paddingLeft: '8px' }}>
+            <div key={f} style={{ fontSize: '10px', color: 'var(--caboo-text-secondary)', paddingLeft: '8px' }}>
               + {f}
             </div>
           ))}
@@ -109,9 +109,9 @@ export default function CompletionScreen({ plan, onClose }: CompletionScreenProp
         <div
           className="w-full max-w-md mb-6 p-3 text-[11px]"
           style={{
-            border: '1px solid var(--forge-accent-amber)',
+            border: '1px solid var(--caboo-accent-amber)',
             background: 'rgba(184,134,11,0.08)',
-            color: 'var(--forge-accent-amber)',
+            color: 'var(--caboo-accent-amber)',
           }}
         >
           {failedTasks} task{failedTasks !== 1 ? 's' : ''} need attention — review the timeline for details.
@@ -121,12 +121,12 @@ export default function CompletionScreen({ plan, onClose }: CompletionScreenProp
       <button
         onClick={onClose}
         style={{
-          fontFamily: 'var(--forge-font-heading)',
+          fontFamily: 'var(--caboo-font-heading)',
           fontSize: '12px',
           padding: '10px 32px',
-          background: 'var(--forge-accent-amber)',
-          color: 'var(--forge-bg-deep)',
-          border: '2px solid var(--forge-accent-amber)',
+          background: 'var(--caboo-accent-amber)',
+          color: 'var(--caboo-bg-deep)',
+          border: '2px solid var(--caboo-accent-amber)',
           cursor: 'pointer',
           letterSpacing: '1px',
         }}
@@ -140,8 +140,8 @@ export default function CompletionScreen({ plan, onClose }: CompletionScreenProp
 function StatRow({ label, value, ok }: { label: string; value: string; ok: boolean }) {
   return (
     <>
-      <div style={{ color: 'var(--forge-text-muted)' }}>{label}</div>
-      <div style={{ color: ok ? 'var(--forge-text-primary)' : 'var(--forge-accent-rust)', fontFamily: 'var(--forge-font-heading)', fontSize: '10px' }}>
+      <div style={{ color: 'var(--caboo-text-muted)' }}>{label}</div>
+      <div style={{ color: ok ? 'var(--caboo-text-primary)' : 'var(--caboo-accent-rust)', fontFamily: 'var(--caboo-font-heading)', fontSize: '10px' }}>
         {value}
       </div>
     </>

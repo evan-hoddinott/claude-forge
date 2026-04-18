@@ -5,7 +5,7 @@ import type { TimeMachineSnapshot, SnapshotTrigger, SnapshotColor, AgentType } f
 import { runExecFile } from '../utils/run-command';
 import * as store from '../store';
 
-const TAG_PREFIX = 'forge-snapshot-';
+const TAG_PREFIX = 'caboo-snapshot-';
 
 function triggerToColor(trigger: SnapshotTrigger): SnapshotColor {
   switch (trigger) {
@@ -41,7 +41,7 @@ export async function createSnapshot(opts: {
     const status = await gitExec(projectPath, ['status', '--porcelain']);
     if (status.trim()) {
       await gitExec(projectPath, ['add', '-A']);
-      await gitExec(projectPath, ['commit', '-m', `[forge snapshot] ${label}`, '--allow-empty']);
+      await gitExec(projectPath, ['commit', '-m', `[caboo snapshot] ${label}`, '--allow-empty']);
     }
   } catch {
     // If git operations fail (no git repo), just store the snapshot without a tag

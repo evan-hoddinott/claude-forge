@@ -16,42 +16,42 @@ export default function CheckpointModal({ plan, station, onDecision, loading = f
   return (
     <div
       className="h-full flex flex-col items-center justify-center px-6 py-8"
-      style={{ fontFamily: 'var(--forge-font-body)' }}
+      style={{ fontFamily: 'var(--caboo-font-body)' }}
     >
       <div className="w-full max-w-lg">
         {/* Header */}
         <div
           className="px-4 py-3 mb-4 text-center"
           style={{
-            border: '2px solid var(--forge-accent-amber)',
+            border: '2px solid var(--caboo-accent-amber)',
             background: 'rgba(184,134,11,0.1)',
           }}
         >
           <div
             style={{
-              fontFamily: 'var(--forge-font-heading)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '14px',
-              color: 'var(--forge-accent-amber)',
+              color: 'var(--caboo-accent-amber)',
               letterSpacing: '1px',
               marginBottom: '4px',
             }}
           >
             ⏸ CHECKPOINT — {station.name}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--forge-text-muted)' }}>
+          <div style={{ fontSize: '11px', color: 'var(--caboo-text-muted)' }}>
             {plan.goal}
           </div>
         </div>
 
         {/* Summary */}
         <div className="mb-4 space-y-1">
-          <div style={{ fontSize: '11px', color: 'var(--forge-text-secondary)', marginBottom: '8px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--caboo-text-secondary)', marginBottom: '8px' }}>
             The conductor finished: "<strong>{station.name}</strong>"
           </div>
-          <div className="flex gap-4 text-[10px]" style={{ color: 'var(--forge-text-muted)' }}>
-            <span style={{ color: 'var(--forge-accent-green)' }}>✅ {completedTasks.length} tasks complete</span>
+          <div className="flex gap-4 text-[10px]" style={{ color: 'var(--caboo-text-muted)' }}>
+            <span style={{ color: 'var(--caboo-accent-green)' }}>✅ {completedTasks.length} tasks complete</span>
             {failedTasks.length > 0 && (
-              <span style={{ color: 'var(--forge-accent-rust)' }}>❌ {failedTasks.length} failed</span>
+              <span style={{ color: 'var(--caboo-accent-rust)' }}>❌ {failedTasks.length} failed</span>
             )}
           </div>
         </div>
@@ -61,23 +61,23 @@ export default function CheckpointModal({ plan, station, onDecision, loading = f
           <div
             className="mb-4 p-3"
             style={{
-              border: '1px solid var(--forge-border)',
-              background: 'var(--forge-bg-deep)',
+              border: '1px solid var(--caboo-border)',
+              background: 'var(--caboo-bg-deep)',
             }}
           >
-            <div style={{ fontSize: '10px', color: 'var(--forge-text-muted)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '10px', color: 'var(--caboo-text-muted)', marginBottom: '4px' }}>
               Changes made:
             </div>
             {uniqueFiles.slice(0, 10).map((f) => (
               <div
                 key={f}
-                style={{ fontSize: '10px', color: 'var(--forge-text-secondary)', paddingLeft: '8px' }}
+                style={{ fontSize: '10px', color: 'var(--caboo-text-secondary)', paddingLeft: '8px' }}
               >
                 + {f}
               </div>
             ))}
             {uniqueFiles.length > 10 && (
-              <div style={{ fontSize: '10px', color: 'var(--forge-text-muted)', paddingLeft: '8px' }}>
+              <div style={{ fontSize: '10px', color: 'var(--caboo-text-muted)', paddingLeft: '8px' }}>
                 +{uniqueFiles.length - 10} more files
               </div>
             )}
@@ -86,7 +86,7 @@ export default function CheckpointModal({ plan, station, onDecision, loading = f
 
         {/* Decision buttons */}
         <div
-          style={{ fontSize: '11px', color: 'var(--forge-text-secondary)', marginBottom: '12px' }}
+          style={{ fontSize: '11px', color: 'var(--caboo-text-secondary)', marginBottom: '12px' }}
         >
           Does this look right?
         </div>
@@ -96,10 +96,10 @@ export default function CheckpointModal({ plan, station, onDecision, loading = f
             disabled={loading}
             className="w-full px-4 py-3 text-left transition-all"
             style={{
-              border: '2px solid var(--forge-accent-green)',
+              border: '2px solid var(--caboo-accent-green)',
               background: 'rgba(90,122,58,0.1)',
-              color: 'var(--forge-accent-green)',
-              fontFamily: 'var(--forge-font-heading)',
+              color: 'var(--caboo-accent-green)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '11px',
               cursor: loading ? 'not-allowed' : 'pointer',
               letterSpacing: '0.5px',
@@ -112,10 +112,10 @@ export default function CheckpointModal({ plan, station, onDecision, loading = f
             disabled={loading}
             className="w-full px-4 py-3 text-left transition-all"
             style={{
-              border: '2px solid var(--forge-border)',
+              border: '2px solid var(--caboo-border)',
               background: 'transparent',
-              color: 'var(--forge-text-secondary)',
-              fontFamily: 'var(--forge-font-heading)',
+              color: 'var(--caboo-text-secondary)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '11px',
               cursor: loading ? 'not-allowed' : 'pointer',
               letterSpacing: '0.5px',
@@ -128,10 +128,10 @@ export default function CheckpointModal({ plan, station, onDecision, loading = f
             disabled={loading}
             className="w-full px-4 py-3 text-left transition-all"
             style={{
-              border: '2px solid var(--forge-accent-amber)',
+              border: '2px solid var(--caboo-accent-amber)',
               background: 'rgba(184,134,11,0.08)',
-              color: 'var(--forge-accent-amber)',
-              fontFamily: 'var(--forge-font-heading)',
+              color: 'var(--caboo-accent-amber)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '11px',
               cursor: loading ? 'not-allowed' : 'pointer',
               letterSpacing: '0.5px',
@@ -144,10 +144,10 @@ export default function CheckpointModal({ plan, station, onDecision, loading = f
             disabled={loading}
             className="w-full px-4 py-3 text-left transition-all"
             style={{
-              border: '2px solid var(--forge-accent-rust)',
+              border: '2px solid var(--caboo-accent-rust)',
               background: 'rgba(139,69,19,0.08)',
-              color: 'var(--forge-accent-rust)',
-              fontFamily: 'var(--forge-font-heading)',
+              color: 'var(--caboo-accent-rust)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '11px',
               cursor: loading ? 'not-allowed' : 'pointer',
               letterSpacing: '0.5px',

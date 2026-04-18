@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAPI, useQuery } from '../../hooks/useAPI';
 
 function CounterDigit({ digit }: { digit: string }) {
-  return <span className="forge-counter-digit">{digit}</span>;
+  return <span className="caboo-counter-digit">{digit}</span>;
 }
 
 function PaddedNumber({ value, digits = 3 }: { value: number; digits?: number }) {
@@ -16,11 +16,11 @@ function PaddedNumber({ value, digits = 3 }: { value: number; digits?: number })
   );
 }
 
-interface ForgeCounterProps {
+interface CabooCounterProps {
   className?: string;
 }
 
-export default function ForgeCounter({ className = '' }: ForgeCounterProps) {
+export default function CabooCounter({ className = '' }: CabooCounterProps) {
   const api = useAPI();
   const { data: projects } = useQuery(() => api.projects.list());
   const [agentCount, setAgentCount] = useState(0);
@@ -43,20 +43,20 @@ export default function ForgeCounter({ className = '' }: ForgeCounterProps) {
   }, [api]);
 
   return (
-    <div className={`forge-counter ${className}`}>
+    <div className={`caboo-counter ${className}`}>
       <div className="flex items-center gap-1.5 mb-1">
         <span style={{ fontSize: 10 }}>{'\u2692'}</span>
-        <span className="forge-counter-label">projects forged:</span>
+        <span className="caboo-counter-label">projects built:</span>
         <PaddedNumber value={projectCount} />
       </div>
       <div className="flex items-center gap-1.5 mb-1">
         <span style={{ fontSize: 10 }}>{'\uD83D\uDCC1'}</span>
-        <span className="forge-counter-label">files crafted:</span>
+        <span className="caboo-counter-label">files crafted:</span>
         <PaddedNumber value={fileEstimate} />
       </div>
       <div className="flex items-center gap-1.5">
         <span style={{ fontSize: 10 }}>{'\uD83D\uDD25'}</span>
-        <span className="forge-counter-label">agents active:</span>
+        <span className="caboo-counter-label">agents active:</span>
         <PaddedNumber value={agentCount} digits={2} />
       </div>
     </div>

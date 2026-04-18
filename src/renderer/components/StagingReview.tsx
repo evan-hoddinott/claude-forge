@@ -301,7 +301,7 @@ export default function StagingReview({ project }: { project: Project }) {
       toast('No chunks accepted — select at least one chunk to commit.', 'error');
       return;
     }
-    const msg = commitMsg.trim() || 'Selective staging commit (Claude Forge)';
+    const msg = commitMsg.trim() || 'Selective staging commit (Caboo)';
     setCommitting(true);
     try {
       await api.shadowGit.applyChunks(project.path, acceptedIds, msg);

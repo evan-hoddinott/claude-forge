@@ -70,16 +70,16 @@ export default function FileExplorer({ project }: FileExplorerProps) {
     return fileTree.filter((node) => CONTEXT_FILE_NAMES.includes(node.name));
   }, [fileTree]);
 
-  // Extract .forge/ node
-  const forgeNode = useMemo(() => {
+  // Extract .caboo/ node
+  const cabooNode = useMemo(() => {
     if (!fileTree) return null;
-    return fileTree.find((node) => node.name === '.forge' && node.type === 'directory') ?? null;
+    return fileTree.find((node) => node.name === '.caboo' && node.type === 'directory') ?? null;
   }, [fileTree]);
 
-  // Filter out context files and .forge from main tree display
+  // Filter out context files and .caboo from main tree display
   const mainTree = useMemo(() => {
     if (!fileTree) return [];
-    return fileTree.filter((node) => !CONTEXT_FILE_NAMES.includes(node.name) && node.name !== '.forge');
+    return fileTree.filter((node) => !CONTEXT_FILE_NAMES.includes(node.name) && node.name !== '.caboo');
   }, [fileTree]);
 
   // Single tree walk to compute stats, common extensions, and all files
@@ -414,9 +414,9 @@ export default function FileExplorer({ project }: FileExplorerProps) {
             />
           ) : (
             <>
-              {forgeNode && (
-                <ForgeStateSection
-                  node={forgeNode}
+              {cabooNode && (
+                <CabooStateSection
+                  node={cabooNode}
                   selectedPath={selectedFile?.path ?? null}
                   onSelect={handleSelect}
                   onDoubleClick={handleDoubleClick}
@@ -475,9 +475,9 @@ export default function FileExplorer({ project }: FileExplorerProps) {
   );
 }
 
-// --- Forge State Section ---
+// --- Caboo State Section ---
 
-function ForgeStateSection({
+function CabooStateSection({
   node,
   selectedPath,
   onSelect,
@@ -498,7 +498,7 @@ function ForgeStateSection({
         className="w-full flex items-center gap-1.5 px-2 py-1 text-[10px] font-semibold text-amber-400/80 hover:text-amber-400 transition-colors"
       >
         <span className="text-[11px]">⚒</span>
-        <span>Forge State</span>
+        <span>Caboo State</span>
         <span className="ml-auto text-text-muted">{open ? '▾' : '▸'}</span>
       </button>
       {open && node.children && (

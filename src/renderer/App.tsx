@@ -52,9 +52,9 @@ function AppInner() {
   const { toast } = useToast();
   const reduceMotion = useReduceMotion();
 
-  // Always apply forge theme class
+  // Always apply caboo theme class
   useEffect(() => {
-    document.documentElement.classList.add('theme-forge');
+    document.documentElement.classList.add('theme-caboo');
   }, []);
   const pageVariants = reduceMotion ? pageVariantsInstant : pageVariantsAnimated;
   const [activePage, setActivePage] = useState<Page>('dashboard');
@@ -278,7 +278,7 @@ function AppInner() {
       {isOffline && (
         <div className="shrink-0 bg-amber-900/80 border-b border-amber-600/40 px-4 py-1 text-[10px] font-mono text-amber-200 flex items-center gap-2">
           <span>✈️</span>
-          <span>Offline Forge Mode — using local models. Cloud features paused.</span>
+          <span>Offline Caboo Mode — using local models. Cloud features paused.</span>
         </div>
       )}
       <div className="flex flex-1 overflow-hidden relative">

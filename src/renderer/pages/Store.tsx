@@ -201,7 +201,7 @@ function SkillDetail({
 
   function handleSubmitSkill() {
     api.system.openExternal(
-      'https://github.com/evan-hoddinott/claude-forge-skills/issues/new?template=submit-skill.md',
+      'https://github.com/evan-hoddinott/caboo-hub/issues/new?template=submit-skill.md',
     );
   }
 
@@ -515,7 +515,7 @@ export default function Store({ projects }: StoreProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Skill Store</h1>
+          <h1 className="text-xl font-bold text-text-primary">Caboo Skills</h1>
           <p className="text-xs text-text-muted mt-0.5">Agent personalities and project bundles</p>
         </div>
         <div className="relative">

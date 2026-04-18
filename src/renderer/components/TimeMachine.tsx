@@ -9,10 +9,10 @@ interface TimeMachineProps {
 }
 
 const SNAPSHOT_COLORS: Record<string, string> = {
-  green:  'var(--forge-accent-green)',
-  red:    'var(--forge-accent-rust)',
-  blue:   'var(--forge-status-info)',
-  amber:  'var(--forge-accent-amber)',
+  green:  'var(--caboo-accent-green)',
+  red:    'var(--caboo-accent-rust)',
+  blue:   'var(--caboo-status-info)',
+  amber:  'var(--caboo-accent-amber)',
 };
 
 export default function TimeMachine({ projectId, projectPath }: TimeMachineProps) {
@@ -90,23 +90,23 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
     <div
       className="border-b"
       style={{
-        borderColor: 'var(--forge-border)',
-        background: 'var(--forge-bg-mid)',
-        fontFamily: 'var(--forge-font-body)',
+        borderColor: 'var(--caboo-border)',
+        background: 'var(--caboo-bg-mid)',
+        fontFamily: 'var(--caboo-font-body)',
       }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-2 cursor-pointer select-none"
         onClick={() => setCollapsed((c) => !c)}
-        style={{ borderBottom: collapsed ? 'none' : '1px solid var(--forge-border)' }}
+        style={{ borderBottom: collapsed ? 'none' : '1px solid var(--caboo-border)' }}
       >
         <div className="flex items-center gap-2">
-          <span style={{ color: 'var(--forge-accent-amber)' }}>⏰</span>
+          <span style={{ color: 'var(--caboo-accent-amber)' }}>⏰</span>
           <span
             style={{
-              color: 'var(--forge-text-heading)',
-              fontFamily: 'var(--forge-font-heading)',
+              color: 'var(--caboo-text-heading)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '10px',
             }}
           >
@@ -116,9 +116,9 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
             <span
               className="px-1"
               style={{
-                color: 'var(--forge-text-muted)',
+                color: 'var(--caboo-text-muted)',
                 fontSize: '10px',
-                border: '1px solid var(--forge-border)',
+                border: '1px solid var(--caboo-border)',
               }}
             >
               {list.length} save point{list.length !== 1 ? 's' : ''}
@@ -131,8 +131,8 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
             disabled={creatingSnapshot}
             className="px-2 py-0.5 text-[10px] transition-colors"
             style={{
-              border: '1px solid var(--forge-border)',
-              color: 'var(--forge-text-secondary)',
+              border: '1px solid var(--caboo-border)',
+              color: 'var(--caboo-text-secondary)',
               background: 'transparent',
               cursor: creatingSnapshot ? 'not-allowed' : 'pointer',
             }}
@@ -141,7 +141,7 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
             {creatingSnapshot ? '...' : '+ Save Point'}
           </button>
           <span
-            style={{ color: 'var(--forge-text-muted)', fontSize: '10px' }}
+            style={{ color: 'var(--caboo-text-muted)', fontSize: '10px' }}
           >
             {collapsed ? '▼' : '▲'}
           </span>
@@ -161,7 +161,7 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
               {list.length === 0 ? (
                 <div
                   className="text-center py-4 text-[11px]"
-                  style={{ color: 'var(--forge-text-muted)' }}
+                  style={{ color: 'var(--caboo-text-muted)' }}
                 >
                   No save points yet. Save points are created automatically before/after agent sessions.
                 </div>
@@ -177,7 +177,7 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
                         left: '8px',
                         right: '8px',
                         height: '2px',
-                        background: 'var(--forge-border)',
+                        background: 'var(--caboo-border)',
                       }}
                     />
 
@@ -185,7 +185,7 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
                     {list.map((snap, idx) => {
                       const pct = list.length === 1 ? 0.5 : idx / (list.length - 1);
                       const leftPct = 8 + pct * 84; // 8% to 92%
-                      const color = SNAPSHOT_COLORS[snap.color] ?? 'var(--forge-accent-green)';
+                      const color = SNAPSHOT_COLORS[snap.color] ?? 'var(--caboo-accent-green)';
 
                       return (
                         <div
@@ -211,7 +211,7 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
                             style={{
                               width: '14px',
                               height: '14px',
-                              background: previewSnap?.id === snap.id ? color : 'var(--forge-bg-deep)',
+                              background: previewSnap?.id === snap.id ? color : 'var(--caboo-bg-deep)',
                               border: `2px solid ${color}`,
                               transform: 'rotate(45deg)',
                               transition: 'background 0.15s',
@@ -224,7 +224,7 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
                               top: '18px',
                               left: '50%',
                               transform: 'translateX(-50%)',
-                              color: 'var(--forge-text-muted)',
+                              color: 'var(--caboo-text-muted)',
                               fontSize: '9px',
                               whiteSpace: 'nowrap',
                             }}
@@ -243,9 +243,9 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
                           left: `${hoveredPos.x}px`,
                           top: '-32px',
                           transform: 'translateX(-50%)',
-                          background: 'var(--forge-bg-surface)',
-                          border: '1px solid var(--forge-border)',
-                          color: 'var(--forge-text-primary)',
+                          background: 'var(--caboo-bg-surface)',
+                          border: '1px solid var(--caboo-border)',
+                          color: 'var(--caboo-text-primary)',
                           fontSize: '10px',
                           whiteSpace: 'nowrap',
                           maxWidth: '200px',
@@ -268,18 +268,18 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
                         transition={{ duration: 0.15 }}
                         className="mb-3 px-3 py-2"
                         style={{
-                          border: '1px solid var(--forge-border)',
-                          background: 'var(--forge-bg-deep)',
+                          border: '1px solid var(--caboo-border)',
+                          background: 'var(--caboo-bg-deep)',
                           fontSize: '11px',
                         }}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <div style={{ color: 'var(--forge-text-heading)' }}>
-                            <span style={{ color: 'var(--forge-accent-amber)' }}>⏰</span>{' '}
+                          <div style={{ color: 'var(--caboo-text-heading)' }}>
+                            <span style={{ color: 'var(--caboo-accent-amber)' }}>⏰</span>{' '}
                             {previewSnap.label}
                           </div>
                           <div
-                            style={{ color: 'var(--forge-text-muted)', fontSize: '10px' }}
+                            style={{ color: 'var(--caboo-text-muted)', fontSize: '10px' }}
                           >
                             {new Date(previewSnap.timestamp).toLocaleTimeString()}
                           </div>
@@ -287,16 +287,16 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
 
                         {previewData && previewData.filesChanged.length > 0 && (
                           <div className="mb-2">
-                            <div style={{ color: 'var(--forge-text-muted)', marginBottom: '4px' }}>
+                            <div style={{ color: 'var(--caboo-text-muted)', marginBottom: '4px' }}>
                               Files changed since this point:
                             </div>
                             {previewData.filesChanged.slice(0, 8).map((f) => (
-                              <div key={f} style={{ color: 'var(--forge-text-secondary)', paddingLeft: '8px' }}>
+                              <div key={f} style={{ color: 'var(--caboo-text-secondary)', paddingLeft: '8px' }}>
                                 ~ {f}
                               </div>
                             ))}
                             {previewData.filesChanged.length > 8 && (
-                              <div style={{ color: 'var(--forge-text-muted)', paddingLeft: '8px' }}>
+                              <div style={{ color: 'var(--caboo-text-muted)', paddingLeft: '8px' }}>
                                 +{previewData.filesChanged.length - 8} more
                               </div>
                             )}
@@ -309,8 +309,8 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
                             disabled={reverting}
                             className="px-2 py-1 text-[10px] transition-colors"
                             style={{
-                              border: '1px solid var(--forge-accent-rust)',
-                              color: 'var(--forge-accent-rust)',
+                              border: '1px solid var(--caboo-accent-rust)',
+                              color: 'var(--caboo-accent-rust)',
                               background: 'transparent',
                               cursor: reverting ? 'not-allowed' : 'pointer',
                             }}
@@ -322,8 +322,8 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
                             disabled={reverting}
                             className="px-2 py-1 text-[10px] transition-colors"
                             style={{
-                              border: '1px solid var(--forge-border)',
-                              color: 'var(--forge-text-muted)',
+                              border: '1px solid var(--caboo-border)',
+                              color: 'var(--caboo-text-muted)',
                               background: 'transparent',
                               cursor: reverting ? 'not-allowed' : 'pointer',
                             }}
@@ -336,7 +336,7 @@ export default function TimeMachine({ projectId, projectPath }: TimeMachineProps
                   </AnimatePresence>
 
                   {/* Legend */}
-                  <div className="flex gap-3 text-[10px]" style={{ color: 'var(--forge-text-muted)' }}>
+                  <div className="flex gap-3 text-[10px]" style={{ color: 'var(--caboo-text-muted)' }}>
                     {[
                       { color: 'green', label: 'agent done' },
                       { color: 'blue', label: 'saved' },

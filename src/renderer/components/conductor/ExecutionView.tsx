@@ -52,13 +52,13 @@ export default function ExecutionView({
   const totalTasks = plan.stations.flatMap((s) => s.tasks).length;
 
   return (
-    <div className="h-full flex flex-col" style={{ fontFamily: 'var(--forge-font-body)' }}>
+    <div className="h-full flex flex-col" style={{ fontFamily: 'var(--caboo-font-body)' }}>
       {/* Train animation */}
       <div
         className="shrink-0"
         style={{
-          borderBottom: '2px solid var(--forge-border)',
-          background: 'var(--forge-bg-mid)',
+          borderBottom: '2px solid var(--caboo-border)',
+          background: 'var(--caboo-bg-mid)',
           padding: '8px 16px',
         }}
       >
@@ -75,23 +75,23 @@ export default function ExecutionView({
       {/* Toolbar */}
       <div
         className="shrink-0 flex items-center justify-between px-4 py-2"
-        style={{ borderBottom: '1px solid var(--forge-border)', background: 'var(--forge-bg-deep)' }}
+        style={{ borderBottom: '1px solid var(--caboo-border)', background: 'var(--caboo-bg-deep)' }}
       >
         <div className="flex items-center gap-3">
           <div
             style={{
-              fontFamily: 'var(--forge-font-heading)',
+              fontFamily: 'var(--caboo-font-heading)',
               fontSize: '10px',
-              color: isRunning ? 'var(--forge-accent-green)' : 'var(--forge-accent-amber)',
+              color: isRunning ? 'var(--caboo-accent-green)' : 'var(--caboo-accent-amber)',
             }}
           >
             {isRunning ? '● EN ROUTE' : isPaused ? '⏸ PAUSED' : '● STOPPED'}
           </div>
-          <div style={{ fontSize: '10px', color: 'var(--forge-text-muted)' }}>
+          <div style={{ fontSize: '10px', color: 'var(--caboo-text-muted)' }}>
             {completedTasks}/{totalTasks} tasks
           </div>
           {plan.tokenUsage.used > 0 && (
-            <div style={{ fontSize: '10px', color: 'var(--forge-text-muted)' }}>
+            <div style={{ fontSize: '10px', color: 'var(--caboo-text-muted)' }}>
               ⛽ ${plan.tokenUsage.used.toFixed(3)}
             </div>
           )}
@@ -101,18 +101,18 @@ export default function ExecutionView({
           {/* View toggle */}
           <div
             className="flex"
-            style={{ border: '1px solid var(--forge-border)' }}
+            style={{ border: '1px solid var(--caboo-border)' }}
           >
             <button
               onClick={() => setViewMode('list')}
               style={{
                 padding: '2px 8px',
                 fontSize: '10px',
-                background: viewMode === 'list' ? 'var(--forge-accent-amber)' : 'transparent',
-                color: viewMode === 'list' ? 'var(--forge-bg-deep)' : 'var(--forge-text-muted)',
+                background: viewMode === 'list' ? 'var(--caboo-accent-amber)' : 'transparent',
+                color: viewMode === 'list' ? 'var(--caboo-bg-deep)' : 'var(--caboo-text-muted)',
                 border: 'none',
                 cursor: 'pointer',
-                fontFamily: 'var(--forge-font-heading)',
+                fontFamily: 'var(--caboo-font-heading)',
               }}
             >
               LIST
@@ -122,11 +122,11 @@ export default function ExecutionView({
               style={{
                 padding: '2px 8px',
                 fontSize: '10px',
-                background: viewMode === 'workbench' ? 'var(--forge-accent-amber)' : 'transparent',
-                color: viewMode === 'workbench' ? 'var(--forge-bg-deep)' : 'var(--forge-text-muted)',
+                background: viewMode === 'workbench' ? 'var(--caboo-accent-amber)' : 'transparent',
+                color: viewMode === 'workbench' ? 'var(--caboo-bg-deep)' : 'var(--caboo-text-muted)',
                 border: 'none',
                 cursor: 'pointer',
-                fontFamily: 'var(--forge-font-heading)',
+                fontFamily: 'var(--caboo-font-heading)',
               }}
             >
               WORKBENCH
@@ -137,24 +137,24 @@ export default function ExecutionView({
           {isPaused ? (
             <button
               onClick={onResume}
-              style={controlBtnStyle('var(--forge-accent-green)')}
+              style={controlBtnStyle('var(--caboo-accent-green)')}
             >
               ▶ Resume
             </button>
           ) : isRunning ? (
             <button
               onClick={onPause}
-              style={controlBtnStyle('var(--forge-accent-amber)')}
+              style={controlBtnStyle('var(--caboo-accent-amber)')}
             >
               ⏸ Pause
             </button>
           ) : null}
           {isRunning && (
-            <button onClick={onSkipTask} style={controlBtnStyle('var(--forge-text-muted)')}>
+            <button onClick={onSkipTask} style={controlBtnStyle('var(--caboo-text-muted)')}>
               ⏭ Skip
             </button>
           )}
-          <button onClick={onStop} style={controlBtnStyle('var(--forge-accent-rust)')}>
+          <button onClick={onStop} style={controlBtnStyle('var(--caboo-accent-rust)')}>
             🛑 Stop
           </button>
         </div>
@@ -180,7 +180,7 @@ function controlBtnStyle(color: string): React.CSSProperties {
     color,
     background: 'transparent',
     cursor: 'pointer',
-    fontFamily: 'var(--forge-font-heading)',
+    fontFamily: 'var(--caboo-font-heading)',
     letterSpacing: '0.5px',
   };
 }
@@ -211,20 +211,20 @@ function StationBlock({
       <div
         className="flex items-center justify-between px-3 py-2 mb-1"
         style={{
-          border: `2px solid ${isActive ? 'var(--forge-accent-amber)' : 'var(--forge-border)'}`,
-          background: isActive ? 'rgba(184,134,11,0.08)' : 'var(--forge-bg-mid)',
+          border: `2px solid ${isActive ? 'var(--caboo-accent-amber)' : 'var(--caboo-border)'}`,
+          background: isActive ? 'rgba(184,134,11,0.08)' : 'var(--caboo-bg-mid)',
         }}
       >
         <div
           style={{
-            fontFamily: 'var(--forge-font-heading)',
+            fontFamily: 'var(--caboo-font-heading)',
             fontSize: '10px',
-            color: isActive ? 'var(--forge-accent-amber)' : 'var(--forge-text-secondary)',
+            color: isActive ? 'var(--caboo-accent-amber)' : 'var(--caboo-text-secondary)',
           }}
         >
           Station {stationIndex + 1}: {station.name}
         </div>
-        <div style={{ fontSize: '10px', color: 'var(--forge-text-muted)', fontFamily: 'var(--forge-font-body)' }}>
+        <div style={{ fontSize: '10px', color: 'var(--caboo-text-muted)', fontFamily: 'var(--caboo-font-body)' }}>
           [{completedCount}/{station.tasks.length}]{' '}
           {station.status === 'completed' ? '✅' : station.status === 'failed' ? '❌' : station.status === 'active' ? '🔄' : '⏳'}
         </div>
@@ -232,9 +232,9 @@ function StationBlock({
 
       <div
         style={{
-          border: '1px solid var(--forge-border)',
+          border: '1px solid var(--caboo-border)',
           borderTop: 'none',
-          background: 'var(--forge-bg-deep)',
+          background: 'var(--caboo-bg-deep)',
         }}
       >
         {station.tasks.map((task, ti) => (
@@ -259,19 +259,19 @@ function TaskRow({ task, isLast }: { task: ConductorTask; isLast: boolean }) {
           flex: 1,
           fontSize: '11px',
           color: task.status === 'completed'
-            ? 'var(--forge-text-muted)'
+            ? 'var(--caboo-text-muted)'
             : task.status === 'running'
-            ? 'var(--forge-text-primary)'
-            : 'var(--forge-text-secondary)',
+            ? 'var(--caboo-text-primary)'
+            : 'var(--caboo-text-secondary)',
         }}
       >
         {task.description}
       </span>
-      <span style={{ fontSize: '10px', color: 'var(--forge-text-muted)' }}>
+      <span style={{ fontSize: '10px', color: 'var(--caboo-text-muted)' }}>
         {AGENT_LABELS[task.assignedAgent] ?? task.assignedAgent}
       </span>
       {task.duration && (
-        <span style={{ fontSize: '9px', color: 'var(--forge-text-muted)' }}>
+        <span style={{ fontSize: '9px', color: 'var(--caboo-text-muted)' }}>
           {Math.round(task.duration / 1000)}s
         </span>
       )}
@@ -279,7 +279,7 @@ function TaskRow({ task, isLast }: { task: ConductorTask; isLast: boolean }) {
         <span
           style={{
             fontSize: '10px',
-            color: 'var(--forge-accent-amber)',
+            color: 'var(--caboo-accent-amber)',
             animation: 'conductor-spin 1s linear infinite',
           }}
         >

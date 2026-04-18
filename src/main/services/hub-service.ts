@@ -5,7 +5,7 @@ import * as store from '../store';
 import { BUILTIN_CATALOG_ITEMS, BUILTIN_VIBES } from './hub-builtin';
 import type { HubCatalog, HubItem, HubVibeBundle, HubPublishInput } from '../../shared/types';
 
-const CATALOG_URL = 'https://raw.githubusercontent.com/evan-hoddinott/forge-hub/main/catalog.json';
+const CATALOG_URL = 'https://raw.githubusercontent.com/evan-hoddinott/caboo-hub/main/catalog.json';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 function mergeCatalog(remote: HubCatalog): HubCatalog {
@@ -81,8 +81,8 @@ export async function installItem(itemId: string, projectPath: string): Promise<
     }
   }
 
-  // Record installed item in .forge-hub-installed.json
-  const installedPath = path.join(projectPath, '.forge-hub-installed.json');
+  // Record installed item in .caboo-hub-installed.json
+  const installedPath = path.join(projectPath, '.caboo-hub-installed.json');
   let installed: string[] = [];
   try {
     installed = JSON.parse(await fs.readFile(installedPath, 'utf-8')) as string[];
@@ -98,7 +98,7 @@ export async function installItem(itemId: string, projectPath: string): Promise<
 }
 
 export async function getInstalledItems(projectPath: string): Promise<string[]> {
-  const installedPath = path.join(projectPath, '.forge-hub-installed.json');
+  const installedPath = path.join(projectPath, '.caboo-hub-installed.json');
   try {
     return JSON.parse(await fs.readFile(installedPath, 'utf-8')) as string[];
   } catch {
@@ -134,9 +134,9 @@ export async function publishItem(input: HubPublishInput): Promise<{ url: string
   // Try to open the GitHub new-file URL with instructions pre-filled in the title
   const issueTitle = encodeURIComponent(`[${input.type}] ${input.name}`);
   const issueBody = encodeURIComponent(
-    `## Submission: ${input.name}\n\n**Type**: ${input.type}\n**Category**: ${input.category}\n**Description**: ${input.description}\n\n${input.longDescription}\n\n**Tags**: ${input.tags.join(', ')}\n\n---\n*Submitted via Claude Forge Hub publisher*`,
+    `## Submission: ${input.name}\n\n**Type**: ${input.type}\n**Category**: ${input.category}\n**Description**: ${input.description}\n\n${input.longDescription}\n\n**Tags**: ${input.tags.join(', ')}\n\n---\n*Submitted via Caboo Hub publisher*`,
   );
-  const url = `https://github.com/evan-hoddinott/forge-hub/issues/new?title=${issueTitle}&body=${issueBody}`;
+  const url = `https://github.com/evan-hoddinott/caboo-hub/issues/new?title=${issueTitle}&body=${issueBody}`;
 
   try {
     await shell.openExternal(url);

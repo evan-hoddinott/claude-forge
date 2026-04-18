@@ -22,21 +22,21 @@ export default function EmptyState({
       <div
         className="text-center mb-6"
         style={{
-          fontFamily: "var(--forge-font-heading, 'Silkscreen', monospace)",
+          fontFamily: "var(--caboo-font-heading, 'Silkscreen', monospace)",
           fontSize: 16,
-          color: 'var(--forge-text-heading)',
+          color: 'var(--caboo-text-heading)',
           letterSpacing: 0.5,
         }}
       >
-        {'\u2692'} Your forge is cold... {'\u2692'}
+        {'\uD83D\uDE82'} Your engine is idling... {'\uD83D\uDE82'}
       </div>
 
       <div
         className="text-center mb-2"
         style={{
-          fontFamily: "var(--forge-font-body, 'IBM Plex Mono', monospace)",
+          fontFamily: "var(--caboo-font-body, 'IBM Plex Mono', monospace)",
           fontSize: 14,
-          color: 'var(--forge-text-primary)',
+          color: 'var(--caboo-text-primary)',
         }}
       >
         No projects yet.
@@ -44,9 +44,9 @@ export default function EmptyState({
       <div
         className="text-center mb-8"
         style={{
-          fontFamily: "var(--forge-font-body, 'IBM Plex Mono', monospace)",
+          fontFamily: "var(--caboo-font-body, 'IBM Plex Mono', monospace)",
           fontSize: 13,
-          color: 'var(--forge-text-secondary)',
+          color: 'var(--caboo-text-secondary)',
         }}
       >
         Light the fire and start building!
@@ -57,13 +57,13 @@ export default function EmptyState({
           onClick={onCreateProject}
           className="flex items-center gap-2 px-5 py-2.5"
           style={{
-            fontFamily: "var(--forge-font-heading, 'Silkscreen', monospace)",
+            fontFamily: "var(--caboo-font-heading, 'Silkscreen', monospace)",
             fontSize: 12,
             textTransform: 'uppercase',
             letterSpacing: 0.5,
-            backgroundColor: 'var(--forge-accent-amber)',
-            color: 'var(--forge-bg-deep)',
-            border: '2px outset var(--forge-accent-amber-bright)',
+            backgroundColor: 'var(--caboo-accent-amber)',
+            color: 'var(--caboo-bg-deep)',
+            border: '2px outset var(--caboo-accent-amber-bright)',
           }}
         >
           <svg
@@ -86,9 +86,9 @@ export default function EmptyState({
             onClick={() => onImportProject('local')}
             className="flex items-center gap-1.5 px-4 py-2 rounded text-text-secondary hover:text-text-primary transition-colors"
             style={{
-              fontFamily: "var(--forge-font-body, 'IBM Plex Mono', monospace)",
+              fontFamily: "var(--caboo-font-body, 'IBM Plex Mono', monospace)",
               fontSize: 12,
-              border: '1px solid var(--forge-border)',
+              border: '1px solid var(--caboo-border)',
               backgroundColor: 'transparent',
             }}
           >
@@ -102,9 +102,9 @@ export default function EmptyState({
             onClick={() => onImportProject('clone')}
             className="flex items-center gap-1.5 px-4 py-2 rounded text-text-secondary hover:text-text-primary transition-colors"
             style={{
-              fontFamily: "var(--forge-font-body, 'IBM Plex Mono', monospace)",
+              fontFamily: "var(--caboo-font-body, 'IBM Plex Mono', monospace)",
               fontSize: 12,
-              border: '1px solid var(--forge-border)',
+              border: '1px solid var(--caboo-border)',
               backgroundColor: 'transparent',
             }}
           >
@@ -118,9 +118,9 @@ export default function EmptyState({
               onClick={onImportBundle}
               className="flex items-center gap-1.5 px-4 py-2 rounded text-text-secondary hover:text-text-primary transition-colors"
               style={{
-                fontFamily: "var(--forge-font-body, 'IBM Plex Mono', monospace)",
+                fontFamily: "var(--caboo-font-body, 'IBM Plex Mono', monospace)",
                 fontSize: 12,
-                border: '1px solid var(--forge-border)',
+                border: '1px solid var(--caboo-border)',
                 backgroundColor: 'transparent',
               }}
             >
@@ -137,9 +137,9 @@ export default function EmptyState({
               onClick={onImportSnapshot}
               className="flex items-center gap-1.5 px-4 py-2 rounded text-text-secondary hover:text-text-primary transition-colors"
               style={{
-                fontFamily: "var(--forge-font-body, 'IBM Plex Mono', monospace)",
+                fontFamily: "var(--caboo-font-body, 'IBM Plex Mono', monospace)",
                 fontSize: 12,
-                border: '1px solid var(--forge-border)',
+                border: '1px solid var(--caboo-border)',
                 backgroundColor: 'transparent',
               }}
             >

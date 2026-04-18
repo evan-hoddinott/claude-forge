@@ -101,7 +101,7 @@ export default function ExportSnapshotDialog({ project, onClose }: Props) {
             ) : (
               <>
                 <p className="text-xs text-text-muted leading-relaxed">
-                  A <span className="font-mono text-accent">.cfsnap</span> archive captures
+                  A <span className="font-mono text-accent">.cbsnap</span> archive captures
                   everything — code, git history, AI context, and chat. Hand a friend the
                   whole project so they can pick up exactly where you left off.
                 </p>

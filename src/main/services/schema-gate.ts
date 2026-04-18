@@ -15,7 +15,7 @@ import type {
   SchemaGateValidation,
   ToolDefinition,
   SchemaGateState,
-  ForgeManifest,
+  CabooManifest,
 } from '../../shared/types';
 
 // ─── Tool catalog ────────────────────────────────────────────────────────────
@@ -54,7 +54,7 @@ export const ROLE_DEFINITIONS: RoleDefinitions = {
     description: 'Writes code, creates files, runs commands.',
     capabilities: ['read', 'write', 'execute', 'git-commit'],
     tools: ['readFile', 'writeFile', 'createFile', 'deleteFile', 'listDirectory', 'runCommand', 'gitAdd', 'gitCommit', 'searchFiles', 'postArtifact'],
-    restrictions: ['Cannot force-push', 'Cannot modify .forge/ directly', 'Cannot delete git history'],
+    restrictions: ['Cannot force-push', 'Cannot modify .caboo/ directly', 'Cannot delete git history'],
     modelTier: 'performance',
   },
   reviewer: {
@@ -152,10 +152,10 @@ function matchesGlob(filePath: string, patterns: string[]): boolean {
   return patterns.some(p => globMatchSingle(filePath, p));
 }
 
-// ─── Forge path helpers ───────────────────────────────────────────────────────
+// ─── Caboo path helpers ───────────────────────────────────────────────────────
 
-function forgePath(projectPath: string, ...parts: string[]): string {
-  return path.join(projectPath, '.forge', ...parts);
+function cabooPath(projectPath: string, ...parts: string[]): string {
+  return path.join(projectPath, '.caboo', ...parts);
 }
 
 async function readJson<T>(filePath: string): Promise<T | null> {
@@ -212,7 +212,7 @@ export async function validateToolCall(
     // Spatial partition check
     if (filePath) {
       const registry = await readJson<{ agents: Record<string, { spatialPartition?: string }> }>(
-        forgePath(projectPath, 'agents', 'registry.json'),
+        cabooPath(projectPath, 'agents', 'registry.json'),
       );
       const partition = registry?.agents?.[agent]?.spatialPartition;
       if (partition && !matchesGlob(filePath, [partition])) {
@@ -251,16 +251,16 @@ export async function logSecurityEvent(
   role?: AgentRole,
 ): Promise<void> {
   const entry: SecurityEvent = { timestamp: new Date().toISOString(), agent, event, detail, role };
-  const logPath = forgePath(projectPath, 'security', 'audit-log.jsonl');
+  const logPath = cabooPath(projectPath, 'security', 'audit-log.jsonl');
   try {
     await fs.appendFile(logPath, JSON.stringify(entry) + '\n', 'utf8');
   } catch {
-    // If .forge/security/ doesn't exist yet, skip — not worth crashing over
+    // If .caboo/security/ doesn't exist yet, skip — not worth crashing over
   }
 }
 
 export async function getAuditLog(projectPath: string, limit = 50): Promise<SecurityEvent[]> {
-  const logPath = forgePath(projectPath, 'security', 'audit-log.jsonl');
+  const logPath = cabooPath(projectPath, 'security', 'audit-log.jsonl');
   try {
     const raw = await fs.readFile(logPath, 'utf8');
     const events = raw
@@ -276,9 +276,9 @@ export async function getAuditLog(projectPath: string, limit = 50): Promise<Secu
 }
 
 export async function getState(projectPath: string): Promise<SchemaGateState> {
-  const manifest = await readJson<ForgeManifest>(forgePath(projectPath, 'manifest.json'));
+  const manifest = await readJson<CabooManifest>(cabooPath(projectPath, 'manifest.json'));
   const registry = await readJson<{ agents: Record<string, { role: AgentRole; lastActive: string; spatialPartition?: string }> }>(
-    forgePath(projectPath, 'agents', 'registry.json'),
+    cabooPath(projectPath, 'agents', 'registry.json'),
   );
 
   const enabled = manifest?.schemaGatingEnabled ?? false;
@@ -298,7 +298,7 @@ export async function assignRole(
   role: AgentRole,
   spatialPartition?: string,
 ): Promise<void> {
-  const regPath = forgePath(projectPath, 'agents', 'registry.json');
+  const regPath = cabooPath(projectPath, 'agents', 'registry.json');
   const registry = (await readJson<{ agents: Record<string, Record<string, unknown>> }>(regPath)) ?? { agents: {} };
   const roleDef = ROLE_DEFINITIONS[role];
 
@@ -333,8 +333,8 @@ export async function assignRole(
 }
 
 export async function enable(projectPath: string): Promise<void> {
-  const p = forgePath(projectPath, 'manifest.json');
-  const manifest = await readJson<ForgeManifest>(p);
+  const p = cabooPath(projectPath, 'manifest.json');
+  const manifest = await readJson<CabooManifest>(p);
   if (manifest) {
     manifest.schemaGatingEnabled = true;
     await writeJson(p, manifest);
@@ -342,8 +342,8 @@ export async function enable(projectPath: string): Promise<void> {
 }
 
 export async function disable(projectPath: string): Promise<void> {
-  const p = forgePath(projectPath, 'manifest.json');
-  const manifest = await readJson<ForgeManifest>(p);
+  const p = cabooPath(projectPath, 'manifest.json');
+  const manifest = await readJson<CabooManifest>(p);
   if (manifest) {
     manifest.schemaGatingEnabled = false;
     await writeJson(p, manifest);

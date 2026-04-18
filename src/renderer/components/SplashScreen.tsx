@@ -25,14 +25,14 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
           transition={{ duration: 0.4 }}
           className="fixed inset-0 z-[10000] flex flex-col items-center justify-center"
           style={{
-            backgroundColor: 'var(--forge-bg-deep, #1a1e14)',
+            backgroundColor: 'var(--caboo-bg-deep, #1a1e14)',
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='.025'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%23ffffff' opacity='.03'/%3E%3Crect x='2' y='5' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3C/svg%3E")`,
             backgroundRepeat: 'repeat',
           }}
         >
           <div className="flex flex-col items-center gap-4">
             {/* ASCII art box */}
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--forge-text-heading, #e8dfc0)' }}>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", color: 'var(--caboo-text-heading, #e8dfc0)' }}>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -47,7 +47,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
                 transition={{ delay: 0.3, duration: 0.3 }}
                 style={{ fontSize: 14, letterSpacing: 1 }}
               >
-                {'\u2551'}{'     \u2692  CLAUDE FORGE  \u2692      '}{'\u2551'}
+                {'\u2551'}{'       \uD83D\uDE82  C A B O O  \uD83D\uDE82      '}{'\u2551'}
               </motion.div>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -55,7 +55,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
                 transition={{ delay: 0.5, duration: 0.3 }}
                 style={{ fontSize: 14, letterSpacing: 1 }}
               >
-                {'\u2551'}{'   your AI coding workshop    '}{'\u2551'}
+                {'\u2551'}{'     your AI coding crew       '}{'\u2551'}
               </motion.div>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -72,15 +72,15 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.4 }}
-              className="forge-fire"
+              className="caboo-fire"
               style={{ width: 32, height: 32 }}
             >
-              <div className="forge-fire-log forge-fire-log-1" />
-              <div className="forge-fire-log forge-fire-log-2" />
-              <div className="forge-fire-flame forge-fire-flame-1" />
-              <div className="forge-fire-flame forge-fire-flame-2" />
-              <div className="forge-fire-flame forge-fire-flame-3" />
-              <div className="forge-fire-flame forge-fire-flame-4" />
+              <div className="caboo-fire-log caboo-fire-log-1" />
+              <div className="caboo-fire-log caboo-fire-log-2" />
+              <div className="caboo-fire-flame caboo-fire-flame-1" />
+              <div className="caboo-fire-flame caboo-fire-flame-2" />
+              <div className="caboo-fire-flame caboo-fire-flame-3" />
+              <div className="caboo-fire-flame caboo-fire-flame-4" />
             </motion.div>
 
             {/* Boot text with blinking cursor */}
@@ -91,10 +91,10 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
               style={{
                 fontFamily: "'IBM Plex Mono', monospace",
                 fontSize: 12,
-                color: 'var(--forge-text-secondary, #9c9478)',
+                color: 'var(--caboo-text-secondary, #9c9478)',
               }}
             >
-              booting up...<span className="forge-blink-cursor">_</span>
+              booting up...<span className="caboo-blink-cursor">_</span>
             </motion.p>
           </div>
         </motion.div>

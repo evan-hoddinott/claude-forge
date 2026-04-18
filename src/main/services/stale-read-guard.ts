@@ -9,7 +9,7 @@
  *   2. Compare with the hash recorded when the agent last read the file
  *   3. If they differ → STALE READ detected → block the write
  *
- * Registry stored at: .forge/snapshots/hashes/file-reads.json
+ * Registry stored at: .caboo/snapshots/hashes/file-reads.json
  */
 
 import * as crypto from 'node:crypto';
@@ -39,7 +39,7 @@ type HashRegistry = Record<string, Record<string, FileReadEntry>>;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function registryPath(projectPath: string): string {
-  return path.join(projectPath, '.forge', 'snapshots', 'hashes', 'file-reads.json');
+  return path.join(projectPath, '.caboo', 'snapshots', 'hashes', 'file-reads.json');
 }
 
 async function readRegistry(projectPath: string): Promise<HashRegistry> {
@@ -87,7 +87,7 @@ export async function recordRead(
     };
     await writeRegistry(projectPath, registry);
   } catch {
-    // Silently ignore — file may not exist yet, or .forge/ may not be initialized
+    // Silently ignore — file may not exist yet, or .caboo/ may not be initialized
   }
 }
 

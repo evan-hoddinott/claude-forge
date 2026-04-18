@@ -1,16 +1,16 @@
 @import 'tailwindcss';
-@import './renderer/styles/themes/forge.css';
+@import './renderer/styles/themes/caboo.css';
 
 @theme {
-  --color-bg: var(--forge-bg-deep, #1a1e14);
-  --color-surface: var(--forge-bg-mid, #232a1c);
-  --color-surface-hover: var(--forge-bg-light, #2d3625);
-  --color-accent: var(--forge-accent-green, #5a7a3a);
-  --color-accent-hover: var(--forge-accent-green-bright, #7a9f54);
+  --color-bg: var(--caboo-bg-deep, #1a1e14);
+  --color-surface: var(--caboo-bg-mid, #232a1c);
+  --color-surface-hover: var(--caboo-bg-light, #2d3625);
+  --color-accent: var(--caboo-accent-green, #5a7a3a);
+  --color-accent-hover: var(--caboo-accent-green-bright, #7a9f54);
   --color-accent-glow: rgba(90, 122, 58, 0.2);
-  --color-text-primary: var(--forge-text-primary, #d4cba8);
-  --color-text-secondary: var(--forge-text-secondary, #9c9478);
-  --color-text-muted: var(--forge-text-muted, #6b6450);
+  --color-text-primary: var(--caboo-text-primary, #d4cba8);
+  --color-text-secondary: var(--caboo-text-secondary, #9c9478);
+  --color-text-muted: var(--caboo-text-muted, #6b6450);
   --color-status-created: #5a7a3a;
   --color-status-in-progress: #b8860b;
   --color-status-ready: #5a7a3a;
