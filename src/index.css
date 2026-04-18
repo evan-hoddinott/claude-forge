@@ -1,26 +1,27 @@
 @import 'tailwindcss';
+@import './renderer/assets/fonts/fonts.css';
 @import './renderer/styles/themes/caboo.css';
 
 @theme {
-  --color-bg: var(--caboo-bg-deep, #1a1e14);
-  --color-surface: var(--caboo-bg-mid, #232a1c);
-  --color-surface-hover: var(--caboo-bg-light, #2d3625);
-  --color-accent: var(--caboo-accent-green, #5a7a3a);
-  --color-accent-hover: var(--caboo-accent-green-bright, #7a9f54);
-  --color-accent-glow: rgba(90, 122, 58, 0.2);
-  --color-text-primary: var(--caboo-text-primary, #d4cba8);
-  --color-text-secondary: var(--caboo-text-secondary, #9c9478);
-  --color-text-muted: var(--caboo-text-muted, #6b6450);
-  --color-status-created: #5a7a3a;
-  --color-status-in-progress: #b8860b;
-  --color-status-ready: #5a7a3a;
-  --color-status-error: #8b4513;
+  --color-bg: var(--station-bg-deep, #1a1714);
+  --color-surface: var(--station-bg-mid, #2a2520);
+  --color-surface-hover: var(--station-bg-surface, #342e28);
+  --color-accent: var(--station-brass, #c4a265);
+  --color-accent-hover: var(--station-brass-bright, #d4b47a);
+  --color-accent-glow: rgba(196, 162, 101, 0.2);
+  --color-text-primary: var(--station-text-primary, #e8e0d4);
+  --color-text-secondary: var(--station-text-secondary, #a89e90);
+  --color-text-muted: var(--station-text-dim, #6e645a);
+  --color-status-created: #5a8fb4;
+  --color-status-in-progress: #d4a039;
+  --color-status-ready: #4a9e6d;
+  --color-status-error: #c45c4a;
   --font-sans: 'IBM Plex Mono', 'Space Mono', monospace;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  scrollbar-color: var(--station-border) var(--station-bg-deep);
 }
 
 body {

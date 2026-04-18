@@ -170,23 +170,23 @@ export default function ProjectDetail({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="shrink-0 border-b border-white/[0.06] px-6 pt-4 pb-0">
+      <div className="shrink-0 pb-0" style={{ borderBottom: '1px solid var(--station-border)', background: 'var(--station-bg-mid)' }}>
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5 text-xs text-text-muted mb-3">
+        <nav className="station-breadcrumb" style={{ padding: '6px 16px' }}>
           <button
             onClick={onBack}
-            className="hover:text-text-primary transition-colors"
+            className="station-breadcrumb-item"
           >
             Dashboard
           </button>
-          <ChevronRightIcon />
-          <span className="text-text-secondary">{project.name}</span>
+          <span className="station-breadcrumb-sep">›</span>
+          <span className="station-breadcrumb-item current">{project.name}</span>
         </nav>
 
         {/* Title row */}
-        <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex items-start justify-between gap-4 px-4 pb-0 pt-1 mb-0">
           <div className="flex items-center gap-3 min-w-0">
-            <h1 className="text-xl font-bold text-text-primary truncate">
+            <h1 style={{ fontFamily: 'var(--caboo-font-heading)', fontSize: 13, color: 'var(--station-text-bright)', letterSpacing: 1, textTransform: 'uppercase' }}>
               {project.name}
             </h1>
             <StatusBadge status={project.status} />
@@ -240,28 +240,41 @@ export default function ProjectDetail({
         {/* Time Machine */}
         <TimeMachine projectId={project.id} projectPath={project.path} />
 
-        {/* Tab bar */}
-        <div className="flex items-center gap-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative px-3 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'text-text-primary'
-                  : 'text-text-muted hover:text-text-secondary'
-              }`}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="tab-indicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-full"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
+        {/* Tab bar — platform signs */}
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: 1, padding: '6px 4px 0', overflowX: 'auto' }}>
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  padding: '5px 12px',
+                  fontFamily: isActive ? 'var(--caboo-font-heading)' : 'var(--caboo-font-body)',
+                  fontSize: isActive ? 9 : 11,
+                  letterSpacing: isActive ? 1 : 0,
+                  textTransform: isActive ? 'uppercase' : 'none',
+                  color: isActive ? 'var(--station-brass)' : 'var(--station-text-secondary)',
+                  background: isActive ? 'var(--station-bg-deep)' : 'transparent',
+                  border: `1px solid ${isActive ? 'var(--station-border-active)' : 'transparent'}`,
+                  borderBottom: isActive ? `1px solid var(--station-bg-deep)` : '1px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'color 0.1s, background 0.1s',
+                  whiteSpace: 'nowrap',
+                  position: 'relative',
+                  marginBottom: -1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = 'var(--station-text-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) (e.currentTarget as HTMLButtonElement).style.color = 'var(--station-text-secondary)';
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -1,78 +1,101 @@
 /*
  * ╔═══════════════════════════════════════════════════════╗
- * ║  FORGE THEME — Digital Forest Workshop                ║
- * ║  Retro neocities / old web aesthetic                  ║
- * ║  Earthy, warm, boxy, textured, lovingly handmade      ║
+ * ║  STATION OS — Night Station Theme                     ║
+ * ║  Retro 1990s train dispatch computer system           ║
+ * ║  Aged wood, brass fittings, signal lights             ║
  * ╚═══════════════════════════════════════════════════════╝
  */
 
-/* ─── Color & Font Overrides ─────────────────────────── */
+/* ─── Station OS Design Tokens ───────────────────────── */
 
+:root,
 .theme-caboo {
-  /* Map to Tailwind @theme token names */
-  --color-bg: #1a1e14;
-  --color-surface: #232a1c;
-  --color-surface-hover: #2d3625;
-  --color-accent: #5a7a3a;
-  --color-accent-hover: #7da854;
-  --color-accent-glow: rgba(90, 122, 58, 0.25);
-  --color-text-primary: #d4cba8;
-  --color-text-secondary: #9c9478;
-  --color-text-muted: #6b6450;
-  --color-status-created: #5a8a7a;
-  --color-status-in-progress: #b8860b;
-  --color-status-ready: #5a7a3a;
-  --color-status-error: #8b4513;
-  --font-sans: 'IBM Plex Mono', 'Space Mono', 'Courier New', monospace;
+  /* Backgrounds — Aged wood and warm metal */
+  --station-bg-deep:    #1a1714;   /* Dark wood paneling */
+  --station-bg-mid:     #2a2520;   /* Weathered platform */
+  --station-bg-surface: #342e28;   /* Control panel surface */
+  --station-bg-card:    #3e3830;   /* Elevated cards/windows */
+  --station-bg-hover:   #4a4238;   /* Hover state */
+  --station-bg-input:   #130f0c;   /* Input field background */
 
-  /* ─── Forge-specific custom properties ─── */
-  --caboo-bg-deep: #1a1e14;
-  --caboo-bg-mid: #232a1c;
-  --caboo-bg-surface: #2d3625;
-  --caboo-bg-input: #1e2418;
-  --caboo-bg-cream: #d4cba8;
-  --caboo-bg-paper: #c8bc96;
+  /* Accents — Brass, copper, signal lights */
+  --station-brass:        #c4a265; /* Primary accent — brass fittings */
+  --station-brass-bright: #d4b47a; /* Bright brass on hover */
+  --station-copper:       #b87333; /* Warm copper details */
+  --station-signal-green: #4a9e6d; /* All clear / success */
+  --station-signal-red:   #c45c4a; /* Stop / error */
+  --station-signal-amber: #d4a039; /* Caution / warning */
+  --station-signal-blue:  #5a8fb4; /* Info / links */
 
-  --caboo-text-primary: #d4cba8;
-  --caboo-text-secondary: #9c9478;
-  --caboo-text-heading: #e8dfc0;
-  --caboo-text-on-light: #2d3625;
+  /* Text — Cream on dark, like departure board text */
+  --station-text-primary:   #e8e0d4; /* Main text — warm white */
+  --station-text-secondary: #a89e90; /* Muted text */
+  --station-text-dim:       #6e645a; /* Very muted */
+  --station-text-bright:    #f5efe6; /* Highlighted/heading text */
 
-  --caboo-accent-green: #5a7a3a;
-  --caboo-accent-green-bright: #7da854;
-  --caboo-accent-amber: #b8860b;
-  --caboo-accent-amber-bright: #daa520;
-  --caboo-accent-brown: #6b4e2e;
-  --caboo-accent-brown-light: #8b7355;
-  --caboo-accent-rust: #8b4513;
+  /* Borders — Thin brass lines */
+  --station-border:        #4a4238; /* Default borders */
+  --station-border-light:  #5c5248; /* Light borders */
+  --station-border-strong: #6e5e52; /* Strong borders */
+  --station-border-active: #c4a265; /* Active/focused borders (brass) */
 
-  --caboo-border: #4a5a38;
-  --caboo-border-light: #5a6b48;
-  --caboo-border-strong: #6b7d55;
+  /* Agent colors — signal light per agent */
+  --agent-claude:  #d4a039; /* Amber  — Claude  */
+  --agent-gemini:  #5a8fb4; /* Blue   — Gemini  */
+  --agent-codex:   #4a9e6d; /* Green  — Codex   */
+  --agent-copilot: #9b72b0; /* Purple — Copilot */
+  --agent-ollama:  #a89e90; /* Gray   — Ollama  */
 
-  --caboo-status-good: #5a7a3a;
-  --caboo-status-warn: #b8860b;
-  --caboo-status-bad: #8b4513;
-  --caboo-status-info: #5a8a7a;
+  /* ─── Legacy aliases so existing components don't break ─── */
+  --caboo-bg-deep:    var(--station-bg-deep);
+  --caboo-bg-mid:     var(--station-bg-mid);
+  --caboo-bg-surface: var(--station-bg-surface);
+  --caboo-bg-card:    var(--station-bg-card);
+  --caboo-bg-input:   var(--station-bg-input);
+  --caboo-bg-cream:   var(--station-text-primary);
+  --caboo-bg-paper:   var(--station-text-secondary);
+  --caboo-bg-light:   var(--station-bg-surface);
+
+  --caboo-text-primary:   var(--station-text-primary);
+  --caboo-text-secondary: var(--station-text-secondary);
+  --caboo-text-heading:   var(--station-text-bright);
+  --caboo-text-on-light:  var(--station-bg-mid);
+  --caboo-text-muted:     var(--station-text-dim);
+
+  --caboo-accent-green:        var(--station-brass);
+  --caboo-accent-green-bright: var(--station-brass-bright);
+  --caboo-accent-amber:        var(--station-signal-amber);
+  --caboo-accent-amber-bright: #e8b84b;
+  --caboo-accent-brown:        var(--station-copper);
+  --caboo-accent-brown-light:  #c4936a;
+  --caboo-accent-rust:         var(--station-signal-red);
+
+  --caboo-border:        var(--station-border);
+  --caboo-border-light:  var(--station-border-light);
+  --caboo-border-strong: var(--station-border-strong);
+
+  --caboo-status-good: var(--station-signal-green);
+  --caboo-status-warn: var(--station-signal-amber);
+  --caboo-status-bad:  var(--station-signal-red);
+  --caboo-status-info: var(--station-signal-blue);
 
   --caboo-font-heading: 'Silkscreen', 'Press Start 2P', monospace;
-  --caboo-font-body: 'IBM Plex Mono', 'Space Mono', 'Courier New', monospace;
-  --caboo-font-size-xs: 10px;
-  --caboo-font-size-sm: 12px;
-  --caboo-font-size-md: 14px;
-  --caboo-font-size-lg: 16px;
-  --caboo-font-size-xl: 18px;
+  --caboo-font-body:    'IBM Plex Mono', 'Space Mono', 'Courier New', monospace;
+  --caboo-font-size-xs:    10px;
+  --caboo-font-size-sm:    12px;
+  --caboo-font-size-md:    14px;
+  --caboo-font-size-lg:    16px;
+  --caboo-font-size-xl:    18px;
   --caboo-font-size-title: 22px;
-
-  --caboo-radius: 0px;
+  --caboo-radius:       0px;
   --caboo-border-width: 2px;
 }
 
 /* ─── Background Texture ─────────────────────────────── */
 
 .theme-caboo {
-  background-color: var(--caboo-bg-deep);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='.025'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%23ffffff' opacity='.03'/%3E%3Crect x='2' y='5' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3Crect x='6' y='7' width='1' height='1' fill='%23ffffff' opacity='.025'/%3E%3Crect x='1' y='3' width='1' height='1' fill='%23ffffff' opacity='.015'/%3E%3Crect x='5' y='6' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3Crect x='7' y='1' width='1' height='1' fill='%23ffffff' opacity='.03'/%3E%3Crect x='3' y='4' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3C/svg%3E");
+  background-color: var(--station-bg-deep);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3Crect x='4' y='2' width='1' height='1' fill='%23ffffff' opacity='.025'/%3E%3Crect x='2' y='5' width='1' height='1' fill='%23ffffff' opacity='.015'/%3E%3Crect x='6' y='7' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3Crect x='1' y='3' width='1' height='1' fill='%23ffffff' opacity='.012'/%3E%3Crect x='5' y='6' width='1' height='1' fill='%23ffffff' opacity='.015'/%3E%3Crect x='7' y='1' width='1' height='1' fill='%23ffffff' opacity='.025'/%3E%3Crect x='3' y='4' width='1' height='1' fill='%23ffffff' opacity='.015'/%3E%3C/svg%3E");
   background-repeat: repeat;
 }
 
@@ -94,28 +117,19 @@
   text-shadow: none;
   line-height: 1.8;
   letter-spacing: 0.5px;
-  color: var(--caboo-text-heading);
+  color: var(--station-text-bright);
 }
 
-.theme-caboo h1 {
-  font-size: 18px;
-}
+.theme-caboo h1 { font-size: 14px; }
+.theme-caboo h2 { font-size: 12px; }
+.theme-caboo h3 { font-size: 11px; }
 
-.theme-caboo h2 {
-  font-size: 16px;
-}
-
-.theme-caboo h3 {
-  font-size: 14px;
-}
-
-/* Nav labels, section headers, and small labels in pixel font */
 .theme-caboo .caboo-pixel,
-.theme-caboo .caboo-logo-text {
+.theme-caboo .caboo-logo-text,
+.theme-caboo .station-pixel {
   font-family: var(--caboo-font-heading) !important;
 }
 
-/* Body text */
 .theme-caboo body,
 .theme-caboo p,
 .theme-caboo span,
@@ -131,240 +145,156 @@
 /* ─── Selection Colors ───────────────────────────────── */
 
 .theme-caboo ::selection {
-  background-color: var(--caboo-accent-green);
-  color: var(--caboo-text-heading);
+  background-color: var(--station-brass);
+  color: var(--station-bg-deep);
 }
 
 .theme-caboo ::-moz-selection {
-  background-color: var(--caboo-accent-green);
-  color: var(--caboo-text-heading);
+  background-color: var(--station-brass);
+  color: var(--station-bg-deep);
 }
 
 /* ─── Custom Scrollbars ──────────────────────────────── */
 
 .theme-caboo * {
-  scrollbar-color: var(--caboo-accent-green) var(--caboo-bg-deep);
+  scrollbar-color: var(--station-border-strong) var(--station-bg-deep);
 }
 
-.theme-caboo *::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-
-.theme-caboo *::-webkit-scrollbar-track {
-  background: var(--caboo-bg-deep);
-}
-
+.theme-caboo *::-webkit-scrollbar { width: 10px; height: 10px; }
+.theme-caboo *::-webkit-scrollbar-track { background: var(--station-bg-deep); }
 .theme-caboo *::-webkit-scrollbar-thumb {
-  background: var(--caboo-accent-green);
-  border: 2px solid var(--caboo-bg-deep);
+  background: var(--station-border-strong);
+  border: 2px solid var(--station-bg-deep);
 }
-
 .theme-caboo *::-webkit-scrollbar-thumb:hover {
-  background: var(--caboo-accent-green-bright);
+  background: var(--station-brass);
 }
 
 /* ─── Focus Rings ────────────────────────────────────── */
 
 .theme-caboo *:focus-visible {
-  outline: 2px solid var(--caboo-accent-green);
+  outline: 2px solid var(--station-brass);
   outline-offset: 1px;
-  box-shadow: 0 0 0 2px var(--caboo-accent-green);
+  box-shadow: 0 0 0 2px rgba(196, 162, 101, 0.3);
 }
 
-/* ─── Sidebar ────────────────────────────────────────── */
-
-.theme-caboo aside {
-  border-right: 2px solid var(--caboo-border) !important;
-  box-shadow: none;
-  background-color: var(--caboo-bg-mid);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect x='0' y='0' width='1' height='1' fill='%23ffffff' opacity='.02'/%3E%3Crect x='3' y='3' width='1' height='1' fill='%23ffffff' opacity='.015'/%3E%3C/svg%3E");
-  background-repeat: repeat;
-}
-
-/* Logo */
-.theme-caboo .caboo-logo-icon {
-  animation: none;
-  filter: none;
-  background-color: transparent !important;
-}
-
-.theme-caboo .caboo-logo-text {
-  font-family: var(--caboo-font-heading) !important;
-  font-size: 12px !important;
-  letter-spacing: 0.5px;
-  text-shadow: none;
-  color: var(--caboo-text-heading);
-}
-
-/* Sidebar separators */
-.theme-caboo aside .border-t {
-  border-color: var(--caboo-border) !important;
-}
-
-/* Sidebar nav buttons */
-.theme-caboo aside button:hover {
-  text-shadow: none;
-}
-
-/* Sidebar nav items — forge active state */
-.theme-caboo aside nav button.bg-white\/8,
-.theme-caboo aside nav button[class*="bg-white/8"] {
-  background-color: rgba(90, 122, 58, 0.15) !important;
-  border-left: 3px solid var(--caboo-accent-amber) !important;
-}
-
-/* Sidebar nav hover */
-.theme-caboo aside nav button:hover {
-  background-color: rgba(90, 122, 58, 0.1) !important;
-}
-
-/* Override all bg-white/* patterns in caboo theme */
-.theme-caboo [class*="bg-white/"],
-.theme-caboo [class*="bg-white\\/"] {
-  --tw-bg-opacity: 1;
-}
+/* ─── Tailwind white/opacity override → brass-tinted ─── */
 
 .theme-caboo .bg-white\/5,
 .theme-caboo [class*="bg-white/5"] {
-  background-color: rgba(90, 122, 58, 0.12) !important;
+  background-color: rgba(196, 162, 101, 0.08) !important;
 }
-
 .theme-caboo .hover\:bg-white\/5:hover,
 .theme-caboo [class*="hover:bg-white/5"]:hover {
-  background-color: rgba(90, 122, 58, 0.15) !important;
+  background-color: rgba(196, 162, 101, 0.12) !important;
 }
-
 .theme-caboo .bg-white\/8,
 .theme-caboo [class*="bg-white/8"] {
-  background-color: rgba(90, 122, 58, 0.18) !important;
+  background-color: rgba(196, 162, 101, 0.13) !important;
 }
-
 .theme-caboo .hover\:bg-white\/8:hover,
 .theme-caboo [class*="hover:bg-white/8"]:hover {
-  background-color: rgba(90, 122, 58, 0.2) !important;
+  background-color: rgba(196, 162, 101, 0.16) !important;
 }
-
 .theme-caboo .hover\:bg-white\/10:hover,
 .theme-caboo [class*="hover:bg-white/10"]:hover {
-  background-color: rgba(90, 122, 58, 0.22) !important;
+  background-color: rgba(196, 162, 101, 0.18) !important;
 }
-
 .theme-caboo [class*="bg-white/\\[0.02\\]"],
 .theme-caboo [class*="bg-white\\/\\[0.02\\]"] {
-  background-color: rgba(90, 122, 58, 0.06) !important;
+  background-color: rgba(196, 162, 101, 0.05) !important;
 }
-
 .theme-caboo [class*="bg-white/\\[0.03\\]"],
 .theme-caboo [class*="bg-white\\/\\[0.03\\]"] {
-  background-color: rgba(90, 122, 58, 0.08) !important;
+  background-color: rgba(196, 162, 101, 0.07) !important;
 }
-
 .theme-caboo [class*="bg-white/\\[0.04\\]"],
 .theme-caboo [class*="bg-white\\/\\[0.04\\]"] {
-  background-color: rgba(90, 122, 58, 0.1) !important;
+  background-color: rgba(196, 162, 101, 0.09) !important;
 }
-
 .theme-caboo [class*="bg-white/\\[0.05\\]"],
 .theme-caboo [class*="bg-white\\/\\[0.05\\]"] {
-  background-color: rgba(90, 122, 58, 0.12) !important;
+  background-color: rgba(196, 162, 101, 0.1) !important;
 }
-
 .theme-caboo [class*="bg-white/\\[0.06\\]"],
 .theme-caboo [class*="bg-white\\/\\[0.06\\]"] {
-  background-color: rgba(90, 122, 58, 0.14) !important;
+  background-color: rgba(196, 162, 101, 0.12) !important;
 }
 
-/* Border overrides: replace white borders with forge borders */
+/* Border overrides */
 .theme-caboo [class*="border-white/"],
 .theme-caboo [class*="border-white\\/"] {
-  border-color: var(--caboo-border) !important;
+  border-color: var(--station-border) !important;
 }
-
 .theme-caboo [class*="hover:border-white/"]:hover,
 .theme-caboo [class*="hover:border-white\\/"]:hover {
-  border-color: var(--caboo-border-light) !important;
+  border-color: var(--station-border-light) !important;
 }
 
 /* ─── Buttons ────────────────────────────────────────── */
 
-/* Primary action buttons (New Project, etc.) */
 .theme-caboo button[class*="bg-accent"] {
-  border: 2px outset var(--caboo-accent-green-bright);
+  border: 2px outset var(--station-brass-bright);
   box-shadow: none;
   text-shadow: none;
   font-family: var(--caboo-font-heading);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
-
 .theme-caboo button[class*="bg-accent"]:hover {
   box-shadow: none;
-  border-color: var(--caboo-accent-green-bright);
-  background-color: var(--caboo-accent-green-bright) !important;
+  border-color: var(--station-brass-bright);
+  background-color: var(--station-brass-bright) !important;
 }
-
 .theme-caboo button[class*="bg-accent"]:active {
   border-style: inset;
 }
 
-/* Secondary buttons */
-.theme-caboo button:not([class*="bg-accent"]):hover {
-  box-shadow: none;
-}
-
-/* All buttons in forge — boxy and deliberate */
-.theme-caboo button {
-  text-shadow: none;
-}
+.theme-caboo button { text-shadow: none; }
 
 /* ─── Cards & Surfaces ───────────────────────────────── */
 
 .theme-caboo .rounded-xl,
 .theme-caboo [class*="rounded-xl"],
 .theme-caboo [class*="rounded-lg"] {
-  border-color: var(--caboo-border) !important;
-  box-shadow: inset 0 0 0 1px var(--caboo-border);
+  border-color: var(--station-border) !important;
+  box-shadow: inset 0 0 0 1px var(--station-border);
 }
-
 .theme-caboo .rounded-xl:hover,
 .theme-caboo [class*="rounded-xl"]:hover {
-  border-color: var(--caboo-border-strong) !important;
-  box-shadow: 2px 2px 0px var(--caboo-accent-brown);
+  border-color: var(--station-border-strong) !important;
+  box-shadow: 2px 2px 0px var(--station-copper);
 }
 
-/* ─── Input Fields — Recessed Look ───────────────────── */
+/* ─── Input Fields ───────────────────────────────────── */
 
 .theme-caboo input[type="text"],
 .theme-caboo input[type="search"],
 .theme-caboo input:not([type]),
 .theme-caboo textarea,
 .theme-caboo select {
-  border: 2px inset var(--caboo-border) !important;
-  background-color: var(--caboo-bg-input) !important;
-  caret-color: var(--caboo-accent-amber);
+  border: 2px inset var(--station-border) !important;
+  background-color: var(--station-bg-input) !important;
+  caret-color: var(--station-brass);
   font-family: var(--caboo-font-body);
 }
-
 .theme-caboo input:focus,
 .theme-caboo textarea:focus,
 .theme-caboo select:focus {
-  border-color: var(--caboo-accent-green) !important;
-  box-shadow: 0 0 0 2px var(--caboo-accent-green);
+  border-color: var(--station-brass) !important;
+  box-shadow: 0 0 0 2px rgba(196, 162, 101, 0.3);
 }
 
 /* ─── Links ──────────────────────────────────────────── */
 
 .theme-caboo a {
-  text-decoration-color: var(--caboo-accent-brown-light);
-  color: var(--caboo-accent-green-bright);
+  text-decoration-color: var(--station-copper);
+  color: var(--station-brass);
 }
-
 .theme-caboo a:hover {
   text-shadow: none;
-  text-decoration-color: var(--caboo-accent-green);
-  color: var(--caboo-accent-amber-bright);
+  color: var(--station-brass-bright);
 }
 
 /* ─── Progress Bars ──────────────────────────────────── */
@@ -377,26 +307,15 @@
 /* ─── Code Blocks ────────────────────────────────────── */
 
 .theme-caboo code {
-  border: 1px solid var(--caboo-border);
+  border: 1px solid var(--station-border);
   text-shadow: none;
-  background-color: var(--caboo-bg-input);
-}
-
-/* ─── Tooltips ───────────────────────────────────────── */
-
-.theme-caboo [title]::after {
-  font-family: var(--caboo-font-body);
+  background-color: var(--station-bg-input);
 }
 
 /* ─── Toggle Switches ────────────────────────────────── */
 
-.theme-caboo input[type="checkbox"] {
-  accent-color: var(--caboo-accent-green);
-}
-
-.theme-caboo input[type="range"] {
-  accent-color: var(--caboo-accent-green);
-}
+.theme-caboo input[type="checkbox"] { accent-color: var(--station-brass); }
+.theme-caboo input[type="range"]    { accent-color: var(--station-brass); }
 
 /* ─── Status Badges ──────────────────────────────────── */
 
@@ -408,38 +327,25 @@
   letter-spacing: 0.5px;
 }
 
-/* ─── Empty State ────────────────────────────────────── */
-
-.theme-caboo .caboo-under-construction {
-  font-family: var(--caboo-font-heading);
-  text-shadow: none;
-  animation: none;
-}
-
 /* ─── Decorative Section Separators ──────────────────── */
 
 .theme-caboo .caboo-separator {
   border: none;
   height: 1px;
-  background: var(--caboo-border-light);
+  background: var(--station-border-light);
 }
-
 
 /* ─── Title Bar ──────────────────────────────────────── */
 
 .theme-caboo .titlebar-drag {
-  background: var(--caboo-bg-mid);
-  border-bottom: 2px solid var(--caboo-border) !important;
+  background: var(--station-bg-mid);
+  border-bottom: 1px solid var(--station-border) !important;
 }
-
-/* Close button keeps red on hover */
 .theme-caboo .titlebar-no-drag button:last-child:hover {
-  background-color: #8b4513 !important;
+  background-color: var(--station-signal-red) !important;
 }
-
-/* Title bar buttons */
 .theme-caboo .titlebar-no-drag button:hover {
-  background-color: rgba(90, 122, 58, 0.2) !important;
+  background-color: rgba(196, 162, 101, 0.15) !important;
 }
 
 /* ─── Wizard Step Indicators ─────────────────────────── */
@@ -447,56 +353,40 @@
 .theme-caboo .caboo-step-dot {
   width: 10px;
   height: 10px;
-  border: 2px solid var(--caboo-accent-green);
+  border: 2px solid var(--station-brass);
   border-radius: 0 !important;
   background: transparent;
 }
-
 .theme-caboo .caboo-step-dot.active {
-  background: var(--caboo-accent-green);
+  background: var(--station-brass);
   box-shadow: none;
-}
-
-/* ─── File Explorer ──────────────────────────────────── */
-
-.theme-caboo [class*="font-mono"] {
-  text-shadow: none;
 }
 
 /* ─── Command Palette ────────────────────────────────── */
 
 .theme-caboo [class*="backdrop-blur"] {
   backdrop-filter: none;
-  background-color: rgba(26, 30, 20, 0.95) !important;
+  background-color: rgba(26, 23, 20, 0.96) !important;
 }
 
+/* ─── Status dots ────────────────────────────────────── */
 
-/* ─── Status dots — square in forge ──────────────────── */
-
-.theme-caboo .caboo-status-pulse {
-  animation: none;
-}
-
-/* Status dots should be square in forge */
-.theme-caboo .rounded-full {
-  border-radius: 0 !important;
-}
+.theme-caboo .caboo-status-pulse { animation: none; }
+.theme-caboo .rounded-full { border-radius: 0 !important; }
 
 /* ─── Toast Notifications ────────────────────────────── */
 
 .theme-caboo .caboo-toast {
-  border: 2px solid var(--caboo-border);
+  border: 2px solid var(--station-border);
   border-left: 3px solid;
   font-family: var(--caboo-font-body);
   backdrop-filter: none;
-  background-color: var(--caboo-bg-surface) !important;
+  background-color: var(--station-bg-surface) !important;
 }
-
-/* Override toast backdrop blur and roundness */
 .theme-caboo [class*="rounded-lg"][class*="backdrop-blur"] {
   backdrop-filter: none !important;
-  background-color: var(--caboo-bg-surface) !important;
-  border: 2px solid var(--caboo-border) !important;
+  background-color: var(--station-bg-surface) !important;
+  border: 2px solid var(--station-border) !important;
   border-left: 3px solid !important;
 }
 
@@ -506,54 +396,118 @@
 .theme-caboo [class*="backdrop-filter"] {
   backdrop-filter: none;
 }
-
-/* Modal overlay */
 .theme-caboo .fixed[class*="backdrop-blur"] {
-  background-color: rgba(26, 30, 20, 0.92) !important;
+  background-color: rgba(26, 23, 20, 0.94) !important;
   backdrop-filter: none !important;
 }
-
-/* Modal content panels */
 .theme-caboo .fixed [class*="bg-surface"] {
-  border: 2px solid var(--caboo-border) !important;
-  box-shadow: 4px 4px 0 var(--caboo-accent-brown) !important;
+  border: 2px solid var(--station-border) !important;
+  box-shadow: 4px 4px 0 var(--station-copper) !important;
 }
 
-/* ─── Project Cards — Boxy Tiles ─────────────────────── */
+/* ─── Project Cards ──────────────────────────────────── */
 
 .theme-caboo main .rounded-xl {
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
-
 .theme-caboo main .rounded-xl:hover {
   transform: translateY(-2px);
-  box-shadow: 2px 2px 0px var(--caboo-accent-brown) !important;
+  box-shadow: 2px 2px 0px var(--station-copper) !important;
 }
-
-/* Project card borders */
 .theme-caboo main [class*="bg-white/\\[0.03\\]"] {
-  background-color: var(--caboo-bg-surface) !important;
-  border: 2px solid var(--caboo-border) !important;
+  background-color: var(--station-bg-card) !important;
+  border: 2px solid var(--station-border) !important;
   border-style: outset !important;
 }
-
 .theme-caboo main [class*="bg-white/\\[0.03\\]"]:hover {
-  border-color: var(--caboo-border-strong) !important;
-  box-shadow: 2px 2px 0 var(--caboo-accent-brown) !important;
+  border-color: var(--station-border-strong) !important;
+  box-shadow: 2px 2px 0 var(--station-copper) !important;
 }
-
-/* Card footer border */
 .theme-caboo main [class*="border-white/\\[0.04\\]"] {
-  border-color: var(--caboo-border) !important;
+  border-color: var(--station-border) !important;
 }
 
 /* ─── Tags / Pills ───────────────────────────────────── */
 
 .theme-caboo [class*="rounded-full"][class*="bg-white/5"] {
-  background-color: rgba(90, 122, 58, 0.15) !important;
-  border: 1px solid var(--caboo-border) !important;
+  background-color: rgba(196, 162, 101, 0.1) !important;
+  border: 1px solid var(--station-border) !important;
   font-family: var(--caboo-font-body);
   font-size: 10px;
+}
+
+/* ─── Shadow overrides ───────────────────────────────── */
+
+.theme-caboo [class*="shadow-lg"],
+.theme-caboo [class*="shadow-xl"] {
+  box-shadow: 2px 2px 0 var(--station-copper) !important;
+}
+.theme-caboo [class*="shadow-sm"] {
+  box-shadow: 1px 1px 0 var(--station-copper) !important;
+}
+.theme-caboo [class*="shadow-\\[0_0"] {
+  box-shadow: none !important;
+}
+.theme-caboo [class*="hover:shadow-"] { box-shadow: none; }
+.theme-caboo [class*="hover:shadow-"]:hover {
+  box-shadow: 2px 2px 0 var(--station-copper) !important;
+}
+
+/* ─── Backdrop / Gradient removal ───────────────────── */
+
+.theme-caboo [class*="backdrop-blur"],
+.theme-caboo [class*="backdrop-filter"],
+.theme-caboo [class*="backdrop-saturate"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.theme-caboo [class*="bg-gradient"],
+.theme-caboo [style*="linear-gradient"] {
+  background-image: none !important;
+}
+
+/* ─── Context Menu ───────────────────────────────────── */
+
+.theme-caboo [role="menu"] {
+  border: 2px solid var(--station-border) !important;
+  background-color: var(--station-bg-surface) !important;
+  box-shadow: 2px 2px 0 var(--station-copper) !important;
+}
+.theme-caboo [role="menuitem"]:hover {
+  background-color: rgba(196, 162, 101, 0.15) !important;
+}
+
+/* ─── Monaco Editor ──────────────────────────────────── */
+
+.theme-caboo .monaco-editor {
+  font-family: var(--caboo-font-body) !important;
+}
+.theme-caboo .monaco-editor .margin {
+  background-color: var(--station-bg-input) !important;
+}
+
+/* ─── Settings page toggles ──────────────────────────── */
+
+.theme-caboo [class*="rounded-md"][class*="bg-white/\\[0.03\\]"] {
+  background-color: rgba(196, 162, 101, 0.06) !important;
+  border: 1px outset var(--station-border) !important;
+}
+.theme-caboo [class*="rounded-md"][class*="bg-white/\\[0.03\\]"]:hover {
+  background-color: rgba(196, 162, 101, 0.1) !important;
+}
+
+/* ─── Section headers ────────────────────────────────── */
+
+.theme-caboo [class*="uppercase"][class*="tracking-wider"] {
+  font-family: var(--caboo-font-heading);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+/* ─── Spinner override ───────────────────────────────── */
+
+.theme-caboo [class*="border-t-accent"] {
+  border-top-color: var(--station-brass) !important;
 }
 
 /* ─── Pixel Button 88x31 ─────────────────────────────── */
@@ -575,58 +529,53 @@
   padding: 0 4px;
   box-sizing: border-box;
 }
-
 .caboo-88x31.green {
-  background: var(--caboo-accent-green);
-  border-color: var(--caboo-accent-green-bright);
-  color: var(--caboo-text-heading);
+  background: var(--station-signal-green);
+  border-color: #5dbf85;
+  color: var(--station-bg-deep);
 }
-
 .caboo-88x31.brown {
-  background: var(--caboo-accent-brown);
-  border-color: var(--caboo-accent-brown-light);
-  color: var(--caboo-text-primary);
+  background: var(--station-copper);
+  border-color: #c4936a;
+  color: var(--station-text-primary);
 }
-
 .caboo-88x31.amber {
-  background: var(--caboo-accent-amber);
-  border-color: var(--caboo-accent-amber-bright);
-  color: var(--caboo-bg-deep);
+  background: var(--station-signal-amber);
+  border-color: #e8b84b;
+  color: var(--station-bg-deep);
 }
 
-/* ─── Forge Counter (Hit Counter) ────────────────────── */
+/* ─── Caboo Counter ──────────────────────────────────── */
 
 .caboo-counter {
   font-family: var(--caboo-font-heading);
   font-size: 10px;
-  border: 2px solid var(--caboo-border);
-  background: var(--caboo-bg-deep);
+  border: 2px solid var(--station-border);
+  background: var(--station-bg-deep);
   padding: 6px 8px;
 }
-
 .caboo-counter-digit {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 14px;
   height: 18px;
-  background: #0f120b;
-  border: 1px inset var(--caboo-border);
+  background: #0d0a07;
+  border: 1px inset var(--station-border);
   font-family: var(--caboo-font-heading);
   font-size: 10px;
-  color: var(--caboo-accent-amber-bright);
-  text-shadow: 0 0 4px rgba(218, 165, 32, 0.4);
+  color: var(--station-brass);
+  text-shadow: 0 0 4px rgba(196, 162, 101, 0.4);
   margin: 0 1px;
 }
-
 .caboo-counter-label {
   font-family: var(--caboo-font-body);
   font-size: 10px;
-  color: var(--caboo-text-secondary);
+  color: var(--station-text-secondary);
   flex: 1;
 }
 
-/* ─── Forge Fire (CSS Pixel Animation) ───────────────── */
+/* ─── Caboo Fire (CSS Pixel Animation) ───────────────── */
 
 .caboo-fire {
   position: relative;
@@ -636,80 +585,36 @@
   align-items: flex-end;
   justify-content: center;
 }
-
 .caboo-fire-log {
   position: absolute;
   bottom: 2px;
-  background: var(--caboo-accent-brown);
+  background: var(--station-copper);
 }
-
-.caboo-fire-log-1 {
-  width: 14px;
-  height: 4px;
-  left: 3px;
-}
-
+.caboo-fire-log-1 { width: 14px; height: 4px; left: 3px; }
 .caboo-fire-log-2 {
   width: 10px;
   height: 3px;
   left: 7px;
   bottom: 5px;
-  background: var(--caboo-accent-brown-light);
+  background: #c4936a;
 }
-
 .caboo-fire-flame {
   position: absolute;
   animation: forge-flame-dance 1.5s ease-in-out infinite;
 }
-
-.caboo-fire-flame-1 {
-  width: 4px;
-  height: 8px;
-  background: #daa520;
-  bottom: 8px;
-  left: 10px;
-  animation-delay: 0s;
-}
-
-.caboo-fire-flame-2 {
-  width: 3px;
-  height: 6px;
-  background: #b8860b;
-  bottom: 9px;
-  left: 6px;
-  animation-delay: 0.3s;
-}
-
-.caboo-fire-flame-3 {
-  width: 4px;
-  height: 10px;
-  background: #cd853f;
-  bottom: 7px;
-  left: 8px;
-  animation-delay: 0.6s;
-}
-
-.caboo-fire-flame-4 {
-  width: 3px;
-  height: 5px;
-  background: #daa520;
-  opacity: 0.7;
-  bottom: 10px;
-  left: 13px;
-  animation-delay: 0.9s;
-}
+.caboo-fire-flame-1 { width: 4px; height: 8px; background: #d4a039; bottom: 8px; left: 10px; animation-delay: 0s; }
+.caboo-fire-flame-2 { width: 3px; height: 6px; background: #b87333; bottom: 9px; left: 6px; animation-delay: 0.3s; }
+.caboo-fire-flame-3 { width: 4px; height: 10px; background: #c4936a; bottom: 7px; left: 8px; animation-delay: 0.6s; }
+.caboo-fire-flame-4 { width: 3px; height: 5px; background: #d4a039; opacity: 0.7; bottom: 10px; left: 13px; animation-delay: 0.9s; }
 
 @keyframes forge-flame-dance {
   0%, 100% { transform: translateY(0); opacity: 1; }
-  25% { transform: translateY(-2px); opacity: 0.9; }
-  50% { transform: translateY(-1px); opacity: 1; }
-  75% { transform: translateY(-2px); opacity: 0.85; }
+  25%       { transform: translateY(-2px); opacity: 0.9; }
+  50%       { transform: translateY(-1px); opacity: 1; }
+  75%       { transform: translateY(-2px); opacity: 0.85; }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .caboo-fire-flame {
-    animation: none !important;
-  }
+  .caboo-fire-flame { animation: none !important; }
 }
 
 /* ─── ASCII Divider ──────────────────────────────────── */
@@ -717,7 +622,7 @@
 .caboo-ascii-divider {
   font-family: var(--caboo-font-body);
   font-size: 11px;
-  color: var(--caboo-border-light);
+  color: var(--station-border-light);
   text-align: center;
   user-select: none;
   padding: 4px 0;
@@ -726,218 +631,463 @@
   overflow: hidden;
 }
 
-/* ─── Blinking Cursor (Splash Screen) ────────────────── */
+/* ─── Blinking Cursor ────────────────────────────────── */
 
 .caboo-blink-cursor {
   animation: forge-blink 1s step-end infinite;
 }
-
 @keyframes forge-blink {
-  0%, 50% { opacity: 1; }
+  0%, 50%  { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .caboo-blink-cursor {
-    animation: none !important;
-  }
+  .caboo-blink-cursor { animation: none !important; }
 }
 
-/* ─── Settings Page — Section Headers ────────────────── */
+/* ─── Station Window Frame ───────────────────────────── */
 
-.theme-caboo h2[class*="text-lg"],
-.theme-caboo h3[class*="text-base"] {
-  font-family: var(--caboo-font-heading) !important;
-  letter-spacing: 0.5px;
+.station-window {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--station-border);
+  background-color: var(--station-bg-mid);
+  position: relative;
 }
-
-/* Settings form controls — boxy */
-.theme-caboo [role="switch"],
-.theme-caboo [type="checkbox"] + span {
-  border: 2px outset var(--caboo-border) !important;
+.station-window.active {
+  border-color: var(--station-border-active);
 }
-
-/* ─── New Project Wizard ─────────────────────────────── */
-
-/* Template selection cards */
-.theme-caboo [class*="cursor-pointer"][class*="border-2"] {
-  border-style: outset !important;
+.station-window-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 8px;
+  background-color: var(--station-bg-deep);
+  border-bottom: 1px solid var(--station-border);
+  flex-shrink: 0;
+  user-select: none;
 }
-
-.theme-caboo [class*="cursor-pointer"][class*="border-2"]:hover {
-  border-color: var(--caboo-accent-green) !important;
-  box-shadow: 2px 2px 0 var(--caboo-accent-brown);
+.station-window.active .station-window-titlebar {
+  border-bottom-color: var(--station-border-active);
+  background: linear-gradient(90deg, var(--station-bg-deep) 0%, rgba(196, 162, 101, 0.06) 100%);
 }
-
-/* Wizard button bar */
-.theme-caboo [class*="justify-between"] button[class*="bg-accent"] {
-  font-family: var(--caboo-font-heading);
-  text-transform: uppercase;
-  font-size: 12px;
-}
-
-/* ─── File Explorer — ASCII Tree ─────────────────────── */
-
-/* Tree indentation lines */
-.theme-caboo [class*="border-l"] {
-  border-left-style: solid !important;
-}
-
-/* File preview header */
-.theme-caboo [class*="font-mono"][class*="text-xs"] {
-  font-family: var(--caboo-font-body);
-}
-
-/* ─── Command Palette ────────────────────────────────── */
-
-.theme-caboo [class*="command-palette"],
-.theme-caboo [role="dialog"][class*="fixed"] {
-  border: 2px solid var(--caboo-border) !important;
-  box-shadow: 4px 4px 0 var(--caboo-accent-brown) !important;
-}
-
-/* Command palette input */
-.theme-caboo [role="dialog"] input {
-  border-bottom: 2px solid var(--caboo-border) !important;
-  background-color: var(--caboo-bg-input) !important;
-}
-
-/* ─── Context Menu ───────────────────────────────────── */
-
-.theme-caboo [role="menu"] {
-  border: 2px solid var(--caboo-border) !important;
-  background-color: var(--caboo-bg-surface) !important;
-  box-shadow: 2px 2px 0 var(--caboo-accent-brown) !important;
-}
-
-.theme-caboo [role="menuitem"]:hover {
-  background-color: rgba(90, 122, 58, 0.2) !important;
-}
-
-/* ─── Shadow overrides ───────────────────────────────── */
-
-/* Replace all soft shadows with hard pixel shadows */
-.theme-caboo [class*="shadow-lg"],
-.theme-caboo [class*="shadow-xl"] {
-  box-shadow: 2px 2px 0 var(--caboo-accent-brown) !important;
-}
-
-.theme-caboo [class*="shadow-sm"] {
-  box-shadow: 1px 1px 0 var(--caboo-accent-brown) !important;
-}
-
-/* Remove glow shadows */
-.theme-caboo [class*="shadow-\\[0_0"] {
-  box-shadow: none !important;
-}
-
-/* ─── Hover glow removal ─────────────────────────────── */
-
-.theme-caboo [class*="hover:shadow-"] {
-  box-shadow: none;
-}
-
-.theme-caboo [class*="hover:shadow-"]:hover {
-  box-shadow: 2px 2px 0 var(--caboo-accent-brown) !important;
-}
-
-/* ─── Backdrop filter removal ────────────────────────── */
-
-.theme-caboo [class*="backdrop-blur"],
-.theme-caboo [class*="backdrop-filter"],
-.theme-caboo [class*="backdrop-saturate"] {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* ─── Gradient removal ───────────────────────────────── */
-
-.theme-caboo [class*="bg-gradient"],
-.theme-caboo [style*="linear-gradient"] {
-  background-image: none !important;
-}
-
-/* ─── Update Notification ────────────────────────────── */
-
-.theme-caboo [class*="update-notification"] {
-  border: 2px solid var(--caboo-border) !important;
-  background-color: var(--caboo-bg-surface) !important;
-}
-
-/* ─── Setup Wizard ───────────────────────────────────── */
-
-.theme-caboo [class*="setup-assistant"] {
-  background-color: var(--caboo-bg-mid) !important;
-}
-
-/* ─── Onboarding Tutorial ────────────────────────────── */
-
-.theme-caboo [class*="tutorial-highlight"] {
-  border: 2px solid var(--caboo-accent-amber) !important;
-  box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.3) !important;
-}
-
-/* ─── Monaco Editor Theme Integration ────────────────── */
-
-.theme-caboo .monaco-editor {
-  font-family: var(--caboo-font-body) !important;
-}
-
-.theme-caboo .monaco-editor .margin {
-  background-color: var(--caboo-bg-input) !important;
-}
-
-/* ─── Action Buttons on Project Cards ────────────────── */
-
-.theme-caboo main button[class*="rounded-lg"][class*="bg-white/5"] {
-  background-color: rgba(90, 122, 58, 0.15) !important;
-  border: 1px outset var(--caboo-border) !important;
-}
-
-.theme-caboo main button[class*="rounded-lg"][class*="bg-white/5"]:hover {
-  background-color: rgba(90, 122, 58, 0.25) !important;
-  border-color: var(--caboo-border-light) !important;
-}
-
-/* ─── Agent install progress log ─────────────────────── */
-
-.theme-caboo [class*="font-mono"][class*="text-\\[9px\\]"] {
-  background-color: var(--caboo-bg-input) !important;
-  border: 1px inset var(--caboo-border) !important;
-}
-
-/* ─── Spinner override ───────────────────────────────── */
-
-.theme-caboo [class*="border-t-accent"] {
-  border-top-color: var(--caboo-accent-green) !important;
-}
-
-/* ─── Section headers — uppercase in forge ───────────── */
-
-.theme-caboo [class*="uppercase"][class*="tracking-wider"] {
+.station-window-title {
   font-family: var(--caboo-font-heading);
   font-size: 9px;
+  color: var(--station-text-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.station-window.active .station-window-title {
+  color: var(--station-brass);
+}
+.station-window-controls {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.station-window-btn {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--station-border);
+  background: var(--station-bg-surface);
+  color: var(--station-text-dim);
+  font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: var(--caboo-font-body);
+  line-height: 1;
+  padding: 0;
+}
+.station-window-btn:hover {
+  background: var(--station-bg-hover);
+  color: var(--station-text-primary);
+  border-color: var(--station-border-light);
+}
+.station-window-btn.close:hover {
+  background: var(--station-signal-red);
+  border-color: var(--station-signal-red);
+  color: white;
+}
+.station-window-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── Split-Flap Display ─────────────────────────────── */
+
+.station-flap-display {
+  display: inline-flex;
+  font-family: var(--caboo-font-heading);
+  font-size: 10px;
   letter-spacing: 1px;
 }
-
-/* ─── Settings page toggle buttons ───────────────────── */
-
-.theme-caboo [class*="rounded-md"][class*="bg-white/\\[0.03\\]"] {
-  background-color: rgba(90, 122, 58, 0.08) !important;
-  border: 1px outset var(--caboo-border) !important;
+.station-flap-char {
+  display: inline-block;
+  min-width: 0.65em;
+  text-align: center;
+  perspective: 200px;
+}
+.station-flap-animating {
+  animation: station-flap-flip 0.25s ease-in-out forwards;
+}
+@keyframes station-flap-flip {
+  0%   { transform: rotateX(0deg);  opacity: 1; }
+  40%  { transform: rotateX(-90deg); opacity: 0.4; }
+  60%  { transform: rotateX(90deg);  opacity: 0.4; }
+  100% { transform: rotateX(0deg);  opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .station-flap-animating { animation: none !important; }
 }
 
-.theme-caboo [class*="rounded-md"][class*="bg-white/\\[0.03\\]"]:hover {
-  background-color: rgba(90, 122, 58, 0.12) !important;
+/* ─── Taskbar ─────────────────────────────────────────── */
+
+.station-taskbar {
+  height: 36px;
+  background: var(--station-bg-deep);
+  border-top: 2px solid var(--station-border);
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 100;
 }
-
-/* ─── Help tooltips ──────────────────────────────────── */
-
-.theme-caboo [class*="tooltip"],
-.theme-caboo [class*="Tooltip"] {
+.station-start-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-right: 1px solid var(--station-border);
+  background: var(--station-bg-surface);
+  color: var(--station-text-primary);
+  font-family: var(--caboo-font-heading);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-transform: uppercase;
+  transition: background 0.1s;
+  flex-shrink: 0;
+}
+.station-start-btn:hover,
+.station-start-btn.open {
+  background: var(--station-brass);
+  color: var(--station-bg-deep);
+  border-color: var(--station-brass);
+}
+.station-taskbar-tabs {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  gap: 1px;
+  padding: 0 4px;
+}
+.station-taskbar-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  background: var(--station-bg-surface);
+  border: 1px solid var(--station-border);
+  border-bottom: none;
+  color: var(--station-text-secondary);
   font-family: var(--caboo-font-body);
-  border: 1px solid var(--caboo-border) !important;
-  background-color: var(--caboo-bg-deep) !important;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 180px;
+  min-width: 80px;
+  transition: background 0.1s, color 0.1s;
+  position: relative;
+  margin-top: 2px;
+}
+.station-taskbar-tab:hover {
+  background: var(--station-bg-hover);
+  color: var(--station-text-primary);
+}
+.station-taskbar-tab.active {
+  background: var(--station-bg-mid);
+  color: var(--station-brass);
+  border-color: var(--station-border-active);
+  border-bottom: 2px solid var(--station-bg-mid);
+  margin-top: 0;
+}
+.station-taskbar-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.station-taskbar-tab-close {
+  color: var(--station-text-dim);
+  font-size: 10px;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  transition: background 0.1s, color 0.1s;
+}
+.station-taskbar-tab-close:hover {
+  background: var(--station-signal-red);
+  color: white;
+  border-color: var(--station-signal-red);
+}
+.station-taskbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-left: 1px solid var(--station-border);
+  flex-shrink: 0;
+}
+.station-taskbar-clock {
+  font-family: var(--caboo-font-heading);
+  font-size: 9px;
+  color: var(--station-text-secondary);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.station-agent-dot {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--caboo-font-body);
+  font-size: 9px;
+  color: var(--station-text-dim);
+}
+.station-agent-dot-indicator {
+  width: 6px;
+  height: 6px;
+  border: 1px solid currentColor;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.station-agent-dot-indicator.online  { background: var(--station-signal-green); border-color: var(--station-signal-green); }
+.station-agent-dot-indicator.working {
+  background: var(--station-signal-amber);
+  border-color: var(--station-signal-amber);
+  animation: station-agent-pulse 1.2s ease-in-out infinite;
+}
+.station-agent-dot-indicator.offline { background: transparent; border-color: var(--station-border-light); }
+
+@keyframes station-agent-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .station-agent-dot-indicator.working { animation: none !important; }
+}
+
+/* ─── Start Menu ─────────────────────────────────────── */
+
+.station-start-menu {
+  position: fixed;
+  bottom: 36px;
+  left: 0;
+  background: var(--station-bg-surface);
+  border: 2px solid var(--station-border-active);
+  box-shadow: 4px -4px 0 var(--station-copper);
+  z-index: 200;
+  min-width: 200px;
+}
+.station-start-menu-header {
+  padding: 10px 12px 8px;
+  background: var(--station-brass);
+  color: var(--station-bg-deep);
+  font-family: var(--caboo-font-heading);
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--station-copper);
+}
+.station-start-menu-section {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--station-border);
+}
+.station-start-menu-section:last-child { border-bottom: none; }
+.station-start-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  color: var(--station-text-primary);
+  font-family: var(--caboo-font-body);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  width: 100%;
+  text-align: left;
+}
+.station-start-menu-item:hover {
+  background: var(--station-brass);
+  color: var(--station-bg-deep);
+}
+.station-start-menu-item-icon {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* ─── Departure Board ────────────────────────────────── */
+
+.station-departure-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--caboo-font-body);
+  font-size: 12px;
+}
+.station-departure-table th {
+  font-family: var(--caboo-font-heading);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--station-text-dim);
+  padding: 6px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--station-border);
+  white-space: nowrap;
+}
+.station-departure-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(74, 66, 56, 0.5);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.station-departure-row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.station-departure-row:hover {
+  background: rgba(196, 162, 101, 0.07);
+}
+.station-departure-row:hover td {
+  border-bottom-color: var(--station-border);
+}
+.station-departure-platform {
+  font-family: var(--caboo-font-heading);
+  font-size: 14px;
+  color: var(--station-brass);
+  text-align: center;
+  min-width: 32px;
+}
+.station-departure-name {
+  font-weight: 600;
+  color: var(--station-text-primary);
+  font-size: 13px;
+}
+.station-departure-status {
+  font-family: var(--caboo-font-heading);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.station-departure-status.on-route { color: var(--station-signal-green); }
+.station-departure-status.departing { color: var(--station-signal-amber); }
+.station-departure-status.arrived  { color: var(--station-text-secondary); }
+.station-departure-status.delayed  { color: var(--station-signal-red); }
+
+.station-status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.station-status-dot.on-route  { background: var(--station-signal-green); }
+.station-status-dot.departing { background: var(--station-signal-amber); animation: station-agent-pulse 1.2s ease-in-out infinite; }
+.station-status-dot.arrived   { background: var(--station-text-dim); }
+.station-status-dot.delayed   { background: var(--station-signal-red); }
+
+/* ─── Breadcrumbs ────────────────────────────────────── */
+
+.station-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--caboo-font-body);
+  font-size: 10px;
+  color: var(--station-text-dim);
+  padding: 4px 0;
+}
+.station-breadcrumb-sep {
+  color: var(--station-border-strong);
+}
+.station-breadcrumb-item {
+  color: var(--station-text-secondary);
+  cursor: pointer;
+  transition: color 0.1s;
+}
+.station-breadcrumb-item:hover { color: var(--station-brass); }
+.station-breadcrumb-item.current {
+  color: var(--station-text-primary);
+  cursor: default;
+}
+
+/* ─── Boot Screen ────────────────────────────────────── */
+
+.station-boot-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--station-bg-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--caboo-font-body);
+}
+.station-boot-box {
+  border: 2px solid var(--station-brass);
+  padding: 32px 48px;
+  min-width: 480px;
+  box-shadow: 4px 4px 0 var(--station-copper);
+}
+.station-boot-title {
+  font-family: var(--caboo-font-heading);
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: var(--station-brass);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.station-boot-subtitle {
+  font-size: 11px;
+  color: var(--station-text-secondary);
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+.station-boot-divider {
+  height: 1px;
+  background: var(--station-border);
+  margin-bottom: 16px;
+}
+.station-boot-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.station-boot-line-label { color: var(--station-text-secondary); }
+.station-boot-line-status.ok     { color: var(--station-signal-green); font-family: var(--caboo-font-heading); font-size: 10px; }
+.station-boot-line-status.wait   { color: var(--station-signal-amber); font-family: var(--caboo-font-heading); font-size: 10px; }
+.station-boot-line-status.fail   { color: var(--station-signal-red);   font-family: var(--caboo-font-heading); font-size: 10px; }
+.station-boot-ready {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--station-signal-green);
 }
 
 /* ─── Conductor Mode Animations ─────────────────────── */
@@ -946,56 +1096,99 @@
   from { transform: translateX(-50%) translateY(0px); }
   to   { transform: translateX(-50%) translateY(-2px); }
 }
-
 @keyframes conductor-train-wobble {
   from { transform: translateX(-50%) rotate(-2deg); }
   to   { transform: translateX(-50%) rotate(2deg); }
 }
-
 @keyframes conductor-toot {
   0%   { opacity: 1; transform: translateY(0) scale(1); }
   100% { opacity: 0; transform: translateY(-16px) scale(1.3); }
 }
-
 @keyframes conductor-checkpoint-pulse {
   0%   { opacity: 1; transform: translateX(-50%) scale(1); }
   50%  { opacity: 0.6; transform: translateX(-50%) scale(1.3); }
   100% { opacity: 1; transform: translateX(-50%) scale(1); }
 }
-
 @keyframes conductor-spark {
   0%   { opacity: 1; transform: scale(1) translateY(0); }
   100% { opacity: 0; transform: scale(2) translateY(-20px); }
 }
-
 @keyframes conductor-loading {
   0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
-
 @keyframes conductor-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 
-/* ─── Workbench Kanban Columns ───────────────────────── */
+/* ─── Workbench Kanban ───────────────────────────────── */
 
 .workbench-forging-col {
-  box-shadow: inset 0 0 40px rgba(184, 134, 11, 0.08);
+  box-shadow: inset 0 0 40px rgba(212, 160, 57, 0.07);
 }
-
 .workbench-done-card {
-  background: rgba(90, 122, 58, 0.06) !important;
+  background: rgba(74, 158, 109, 0.06) !important;
 }
 
 /* ─── Time Machine Track ─────────────────────────────── */
 
-.time-machine-track-line {
-  background: var(--caboo-border);
-}
-
+.time-machine-track-line           { background: var(--station-border); }
 .time-machine-track-line-completed {
-  background: var(--caboo-accent-green);
+  background: var(--station-signal-green);
   transition: width 0.3s ease;
 }
 
+/* ─── Crew Status Bar (above taskbar) ────────────────── */
+
+.station-crew-bar {
+  background: var(--station-bg-mid);
+  border-top: 1px solid var(--station-border);
+  height: 22px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 16px;
+  font-family: var(--caboo-font-body);
+  font-size: 10px;
+  color: var(--station-text-dim);
+  flex-shrink: 0;
+}
+.station-crew-label {
+  font-family: var(--caboo-font-heading);
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--station-text-dim);
+  margin-right: 4px;
+}
+.station-crew-agent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: color 0.1s;
+}
+.station-crew-agent:hover { color: var(--station-text-primary); }
+
+/* ─── Train Loading Indicator ────────────────────────── */
+
+.station-loading-train {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--caboo-font-heading);
+  font-size: 9px;
+  color: var(--station-text-secondary);
+  letter-spacing: 1px;
+}
+.station-loading-train-icon {
+  animation: station-train-chug 0.6s steps(2) infinite;
+}
+@keyframes station-train-chug {
+  0%   { transform: translateX(0); }
+  50%  { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .station-loading-train-icon { animation: none !important; }
+}
