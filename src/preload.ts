@@ -306,6 +306,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
     offTaskUpdate: () => {
       ipcRenderer.removeAllListeners('conductor:task-update');
     },
+    generateMockups: (planId: string) =>
+      ipcRenderer.invoke('conductor:generate-mockups', planId),
+    selectMockup: (planId: string, stationId: string, variantId: string) =>
+      ipcRenderer.invoke('conductor:select-mockup', planId, stationId, variantId),
+    setLearningMode: (planId: string, enabled: boolean) =>
+      ipcRenderer.invoke('conductor:set-learning-mode', planId, enabled),
+  },
+  testPipeline: {
+    run: (projectId: string, projectPath: string) =>
+      ipcRenderer.invoke('test-pipeline:run', projectId, projectPath),
+    getHistory: (projectId: string) =>
+      ipcRenderer.invoke('test-pipeline:get-history', projectId),
+    onProgress: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('test-pipeline:progress', handler);
+    },
+    offProgress: () => {
+      ipcRenderer.removeAllListeners('test-pipeline:progress');
+    },
   },
   fuel: {
     getStatus: () => ipcRenderer.invoke('fuel:get-status'),

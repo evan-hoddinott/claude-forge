@@ -159,6 +159,8 @@ function extractJSON(text: string): unknown {
   return JSON.parse(raw.trim());
 }
 
+const DESIGN_KEYWORDS = /\b(ui|ux|design|visual|component|page|layout|style|css|theme|color|button|form|modal|dashboard|landing|hero|card|table|nav|sidebar|header|footer)\b/i;
+
 // --- Planning Phase ---
 
 export async function startPlan(opts: {
@@ -356,6 +358,14 @@ Rules:
     status: 'pending' as const,
   }));
 
+  // Tag design stations for mockup generation
+  for (const station of stations) {
+    const stationText = [station.name, ...station.tasks.map((t) => t.description)].join(' ');
+    if (DESIGN_KEYWORDS.test(stationText)) {
+      station.isDesignStation = true;
+    }
+  }
+
   // Estimate token usage (rough: 1000 tokens per task * 3 for avg interaction)
   const taskCount = stations.reduce((sum, s) => sum + s.tasks.length, 0);
   const estimatedTokens = taskCount * 3000;
@@ -365,6 +375,120 @@ Rules:
     stations,
     tokenUsage: { used: 0, estimated: estimatedCost, saved: 0 },
   };
+}
+
+// --- Mockup Generation (Extension 1) ---
+
+export async function generateMockups(opts: { planId: string; projectId: string }): Promise<ConductorPlan> {
+  const { projectId } = opts;
+  const plan = store.getConductorPlan(projectId);
+  if (!plan) throw new Error('Plan not found');
+
+  const model = selectPlanningModel();
+
+  for (const station of plan.stations) {
+    if (!station.isDesignStation) continue;
+
+    const taskDescriptions = station.tasks.map((t) => t.description).join(', ');
+
+    const systemPrompt = `You are a UI/UX expert. Generate 3 distinct design variants for the user to choose from. Each variant must be a complete, self-contained HTML document with inline CSS. Make the designs visually distinct from each other but all solve the same design problem. Use a dark background (#1a1714) as base. Keep designs compact (fits in 200px height preview).
+
+Return ONLY valid JSON:
+{
+  "designDecision": "Brief description of the design choice",
+  "variants": [
+    {
+      "id": "v1",
+      "label": "Minimal",
+      "description": "One sentence description",
+      "htmlSpec": "<!DOCTYPE html><html>...</html>"
+    }
+  ]
+}`;
+
+    const userMessage = `Design task: ${taskDescriptions}\nGoal: ${plan.goal}\n\nGenerate 3 visual variants.`;
+
+    try {
+      const response = await callLLM(model, systemPrompt, userMessage);
+      const parsed = extractJSON(response) as { designDecision: string; variants: Array<{ id: string; label: string; description: string; htmlSpec: string }> };
+      station.mockupSpec = {
+        designDecision: parsed.designDecision,
+        variants: parsed.variants ?? [],
+        selectedVariantId: parsed.variants?.[0]?.id,
+      };
+    } catch {
+      // Non-fatal: skip mockup for this station
+    }
+  }
+
+  plan.status = 'mockup';
+  broadcastPlan(plan);
+  return plan;
+}
+
+export function selectMockup(opts: { planId: string; projectId: string; stationId: string; variantId: string }): ConductorPlan {
+  const { projectId, stationId, variantId } = opts;
+  const plan = store.getConductorPlan(projectId);
+  if (!plan) throw new Error('Plan not found');
+
+  const station = plan.stations.find((s) => s.id === stationId);
+  if (station?.mockupSpec) {
+    station.mockupSpec.selectedVariantId = variantId;
+    // Inject selected variant description into task prompts
+    const variant = station.mockupSpec.variants.find((v) => v.id === variantId);
+    if (variant) {
+      for (const task of station.tasks) {
+        task.prompt = `Design choice: "${variant.label}" — ${variant.description}\n\n${task.prompt}`;
+      }
+    }
+  }
+
+  store.saveConductorPlan(projectId, plan);
+  return plan;
+}
+
+// --- Learning Mode (Extension 3) ---
+
+export async function setLearningMode(opts: { planId: string; projectId: string; enabled: boolean }): Promise<ConductorPlan> {
+  const { projectId, enabled } = opts;
+  const plan = store.getConductorPlan(projectId);
+  if (!plan) throw new Error('Plan not found');
+
+  plan.learningEnabled = enabled;
+  store.saveConductorPlan(projectId, plan);
+  return plan;
+}
+
+async function generateLearningAnnotation(task: ConductorTask, model: LLMChoice): Promise<string> {
+  const systemPrompt = `You are a friendly coding tutor. Explain what just happened in 2-3 plain English sentences. Focus on what the user learned, not technical jargon. Write as if explaining to someone new to programming.`;
+  const userMessage = `Task completed: "${task.description}"\nOutput snippet: ${(task.output ?? '').slice(0, 500)}`;
+  try {
+    const text = await callLLM(model, systemPrompt, userMessage);
+    return text.trim().slice(0, 400);
+  } catch {
+    return `The Conductor completed: ${task.description}`;
+  }
+}
+
+async function saveLearningSession(projectPath: string, plan: ConductorPlan): Promise<void> {
+  if (!plan.learningEnabled || !plan.learningAnnotations) return;
+  try {
+    const dir = nodePath.join(projectPath, '.caboo', 'learning');
+    await fs.mkdir(dir, { recursive: true });
+    const date = new Date().toISOString().split('T')[0];
+    const lines = [
+      `# Learning Session — ${date}`,
+      `Goal: ${plan.goal}`,
+      '',
+      ...Object.entries(plan.learningAnnotations).map(([taskId, annotation]) => {
+        const task = plan.stations.flatMap((s) => s.tasks).find((t) => t.id === taskId);
+        return `## ${task?.description ?? taskId}\n${annotation}\n`;
+      }),
+    ];
+    await fs.writeFile(nodePath.join(dir, `session-${date}.md`), lines.join('\n'), 'utf-8');
+  } catch {
+    // Non-fatal
+  }
 }
 
 // --- Task Reordering & Reassignment ---
@@ -716,6 +840,18 @@ async function executeAll(state: ExecutionState): Promise<void> {
       }
 
       broadcastTask(plan, station, task);
+
+      // Generate learning annotation (non-blocking)
+      if (plan.learningEnabled && task.status === 'completed') {
+        const planningModel = selectPlanningModel();
+        generateLearningAnnotation(task, planningModel).then((annotation) => {
+          if (!plan.learningAnnotations) plan.learningAnnotations = {};
+          plan.learningAnnotations[task.id] = annotation;
+          store.saveConductorPlan(plan.projectId, plan);
+          broadcastPlan(plan);
+        }).catch(() => { /* best-effort */ });
+      }
+
       broadcastPlan(plan);
 
       // In Guided/Full Control: pause on task failure
@@ -829,6 +965,9 @@ async function executeAll(state: ExecutionState): Promise<void> {
   if (!state.stopped) {
     plan.status = 'completed';
     plan.completedAt = new Date().toISOString();
+
+    // Save learning session (Extension 3)
+    await saveLearningSession(projectPath, plan);
 
     // Final snapshot
     try {

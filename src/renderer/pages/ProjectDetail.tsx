@@ -32,7 +32,10 @@ const StagingReview = lazy(() => import('../components/StagingReview'));
 // Lazy-load SecurityDashboard — only when Security tab is opened
 const SecurityDashboard = lazy(() => import('../components/SecurityDashboard'));
 
-type Tab = 'overview' | 'files' | 'map' | 'timeline' | 'github' | 'agents' | 'settings' | 'blackboard' | 'review' | 'security';
+// Lazy-load QualityTab — only when Quality tab is opened
+const QualityTab = lazy(() => import('../components/QualityTab'));
+
+type Tab = 'overview' | 'files' | 'map' | 'timeline' | 'github' | 'agents' | 'settings' | 'blackboard' | 'review' | 'security' | 'quality';
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
@@ -41,6 +44,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: 'timeline', label: 'Timeline' },
   { id: 'blackboard', label: 'Blackboard' },
   { id: 'review', label: 'Review' },
+  { id: 'quality', label: 'Quality' },
   { id: 'github', label: 'GitHub' },
   { id: 'agents', label: 'AI Agents' },
   { id: 'security', label: 'Security' },
@@ -314,6 +318,12 @@ export default function ProjectDetail({
           <div className="p-6">
             <Suspense fallback={<div className="text-sm text-text-muted">Loading...</div>}>
               <SecurityDashboard project={project} />
+            </Suspense>
+          </div>
+        ) : activeTab === 'quality' ? (
+          <div className="h-full">
+            <Suspense fallback={<div className="text-sm text-text-muted p-4">Loading quality pipeline...</div>}>
+              <QualityTab projectId={project.id} projectPath={project.path} />
             </Suspense>
           </div>
         ) : (

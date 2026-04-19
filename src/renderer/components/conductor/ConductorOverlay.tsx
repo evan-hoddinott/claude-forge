@@ -9,6 +9,9 @@ import PlanReview from './PlanReview';
 import ExecutionView from './ExecutionView';
 import CheckpointModal from './CheckpointModal';
 import CompletionScreen from './CompletionScreen';
+import MockupCheckpoint from './MockupCheckpoint';
+import LearningPanel from './LearningPanel';
+import LearningSummary from './LearningSummary';
 
 interface ConductorOverlayProps {
   projectId: string;
@@ -17,7 +20,7 @@ interface ConductorOverlayProps {
   onClose: () => void;
 }
 
-type Step = 'goal' | 'qa' | 'plan' | 'execution' | 'checkpoint' | 'complete';
+type Step = 'goal' | 'qa' | 'plan' | 'mockup' | 'execution' | 'checkpoint' | 'complete';
 
 export default function ConductorOverlay({
   projectId,
@@ -31,15 +34,19 @@ export default function ConductorOverlay({
   const [plan, setPlan] = useState<ConductorPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [learningMode, setLearningMode] = useState(false);
+  const [generatingMockups, setGeneratingMockups] = useState(false);
 
   // Load any existing active plan on mount
   useEffect(() => {
     api.conductor.getPlan(projectId).then((existingPlan) => {
       if (existingPlan && existingPlan.status !== 'completed' && existingPlan.status !== 'failed') {
         setPlan(existingPlan);
+        setLearningMode(existingPlan.learningEnabled ?? false);
         switch (existingPlan.status) {
           case 'answering':  setStep('qa'); break;
           case 'reviewing':  setStep('plan'); break;
+          case 'mockup':     setStep('mockup'); break;
           case 'executing':
           case 'paused':     setStep('execution'); break;
           case 'checkpoint': setStep('checkpoint'); break;
@@ -58,6 +65,7 @@ export default function ConductorOverlay({
           case 'checkpoint': setStep('checkpoint'); break;
           case 'completed':  setStep('complete'); break;
           case 'failed':     setStep('complete'); break;
+          case 'mockup':     setStep('mockup'); break;
           case 'executing':
           case 'paused':     if (step !== 'execution') setStep('execution'); break;
         }
@@ -100,15 +108,39 @@ export default function ConductorOverlay({
     }
   }
 
-  async function handleStartExecution() {
+  async function handlePlanApproved() {
+    if (!plan) return;
+    // Check if there are design stations that need mockups
+    const hasDesignStations = plan.stations.some((s) => s.isDesignStation);
+    if (hasDesignStations) {
+      setGeneratingMockups(true);
+      try {
+        const updated = await api.conductor.generateMockups(plan.id);
+        setPlan(updated);
+        setStep('mockup');
+      } catch {
+        // If mockup generation fails, skip to execution
+        await startExecution();
+      } finally {
+        setGeneratingMockups(false);
+      }
+    } else {
+      await startExecution();
+    }
+  }
+
+  async function startExecution() {
     if (!plan) return;
     setLoading(true);
     setError(null);
     try {
+      // Apply learning mode if enabled
+      if (learningMode) {
+        const updated = await api.conductor.setLearningMode(plan.id, true);
+        setPlan(updated);
+      }
       await api.conductor.startExecution(plan.id);
       setStep('execution');
-
-      // Express mode: countdown
       if (plan.controlLevel === 'express') {
         toast('🚂 Conductor departing in 3...');
       }
@@ -117,6 +149,20 @@ export default function ConductorOverlay({
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleMockupSelect(stationId: string, variantId: string) {
+    if (!plan) return;
+    const updated = await api.conductor.selectMockup(plan.id, stationId, variantId);
+    setPlan(updated);
+  }
+
+  async function handleMockupContinue(stationId: string, variantId: string) {
+    await handleMockupSelect(stationId, variantId);
+  }
+
+  async function handleMockupsDone() {
+    await startExecution();
   }
 
   async function handleCheckpointDecision(decision: 'continue' | 'pause' | 'revert' | 'stop') {
@@ -128,7 +174,7 @@ export default function ConductorOverlay({
       } else {
         setStep('execution');
       }
-    } catch (err) {
+    } catch {
       toast('Failed to send checkpoint decision');
     }
   }
@@ -143,7 +189,21 @@ export default function ConductorOverlay({
     }
   }
 
+  async function handleToggleLearning() {
+    const next = !learningMode;
+    setLearningMode(next);
+    if (plan) {
+      try {
+        const updated = await api.conductor.setLearningMode(plan.id, next);
+        setPlan(updated);
+      } catch {
+        // Non-fatal
+      }
+    }
+  }
+
   const currentStation = plan ? plan.stations[plan.currentStationIndex] : null;
+  const showLearningPanel = learningMode && step === 'execution' && plan;
 
   return (
     <motion.div
@@ -199,20 +259,40 @@ export default function ConductorOverlay({
               </>
             )}
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              color: 'var(--caboo-text-muted)',
-              background: 'none',
-              border: '1px solid var(--caboo-border)',
-              padding: '2px 8px',
-              cursor: 'pointer',
-              fontFamily: 'var(--caboo-font-heading)',
-              fontSize: '10px',
-            }}
-          >
-            ✕ CLOSE
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Learning mode toggle */}
+            <button
+              onClick={handleToggleLearning}
+              title={learningMode ? 'Disable learning mode' : 'Enable learning mode — adds explanations for beginners'}
+              style={{
+                padding: '2px 8px',
+                background: learningMode ? 'rgba(196,162,101,0.15)' : 'none',
+                border: `1px solid ${learningMode ? 'var(--station-brass)' : 'var(--caboo-border)'}`,
+                color: learningMode ? 'var(--station-brass)' : 'var(--caboo-text-muted)',
+                fontFamily: 'var(--caboo-font-heading)',
+                fontSize: '10px',
+                cursor: 'pointer',
+                letterSpacing: '0.5px',
+                transition: 'all 0.15s',
+              }}
+            >
+              💡 {learningMode ? 'LEARNING ON' : 'LEARNING'}
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                color: 'var(--caboo-text-muted)',
+                background: 'none',
+                border: '1px solid var(--caboo-border)',
+                padding: '2px 8px',
+                cursor: 'pointer',
+                fontFamily: 'var(--caboo-font-heading)',
+                fontSize: '10px',
+              }}
+            >
+              ✕ CLOSE
+            </button>
+          </div>
         </div>
 
         {/* Error banner */}
@@ -229,70 +309,112 @@ export default function ConductorOverlay({
           </div>
         )}
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden">
-          <AnimatePresence mode="wait">
-            {step === 'goal' && (
-              <StepWrapper key="goal">
-                <GoalInput
-                  projectName={projectName}
-                  onSubmit={handleGoalSubmit}
-                  loading={loading}
-                />
-              </StepWrapper>
-            )}
+        {/* Mockup generation loading banner */}
+        {generatingMockups && (
+          <div
+            className="shrink-0 px-4 py-2 text-[11px]"
+            style={{
+              background: 'rgba(196,162,101,0.1)',
+              borderBottom: '1px solid var(--station-brass)',
+              color: 'var(--station-brass)',
+              fontFamily: 'var(--caboo-font-heading)',
+              letterSpacing: 1,
+            }}
+          >
+            🎨 GENERATING DESIGN PREVIEWS...
+          </div>
+        )}
 
-            {step === 'qa' && plan?.questions && plan.questions.length > 0 && (
-              <StepWrapper key="qa">
-                <QAScreen
-                  questions={plan.questions}
-                  onSubmit={handleAnswersSubmit}
-                  loading={loading}
-                />
-              </StepWrapper>
-            )}
+        {/* Content + optional learning panel side-by-side */}
+        <div className="flex-1 overflow-hidden flex">
+          <div className="flex-1 overflow-hidden">
+            <AnimatePresence mode="wait">
+              {step === 'goal' && (
+                <StepWrapper key="goal">
+                  <GoalInput
+                    projectName={projectName}
+                    onSubmit={handleGoalSubmit}
+                    loading={loading}
+                  />
+                </StepWrapper>
+              )}
 
-            {step === 'plan' && plan && (
-              <StepWrapper key="plan">
-                <PlanReview
-                  plan={plan}
-                  onStart={handleStartExecution}
-                  onBack={() => setStep(plan.questions?.length ? 'qa' : 'goal')}
-                  onReassignTask={handleReassignTask}
-                  loading={loading}
-                />
-              </StepWrapper>
-            )}
+              {step === 'qa' && plan?.questions && plan.questions.length > 0 && (
+                <StepWrapper key="qa">
+                  <QAScreen
+                    questions={plan.questions}
+                    onSubmit={handleAnswersSubmit}
+                    loading={loading}
+                  />
+                </StepWrapper>
+              )}
 
-            {step === 'execution' && plan && (
-              <StepWrapper key="execution">
-                <ExecutionView
-                  plan={plan}
-                  onPause={() => api.conductor.pause(plan.id)}
-                  onResume={() => api.conductor.resume(plan.id)}
-                  onSkipTask={() => api.conductor.skipTask(plan.id)}
-                  onStop={() => api.conductor.stop(plan.id)}
-                  onReassignTask={handleReassignTask}
-                />
-              </StepWrapper>
-            )}
+              {step === 'plan' && plan && (
+                <StepWrapper key="plan">
+                  <PlanReview
+                    plan={plan}
+                    onStart={handlePlanApproved}
+                    onBack={() => setStep(plan.questions?.length ? 'qa' : 'goal')}
+                    onReassignTask={handleReassignTask}
+                    loading={loading || generatingMockups}
+                  />
+                </StepWrapper>
+              )}
 
-            {step === 'checkpoint' && plan && currentStation && (
-              <StepWrapper key="checkpoint">
-                <CheckpointModal
-                  plan={plan}
-                  station={currentStation}
-                  onDecision={handleCheckpointDecision}
-                />
-              </StepWrapper>
-            )}
+              {step === 'mockup' && plan && (
+                <StepWrapper key="mockup">
+                  <MockupCheckpoint
+                    plan={plan}
+                    onSelectVariant={handleMockupContinue}
+                    onContinue={handleMockupsDone}
+                    onSkip={handleMockupsDone}
+                    loading={loading}
+                  />
+                </StepWrapper>
+              )}
 
-            {step === 'complete' && plan && (
-              <StepWrapper key="complete">
-                <CompletionScreen plan={plan} onClose={onClose} />
-              </StepWrapper>
-            )}
-          </AnimatePresence>
+              {step === 'execution' && plan && (
+                <StepWrapper key="execution">
+                  <ExecutionView
+                    plan={plan}
+                    onPause={() => api.conductor.pause(plan.id)}
+                    onResume={() => api.conductor.resume(plan.id)}
+                    onSkipTask={() => api.conductor.skipTask(plan.id)}
+                    onStop={() => api.conductor.stop(plan.id)}
+                    onReassignTask={handleReassignTask}
+                  />
+                </StepWrapper>
+              )}
+
+              {step === 'checkpoint' && plan && currentStation && (
+                <StepWrapper key="checkpoint">
+                  <CheckpointModal
+                    plan={plan}
+                    station={currentStation}
+                    onDecision={handleCheckpointDecision}
+                  />
+                </StepWrapper>
+              )}
+
+              {step === 'complete' && plan && (
+                <StepWrapper key="complete">
+                  <div className="h-full overflow-y-auto">
+                    <CompletionScreen plan={plan} onClose={onClose} />
+                    {plan.learningEnabled && (
+                      <div style={{ padding: '0 24px 24px' }}>
+                        <LearningSummary plan={plan} />
+                      </div>
+                    )}
+                  </div>
+                </StepWrapper>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Learning panel sidebar */}
+          {showLearningPanel && (
+            <LearningPanel plan={plan!} onToggle={handleToggleLearning} />
+          )}
         </div>
       </div>
     </motion.div>
@@ -317,13 +439,14 @@ const STEP_LABELS: Record<Step, string> = {
   goal:        'Goal',
   qa:          'Questions',
   plan:        'Plan Review',
+  mockup:      'Design Preview',
   execution:   'Executing',
   checkpoint:  'Checkpoint',
   complete:    'Complete',
 };
 
 function StepBreadcrumb({ step }: { step: Step }) {
-  const steps: Step[] = ['goal', 'qa', 'plan', 'execution', 'complete'];
+  const steps: Step[] = ['goal', 'qa', 'plan', 'mockup', 'execution', 'complete'];
   const currentIdx = steps.indexOf(step);
 
   return (

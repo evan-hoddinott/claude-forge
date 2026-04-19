@@ -24,6 +24,7 @@ import * as skillService from './services/skill-service';
 import * as battleService from './services/battle-service';
 import * as timelineService from './services/timeline-service';
 import * as conductorService from './services/conductor-service';
+import * as testPipelineService from './services/test-pipeline-service';
 import * as fuelService from './services/fuel-service';
 import * as timeMachineService from './services/time-machine-service';
 import * as ollamaService from './services/ollama-service';
@@ -1739,6 +1740,59 @@ export function registerIpcHandlers(): void {
       }
     }
     throw new Error('Plan not found');
+  });
+
+  // --- Conductor Mockups & Learning (Extensions 1 & 3) ---
+
+  ipcMain.handle('conductor:generate-mockups', async (_, planId: unknown) => {
+    const vPlanId = validateString(planId, 'planId');
+    const projects = store.getAllProjects();
+    for (const p of projects) {
+      const plan = store.getConductorPlan(p.id);
+      if (plan?.id === vPlanId) {
+        return conductorService.generateMockups({ planId: vPlanId, projectId: p.id });
+      }
+    }
+    throw new Error('Plan not found');
+  });
+
+  ipcMain.handle('conductor:select-mockup', (_, planId: unknown, stationId: unknown, variantId: unknown) => {
+    const vPlanId = validateString(planId, 'planId');
+    const vStationId = validateString(stationId, 'stationId');
+    const vVariantId = validateString(variantId, 'variantId');
+    const projects = store.getAllProjects();
+    for (const p of projects) {
+      const plan = store.getConductorPlan(p.id);
+      if (plan?.id === vPlanId) {
+        return conductorService.selectMockup({ planId: vPlanId, projectId: p.id, stationId: vStationId, variantId: vVariantId });
+      }
+    }
+    throw new Error('Plan not found');
+  });
+
+  ipcMain.handle('conductor:set-learning-mode', async (_, planId: unknown, enabled: unknown) => {
+    const vPlanId = validateString(planId, 'planId');
+    if (typeof enabled !== 'boolean') throw new Error('enabled must be boolean');
+    const projects = store.getAllProjects();
+    for (const p of projects) {
+      const plan = store.getConductorPlan(p.id);
+      if (plan?.id === vPlanId) {
+        return conductorService.setLearningMode({ planId: vPlanId, projectId: p.id, enabled });
+      }
+    }
+    throw new Error('Plan not found');
+  });
+
+  // --- Test Pipeline (Extension 2) ---
+
+  ipcMain.handle('test-pipeline:run', async (_, projectId: unknown, projectPath: unknown) => {
+    const vId = validateString(projectId, 'projectId');
+    const vPath = await validatePath(validateString(projectPath, 'projectPath'), 'projectPath');
+    return testPipelineService.runPipeline({ projectId: vId, projectPath: vPath });
+  });
+
+  ipcMain.handle('test-pipeline:get-history', (_, projectId: unknown) => {
+    return testPipelineService.getHistory(validateString(projectId, 'projectId'));
   });
 
   // --- Fuel Gauge ---

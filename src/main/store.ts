@@ -5,7 +5,7 @@ import path from 'node:path';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
-import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord, BattleRecord, AgentLeaderboardEntry, TimelineEvent, FuelEntry, FuelBudget, ConductorPlan, TimeMachineSnapshot, HubCatalog } from '../shared/types';
+import type { Project, CreateProjectInput, UserPreferences, ChatMessage, VaultEntry, GhostTestResult, GhostTestSettings, ReasoningMap, AgentType, InstalledSkillRecord, BattleRecord, AgentLeaderboardEntry, TimelineEvent, FuelEntry, FuelBudget, ConductorPlan, TimeMachineSnapshot, HubCatalog, TestPipelineResult } from '../shared/types';
 
 // electron-store is ESM; when Node.js requires it at runtime the default export
 // may land on `.default`. This handles both CJS interop shapes.
@@ -29,6 +29,7 @@ interface StoreSchema {
   timeMachineSnapshots: Record<string, TimeMachineSnapshot[]>; // projectId → snapshots
   hubCache: { catalog: HubCatalog; fetchedAt: string } | null;
   hubDownloads: Record<string, number>; // itemId → local download count
+  testPipelineHistory: Record<string, TestPipelineResult[]>; // projectId → results
 }
 
 let _store: Store<StoreSchema> | null = null;
@@ -125,6 +126,7 @@ function getStore(): Store<StoreSchema> {
         timeMachineSnapshots: {},
         hubCache: null,
         hubDownloads: {},
+        testPipelineHistory: {},
       },
     });
   }
@@ -505,6 +507,20 @@ export function saveConductorPlan(projectId: string, plan: ConductorPlan): void 
   const plans = s.get('conductorPlans');
   plans[projectId] = plan;
   s.set('conductorPlans', plans);
+}
+
+// --- Test Pipeline History ---
+
+export function getTestPipelineHistory(projectId: string): TestPipelineResult[] {
+  return getStore().get('testPipelineHistory')[projectId] ?? [];
+}
+
+export function saveTestPipelineResult(projectId: string, result: TestPipelineResult): void {
+  const s = getStore();
+  const history = s.get('testPipelineHistory');
+  const existing = history[projectId] ?? [];
+  history[projectId] = [result, ...existing].slice(0, 10);
+  s.set('testPipelineHistory', history);
 }
 
 export function deleteConductorPlan(projectId: string): void {

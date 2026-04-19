@@ -605,11 +605,47 @@ export type ConductorStatus =
   | 'planning'
   | 'answering'
   | 'reviewing'
+  | 'mockup'
   | 'executing'
   | 'checkpoint'
   | 'completed'
   | 'failed'
   | 'paused';
+
+// --- Mockup Types (Extension 1) ---
+export interface MockupVariant {
+  id: string;
+  label: string;
+  description: string;
+  htmlSpec: string;
+}
+
+export interface MockupSpec {
+  designDecision: string;
+  variants: MockupVariant[];
+  selectedVariantId?: string;
+}
+
+// --- Test Pipeline Types (Extension 2) ---
+export type TestStepStatus = 'pending' | 'running' | 'passed' | 'failed' | 'skipped';
+
+export interface TestStep {
+  id: string;
+  label: string;
+  command?: string;
+  status: TestStepStatus;
+  output?: string;
+  duration?: number;
+}
+
+export interface TestPipelineResult {
+  id: string;
+  projectId: string;
+  ranAt: string;
+  steps: TestStep[];
+  aiNotes?: string;
+  overallStatus: 'passed' | 'failed' | 'partial';
+}
 
 export interface ConductorTask {
   id: string;
@@ -633,6 +669,8 @@ export interface ConductorStation {
   hasCheckpoint: boolean;
   status: StationStatus;
   startSnapshotId?: string;
+  mockupSpec?: MockupSpec;
+  isDesignStation?: boolean;
 }
 
 export interface ConductorQuestionOption {
@@ -668,6 +706,8 @@ export interface ConductorPlan {
   tokenUsage: { used: number; estimated: number; saved: number };
   createdAt: string;
   completedAt?: string;
+  learningEnabled?: boolean;
+  learningAnnotations?: Record<string, string>;
 }
 
 // --- Contract Net Protocol Types ---
@@ -993,6 +1033,9 @@ export interface ElectronAPI {
   conductor: {
     startPlan: (projectId: string, goal: string, controlLevel: ControlLevel) => Promise<ConductorPlan>;
     submitAnswers: (planId: string, answers: ConductorAnswer[]) => Promise<ConductorPlan>;
+    generateMockups: (planId: string) => Promise<ConductorPlan>;
+    selectMockup: (planId: string, stationId: string, variantId: string) => Promise<ConductorPlan>;
+    setLearningMode: (planId: string, enabled: boolean) => Promise<ConductorPlan>;
     startExecution: (planId: string) => Promise<void>;
     pause: (planId: string) => Promise<void>;
     resume: (planId: string) => Promise<void>;
@@ -1006,6 +1049,12 @@ export interface ElectronAPI {
     offStatusUpdate: () => void;
     onTaskUpdate: (callback: (data: { planId: string; stationId: string; task: ConductorTask }) => void) => void;
     offTaskUpdate: () => void;
+  };
+  testPipeline: {
+    run: (projectId: string, projectPath: string) => Promise<TestPipelineResult>;
+    getHistory: (projectId: string) => Promise<TestPipelineResult[]>;
+    onProgress: (callback: (data: { projectId: string; step: TestStep }) => void) => void;
+    offProgress: () => void;
   };
   fuel: {
     getStatus: () => Promise<FuelStatus>;
