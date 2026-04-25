@@ -53,17 +53,8 @@ const config: ForgeConfig = {
         maintainer: 'evan-hoddinott',
       },
     }),
-    // Linux — .rpm package
-    new MakerRpm({
-      options: {
-        name: 'caboo',
-        productName: 'Caboo',
-        genericName: 'AI Coding Orchestrator',
-        description: 'Multi-agent AI coding orchestrator',
-        categories: ['Development', 'Utility'],
-        icon: path.join(iconDir, 'icon.png'),
-      },
-    }),
+    // Linux — .rpm package (disabled on Arch — rpmbuild installer broken)
+    // new MakerRpm({ options: { name: 'caboo', productName: 'Caboo', genericName: 'AI Coding Orchestrator', description: 'Multi-agent AI coding orchestrator', categories: ['Development', 'Utility'], icon: path.join(iconDir, 'icon.png') } }),
   ],
   plugins: [
     new VitePlugin({
