@@ -1,7 +1,7 @@
 {
   "name": "caboo",
   "productName": "Caboo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Caboo is a multi-agent AI coding orchestrator for Claude Code, Gemini CLI, and OpenAI Codex",
   "main": ".vite/build/main.js",
   "private": true,
