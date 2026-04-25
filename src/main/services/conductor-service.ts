@@ -11,16 +11,23 @@ import type {
   ConductorAnswer,
   ControlLevel,
   AgentType,
+  TaskComplexity,
 } from '../../shared/types';
 import { AGENTS } from '../../shared/types';
 import * as store from '../store';
 import * as fuelService from './fuel-service';
 import * as timeMachineService from './time-machine-service';
 import * as timelineService from './timeline-service';
-import { runCommand, runExecFile } from '../utils/run-command';
+import { runCommand } from '../utils/run-command';
 import * as blackboardService from './blackboard-service';
 import * as tokenBucketService from './token-bucket';
 import * as contractNetService from './contract-net';
+import {
+  getAvailableAgents,
+  getPreferredPlanningModel,
+  selectModelVariant,
+  checkAgentAvailability,
+} from './agent-availability';
 
 // --- State ---
 
@@ -33,20 +40,19 @@ interface ExecutionState {
   stopped: boolean;
   checkpointDecision: CheckpointDecision | null;
   checkpointResolve: (() => void) | null;
-  /** Maps ConductorTask.id → blackboard task id for live sync */
   blackboardIdMap: Map<string, string>;
 }
 
 const activeExecutions = new Map<string, ExecutionState>();
+
+const MAX_PARALLEL_TASKS = 3;
 
 // --- Broadcast helpers ---
 
 function broadcast(channel: string, data: unknown): void {
   const wins = BrowserWindow.getAllWindows();
   for (const win of wins) {
-    if (!win.isDestroyed()) {
-      win.webContents.send(channel, data);
-    }
+    if (!win.isDestroyed()) win.webContents.send(channel, data);
   }
 }
 
@@ -59,47 +65,39 @@ function broadcastTask(plan: ConductorPlan, station: ConductorStation, task: Con
   broadcast('conductor:task-update', { planId: plan.id, stationId: station.id, task });
 }
 
-// --- Model selection for planning ---
-
-function getApiKey(providerId: string): string | null {
-  return store.getApiKey(providerId);
+function broadcastStream(plan: ConductorPlan, taskId: string, chunk: string): void {
+  broadcast('conductor:task-stream', { planId: plan.id, taskId, chunk });
 }
+
+// --- Simple concurrency semaphore ---
+
+function createSemaphore(max: number) {
+  let running = 0;
+  const queue: Array<() => void> = [];
+
+  return async function acquire<T>(fn: () => Promise<T>): Promise<T> {
+    if (running >= max) {
+      await new Promise<void>((resolve) => queue.push(resolve));
+    }
+    running++;
+    try {
+      return await fn();
+    } finally {
+      running = Math.max(0, running - 1);
+      queue.shift()?.();
+    }
+  };
+}
+
+// --- LLM calling ---
 
 interface LLMChoice {
   provider: string;
   model: string;
   baseUrl?: string;
   apiKey?: string;
-}
-
-function selectPlanningModel(): LLMChoice {
-  // Priority: GitHub Models (free) → Claude Sonnet → GPT-4o
-  const githubToken = (() => {
-    try {
-      return execSync('gh auth token', { timeout: 5000 }).toString().trim();
-    } catch { return null; }
-  })();
-
-  if (githubToken) {
-    return {
-      provider: 'github',
-      model: 'gpt-4o',
-      baseUrl: 'https://models.inference.ai.azure.com',
-      apiKey: githubToken,
-    };
-  }
-
-  const anthropicKey = getApiKey('anthropic');
-  if (anthropicKey) {
-    return { provider: 'anthropic', model: 'claude-sonnet-4-6', apiKey: anthropicKey };
-  }
-
-  const openaiKey = getApiKey('openai');
-  if (openaiKey) {
-    return { provider: 'openai', model: 'gpt-4o', apiKey: openaiKey };
-  }
-
-  throw new Error('No AI provider connected. Please connect GitHub, Claude, or OpenAI in Settings → Fuel to use Conductor Mode.');
+  isFree?: boolean;
+  displayName?: string;
 }
 
 async function callLLM(choice: LLMChoice, systemPrompt: string, userMessage: string): Promise<string> {
@@ -112,10 +110,7 @@ async function callLLM(choice: LLMChoice, systemPrompt: string, userMessage: str
     const baseUrl = choice.baseUrl ?? 'https://api.openai.com/v1';
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${choice.apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: `Bearer ${choice.apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: choice.model, messages, max_tokens: 4000 }),
     });
     if (!response.ok) {
@@ -153,13 +148,18 @@ async function callLLM(choice: LLMChoice, systemPrompt: string, userMessage: str
 }
 
 function extractJSON(text: string): unknown {
-  // Try to extract JSON from markdown code blocks or raw JSON
   const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   const raw = match ? match[1] : text;
   return JSON.parse(raw.trim());
 }
 
 const DESIGN_KEYWORDS = /\b(ui|ux|design|visual|component|page|layout|style|css|theme|color|button|form|modal|dashboard|landing|hero|card|table|nav|sidebar|header|footer)\b/i;
+
+// --- Availability export ---
+
+export function checkAvailability() {
+  return getAvailableAgents();
+}
 
 // --- Planning Phase ---
 
@@ -170,16 +170,18 @@ export async function startPlan(opts: {
   controlLevel: ControlLevel;
 }): Promise<ConductorPlan> {
   const { projectId, projectPath, goal, controlLevel } = opts;
-  const model = selectPlanningModel();
+  const model = getPreferredPlanningModel('balanced');
 
-  // Read project context
+  broadcast('conductor:availability', {
+    projectId,
+    availability: getAvailableAgents(),
+    planningModel: model.displayName,
+  });
+
   let contextContent = '';
   try {
-    const contextPath = nodePath.join(projectPath, 'CLAUDE.md');
-    contextContent = await fs.readFile(contextPath, 'utf-8');
-  } catch {
-    // No context file yet
-  }
+    contextContent = await fs.readFile(nodePath.join(projectPath, 'CLAUDE.md'), 'utf-8');
+  } catch { /* no context file */ }
 
   const plan: ConductorPlan = {
     id: uuidv4(),
@@ -199,7 +201,6 @@ export async function startPlan(opts: {
   store.saveConductorPlan(projectId, plan);
 
   if (controlLevel !== 'express') {
-    // Generate clarifying questions
     const systemPrompt = `You are a senior software architect helping plan a coding project. Generate 3-5 clarifying questions about the user's goal. For each question, provide 3-4 options with plain-English explanations of any technical terms, plus pros and cons for each option. Keep it friendly and accessible to beginners.
 
 Return ONLY valid JSON in this exact format (no markdown, no explanation):
@@ -227,8 +228,7 @@ Return ONLY valid JSON in this exact format (no markdown, no explanation):
       const response = await callLLM(model, systemPrompt, userMessage);
       const parsed = extractJSON(response) as { questions: ConductorQuestion[] };
       plan.questions = parsed.questions || [];
-    } catch (err) {
-      // If Q&A fails, skip to plan generation
+    } catch {
       plan.questions = [];
       plan.status = 'reviewing';
     }
@@ -237,7 +237,6 @@ Return ONLY valid JSON in this exact format (no markdown, no explanation):
   if (plan.questions && plan.questions.length > 0) {
     plan.status = 'answering';
   } else {
-    // Auto-generate the plan without answers
     const generatedPlan = await generatePlan({ plan, contextContent, model });
     plan.stations = generatedPlan.stations;
     plan.tokenUsage = generatedPlan.tokenUsage;
@@ -263,13 +262,10 @@ export async function submitAnswers(opts: {
   const project = store.getProjectById(projectId);
   let contextContent = '';
   try {
-    const contextPath = nodePath.join(project?.path ?? '', 'CLAUDE.md');
-    contextContent = await fs.readFile(contextPath, 'utf-8');
-  } catch {
-    // no context
-  }
+    contextContent = await fs.readFile(nodePath.join(project?.path ?? '', 'CLAUDE.md'), 'utf-8');
+  } catch { /* no context */ }
 
-  const model = selectPlanningModel();
+  const model = getPreferredPlanningModel('balanced');
   const generatedPlan = await generatePlan({ plan, contextContent, model });
   plan.stations = generatedPlan.stations;
   plan.tokenUsage = generatedPlan.tokenUsage;
@@ -290,7 +286,15 @@ async function generatePlan(opts: {
 }): Promise<GeneratedPlan> {
   const { plan, contextContent, model } = opts;
 
-  // Format answers for context
+  // Get available agents to restrict assignments to available ones
+  const available = getAvailableAgents();
+  const availableAgents = available.filter((a) => a.available).map((a) => a.agent);
+  const freeAgents = available.filter((a) => a.available && a.isFree).map((a) => a.agent);
+
+  const agentSummary = available
+    .map((a) => `- ${a.agent}: ${a.available ? (a.isFree ? 'AVAILABLE (free)' : 'AVAILABLE (paid)') : `UNAVAILABLE: ${a.reason}`}`)
+    .join('\n');
+
   const answersText = (plan.answers ?? [])
     .map((a) => {
       const q = plan.questions?.find((q) => q.id === a.questionId);
@@ -299,11 +303,20 @@ async function generatePlan(opts: {
     })
     .join('\n');
 
-  const systemPrompt = `You are a senior software architect. Create a detailed implementation plan broken into stations (phases) and tasks. Each task should be assigned to the most appropriate AI agent.
+  const systemPrompt = `You are a senior software architect. Create a detailed implementation plan broken into stations (phases) and tasks.
 
-Available agents: claude (complex logic, architecture), gemini (UI components, frontend), codex (tests, boilerplate), copilot (docs, simple scripts).
+ONLY assign tasks to agents that are AVAILABLE. Available agents:
+${agentSummary}
 
-Return ONLY valid JSON in this exact format:
+If a preferred agent is unavailable, assign to the next best available one.
+Prefer free agents when task complexity allows.
+
+Task complexity rules:
+- "hard": architecture decisions, complex algorithms, security-sensitive code → best available model
+- "medium": components, API routes, database queries → balanced model
+- "easy": config, boilerplate, docs, simple scripts → cheapest model
+
+Return ONLY valid JSON:
 {
   "stations": [
     {
@@ -316,6 +329,7 @@ Return ONLY valid JSON in this exact format:
           "id": "t1",
           "description": "What to do",
           "assignedAgent": "claude",
+          "complexity": "medium",
           "prompt": "Detailed prompt for the agent including exactly what files to create/modify and what the output should be"
         }
       ]
@@ -328,19 +342,24 @@ Rules:
 - Last station should always run ghost tests
 - Add checkpoints after stations 1 and 2, and before final station
 - Prompts must be detailed enough for an AI to execute without further questions
-- Agent prompts should reference the CLAUDE.md / GEMINI.md context file`;
+- Tasks within a station will run IN PARALLEL — ensure they are independent of each other`;
 
   const userMessage = [
     `Project context:\n${contextContent || '(new project)'}`,
     `User goal: ${plan.goal}`,
     answersText ? `User choices:\n${answersText}` : '',
+    `Available agents (ONLY assign to these): ${availableAgents.join(', ') || 'none — cannot proceed'}`,
     `Create a detailed implementation plan.`,
   ].filter(Boolean).join('\n\n');
+
+  if (availableAgents.length === 0) {
+    throw new Error('No agents available. Install and authenticate at least one agent (Claude Code, Gemini CLI, etc.) to use Conductor Mode.');
+  }
 
   const response = await callLLM(model, systemPrompt, userMessage);
   const parsed = extractJSON(response) as { stations: Array<{
     id: string; name: string; estimatedMinutes?: number; hasCheckpoint?: boolean;
-    tasks: Array<{ id: string; description: string; assignedAgent: string; prompt: string }>;
+    tasks: Array<{ id: string; description: string; assignedAgent: string; complexity?: string; prompt: string }>;
   }> };
 
   const stations: ConductorStation[] = (parsed.stations ?? []).map((s) => ({
@@ -348,17 +367,28 @@ Rules:
     name: s.name,
     estimatedMinutes: s.estimatedMinutes,
     hasCheckpoint: s.hasCheckpoint ?? false,
-    tasks: (s.tasks ?? []).map((t) => ({
-      id: t.id || uuidv4(),
-      description: t.description,
-      assignedAgent: (t.assignedAgent as AgentType) || 'claude',
-      prompt: t.prompt,
-      status: 'pending' as const,
-    })),
+    tasks: (s.tasks ?? []).map((t) => {
+      const agent = availableAgents.includes(t.assignedAgent as AgentType)
+        ? (t.assignedAgent as AgentType)
+        : (availableAgents[0] as AgentType ?? 'claude');
+      const complexity = (['easy', 'medium', 'hard'].includes(t.complexity ?? ''))
+        ? (t.complexity as TaskComplexity)
+        : 'medium';
+      const modelVariant = selectModelVariant(complexity, agent);
+      return {
+        id: t.id || uuidv4(),
+        description: t.description,
+        assignedAgent: agent,
+        complexity,
+        modelVariant,
+        prompt: t.prompt,
+        status: 'pending' as const,
+      };
+    }),
     status: 'pending' as const,
   }));
 
-  // Tag design stations for mockup generation
+  // Tag design stations
   for (const station of stations) {
     const stationText = [station.name, ...station.tasks.map((t) => t.description)].join(' ');
     if (DESIGN_KEYWORDS.test(stationText)) {
@@ -366,7 +396,6 @@ Rules:
     }
   }
 
-  // Estimate token usage (rough: 1000 tokens per task * 3 for avg interaction)
   const taskCount = stations.reduce((sum, s) => sum + s.tasks.length, 0);
   const estimatedTokens = taskCount * 3000;
   const estimatedCost = fuelService.estimateCost(model.model, estimatedTokens, estimatedTokens).cost;
@@ -384,7 +413,7 @@ export async function generateMockups(opts: { planId: string; projectId: string 
   const plan = store.getConductorPlan(projectId);
   if (!plan) throw new Error('Plan not found');
 
-  const model = selectPlanningModel();
+  const model = getPreferredPlanningModel('balanced');
 
   for (const station of plan.stations) {
     if (!station.isDesignStation) continue;
@@ -410,7 +439,10 @@ Return ONLY valid JSON:
 
     try {
       const response = await callLLM(model, systemPrompt, userMessage);
-      const parsed = extractJSON(response) as { designDecision: string; variants: Array<{ id: string; label: string; description: string; htmlSpec: string }> };
+      const parsed = extractJSON(response) as {
+        designDecision: string;
+        variants: Array<{ id: string; label: string; description: string; htmlSpec: string }>;
+      };
       station.mockupSpec = {
         designDecision: parsed.designDecision,
         variants: parsed.variants ?? [],
@@ -434,7 +466,6 @@ export function selectMockup(opts: { planId: string; projectId: string; stationI
   const station = plan.stations.find((s) => s.id === stationId);
   if (station?.mockupSpec) {
     station.mockupSpec.selectedVariantId = variantId;
-    // Inject selected variant description into task prompts
     const variant = station.mockupSpec.variants.find((v) => v.id === variantId);
     if (variant) {
       for (const task of station.tasks) {
@@ -486,18 +517,12 @@ async function saveLearningSession(projectPath: string, plan: ConductorPlan): Pr
       }),
     ];
     await fs.writeFile(nodePath.join(dir, `session-${date}.md`), lines.join('\n'), 'utf-8');
-  } catch {
-    // Non-fatal
-  }
+  } catch { /* non-fatal */ }
 }
 
 // --- Task Reordering & Reassignment ---
 
-export function reorderTasks(opts: {
-  projectId: string;
-  stationId: string;
-  taskIds: string[];
-}): ConductorPlan {
+export function reorderTasks(opts: { projectId: string; stationId: string; taskIds: string[] }): ConductorPlan {
   const { projectId, stationId, taskIds } = opts;
   const plan = store.getConductorPlan(projectId);
   if (!plan) throw new Error('Plan not found');
@@ -512,11 +537,7 @@ export function reorderTasks(opts: {
   return plan;
 }
 
-export function reassignTask(opts: {
-  projectId: string;
-  taskId: string;
-  agentType: AgentType;
-}): ConductorPlan {
+export function reassignTask(opts: { projectId: string; taskId: string; agentType: AgentType }): ConductorPlan {
   const { projectId, taskId, agentType } = opts;
   const plan = store.getConductorPlan(projectId);
   if (!plan) throw new Error('Plan not found');
@@ -524,7 +545,17 @@ export function reassignTask(opts: {
   for (const station of plan.stations) {
     const task = station.tasks.find((t) => t.id === taskId);
     if (task) {
+      const avail = checkAgentAvailability(agentType);
+      if (!avail.available) {
+        broadcast('conductor:agent-unavailable', {
+          planId: plan.id,
+          taskId,
+          agent: agentType,
+          reason: avail.reason,
+        });
+      }
       task.assignedAgent = agentType;
+      task.modelVariant = task.complexity ? selectModelVariant(task.complexity, agentType) : undefined;
       break;
     }
   }
@@ -533,26 +564,98 @@ export function reassignTask(opts: {
   return plan;
 }
 
-// --- Execution Engine ---
+// --- Agent execution with availability + fallback ---
+
+async function resolveExecutorAgent(
+  agentType: AgentType,
+  planId: string,
+): Promise<AgentType> {
+  const avail = checkAgentAvailability(agentType);
+  if (avail.available) return agentType;
+
+  // Notify renderer of the downshift
+  broadcast('conductor:agent-unavailable', {
+    planId,
+    agent: agentType,
+    reason: avail.reason,
+    fallback: null,
+  });
+
+  // Find best available fallback
+  const allAvail = getAvailableAgents();
+  const fallbacks: AgentType[] = ['claude', 'gemini', 'codex', 'copilot', 'ollama'];
+  for (const fallback of fallbacks) {
+    if (fallback !== agentType && allAvail.find((a) => a.agent === fallback && a.available)) {
+      broadcast('conductor:agent-downshifted', {
+        planId,
+        from: agentType,
+        to: fallback,
+        reason: avail.reason ?? 'Agent unavailable',
+      });
+      return fallback;
+    }
+  }
+
+  // No available agents — return original and let it fail gracefully
+  return agentType;
+}
 
 async function runAgentNonInteractive(opts: {
   agentType: AgentType;
   projectPath: string;
   prompt: string;
+  plan: ConductorPlan;
+  taskId: string;
 }): Promise<{ output: string; filesChanged: string[] }> {
-  const { agentType, projectPath, prompt } = opts;
+  const { agentType, projectPath, prompt, plan, taskId } = opts;
   const config = AGENTS[agentType];
 
-  // Get changed files before (unused but kept for potential future diffing)
-  try {
-    await runExecFile('git', ['diff', '--name-only', 'HEAD'], { cwd: projectPath, timeout: 5000 });
-  } catch { /* ignore */ }
+  // --- Copilot: uses 'gh copilot suggest' ---
+  if (agentType === 'copilot') {
+    try {
+      const safePrompt = prompt.slice(0, 500).replace(/"/g, '\\"');
+      const output = await runCommand(
+        `gh copilot suggest -t shell "${safePrompt}" 2>&1 || true`,
+        { cwd: projectPath, timeout: 30000 },
+      );
+      return { output: output || '(Copilot: no suggestion produced)', filesChanged: [] };
+    } catch (err) {
+      return {
+        output: `GitHub Copilot failed: ${err instanceof Error ? err.message : String(err)}. For complex coding tasks, consider using Claude or Gemini instead.`,
+        filesChanged: [],
+      };
+    }
+  }
 
-  // Resolve the agent binary
+  // --- Ollama: use ollama run ---
+  if (agentType === 'ollama') {
+    try {
+      const modelList = await runCommand('ollama list 2>/dev/null | tail -n +2 | head -1 | awk \'{print $1}\'', { timeout: 5000 });
+      const ollamaModel = modelList.trim() || 'codellama';
+      const safePrompt = prompt.slice(0, 2000).replace(/'/g, "'\\''");
+      const output = await runCommand(
+        `ollama run ${ollamaModel} '${safePrompt}' 2>&1`,
+        { cwd: projectPath, timeout: 120000 },
+      );
+      return { output: output.slice(0, 10000), filesChanged: [] };
+    } catch (err) {
+      return { output: `Ollama failed: ${err instanceof Error ? err.message : String(err)}`, filesChanged: [] };
+    }
+  }
+
+  // --- Standard agents (claude, gemini, codex) ---
   let agentBin = config.command;
   try {
-    agentBin = await runCommand(`which ${config.command}`, { timeout: 5000 });
-  } catch { /* use default */ }
+    const resolved = await runCommand(`which ${config.command}`, { timeout: 5000 });
+    if (resolved) agentBin = resolved;
+  } catch {
+    // Also try ~/.npm-global/bin
+    const npmGlobalBin = `${process.env.HOME ?? '~'}/.npm-global/bin/${config.command}`;
+    try {
+      await runCommand(`test -x "${npmGlobalBin}"`, { timeout: 2000 });
+      agentBin = npmGlobalBin;
+    } catch { /* use default */ }
+  }
 
   const args = agentType === 'codex' ? [prompt] : ['-p', prompt];
 
@@ -564,8 +667,14 @@ async function runAgentNonInteractive(opts: {
       env: { ...process.env },
     });
 
-    proc.stdout?.on('data', (d: Buffer) => chunks.push(d.toString()));
-    proc.stderr?.on('data', (d: Buffer) => chunks.push(d.toString()));
+    const onData = (d: Buffer) => {
+      const chunk = d.toString();
+      chunks.push(chunk);
+      broadcastStream(plan, taskId, chunk);
+    };
+
+    proc.stdout?.on('data', onData);
+    proc.stderr?.on('data', onData);
 
     const timeout = setTimeout(() => {
       proc.kill('SIGTERM');
@@ -586,21 +695,202 @@ async function runAgentNonInteractive(opts: {
     });
   });
 
-  // Get changed files after
+  // Get changed files
   let filesChanged: string[] = [];
   try {
-    await runExecFile('git', ['add', '-A'], { cwd: projectPath, timeout: 5000 });
-    const statusAfterResult = await runExecFile('git', ['diff', '--name-only', '--cached'], { cwd: projectPath, timeout: 5000 });
-    filesChanged = statusAfterResult.stdout.split('\n').filter(Boolean);
+    await runCommand('git add -A', { cwd: projectPath, timeout: 5000 });
+    const statusOut = await runCommand('git diff --name-only --cached', { cwd: projectPath, timeout: 5000 });
+    filesChanged = statusOut.split('\n').filter(Boolean);
 
-    // Commit the changes
     if (filesChanged.length > 0) {
-      await runExecFile('git', ['commit', '-m', `[conductor] task complete`], { cwd: projectPath, timeout: 10000 });
+      await runCommand('git commit -m "[conductor] task complete"', { cwd: projectPath, timeout: 10000 });
     }
   } catch { /* git might not be set up */ }
 
-  return { output: output.slice(0, 10000), filesChanged }; // cap output at 10kb
+  return { output: output.slice(0, 10000), filesChanged };
 }
+
+// --- Single task execution (extracted for parallel use) ---
+
+async function executeSingleTask(
+  state: ExecutionState,
+  station: ConductorStation,
+  task: ConductorTask,
+): Promise<void> {
+  const { plan, projectPath } = state;
+
+  // Budget check
+  const budgetEnforcement = tokenBucketService.getBudgetEnforcement();
+  if (budgetEnforcement.shouldBlock || tokenBucketService.isMonthlyCapExceeded()) {
+    task.status = 'failed';
+    task.error = 'Budget limit reached. All paid API usage is blocked until the daily budget resets.';
+    broadcastTask(plan, station, task);
+    broadcast('conductor:budget-exceeded', {
+      planId: plan.id,
+      percentUsed: budgetEnforcement.percentUsed,
+      at100Action: budgetEnforcement.at100Action,
+    });
+    state.paused = true;
+    plan.status = 'paused';
+    broadcastPlan(plan);
+    while (state.paused && !state.stopped) await sleep(500);
+    if (state.stopped) return;
+    const recheckEnforcement = tokenBucketService.getBudgetEnforcement();
+    if (recheckEnforcement.shouldBlock) return;
+  }
+
+  // Downshift to free agent if budget is tight
+  if (budgetEnforcement.shouldDownshift && task.assignedAgent !== 'ollama') {
+    const freeAlternative = findFreeAlternative(task.assignedAgent);
+    if (freeAlternative) {
+      broadcast('conductor:agent-downshifted', {
+        planId: plan.id,
+        taskId: task.id,
+        from: task.assignedAgent,
+        to: freeAlternative,
+        reason: 'budget-threshold',
+      });
+      task.assignedAgent = freeAlternative;
+      task.modelVariant = task.complexity ? selectModelVariant(task.complexity, freeAlternative) : undefined;
+    }
+  }
+
+  // Availability check — swap to best available if current agent is down
+  const resolvedAgent = await resolveExecutorAgent(task.assignedAgent, plan.id);
+  if (resolvedAgent !== task.assignedAgent) {
+    task.assignedAgent = resolvedAgent;
+    task.modelVariant = task.complexity ? selectModelVariant(task.complexity, resolvedAgent) : undefined;
+  }
+
+  task.status = 'running';
+  task.liveOutput = '';
+  broadcastTask(plan, station, task);
+  broadcastPlan(plan);
+
+  // Sync to blackboard
+  const bbTaskId = state.blackboardIdMap.get(task.id);
+  if (bbTaskId) {
+    blackboardService.claimTask(projectPath, bbTaskId, task.assignedAgent).catch(() => {});
+    blackboardService.updateTaskStatus(projectPath, bbTaskId, 'in-progress').catch(() => {});
+    blackboardService.sendMessage(projectPath, {
+      from: 'conductor',
+      to: task.assignedAgent,
+      type: 'system',
+      subject: `Task assigned: ${task.description.slice(0, 60)}`,
+      body: `You have been assigned blackboard task ${bbTaskId}.`,
+    }).catch(() => {});
+  }
+
+  const startTime = Date.now();
+  let success = false;
+  let retryCount = 0;
+
+  while (!success && retryCount < 2 && !state.stopped) {
+    try {
+      const result = await runAgentNonInteractive({
+        agentType: task.assignedAgent,
+        projectPath,
+        prompt: buildTaskPrompt(plan, station, task),
+        plan,
+        taskId: task.id,
+      });
+
+      task.status = 'completed';
+      task.duration = Date.now() - startTime;
+      task.filesChanged = result.filesChanged;
+      task.output = result.output;
+      task.liveOutput = undefined;
+      success = true;
+
+      if (bbTaskId) {
+        blackboardService.completeTask(projectPath, bbTaskId, [], result.filesChanged).catch(() => {});
+        if (result.output.length > 100) {
+          blackboardService.postArtifact(projectPath, `${task.id}-output.txt`, result.output).catch(() => {});
+        }
+      }
+
+      const tokensOut = Math.ceil(result.output.length / 4);
+      const tokensIn = Math.ceil(task.prompt.length / 4);
+      const fuelEntry = fuelService.recordUsage({
+        provider: task.assignedAgent,
+        model: task.modelVariant ?? task.assignedAgent,
+        tokensIn,
+        tokensOut,
+        projectId: plan.projectId,
+        taskType: 'conductor-task',
+      });
+      plan.tokenUsage.used += fuelEntry.cost;
+      plan.tokenUsage.saved += fuelEntry.savedAmount;
+
+    } catch (err) {
+      retryCount++;
+      if (retryCount < 2) {
+        task.prompt = `[Retry attempt ${retryCount}] ${task.prompt}`;
+        await sleep(2000);
+      } else {
+        task.status = 'failed';
+        task.error = err instanceof Error ? err.message : String(err);
+        task.liveOutput = undefined;
+
+        if (bbTaskId) {
+          blackboardService.failTask(projectPath, bbTaskId, task.error ?? 'unknown error').catch(() => {});
+        }
+
+        // Express mode: auto-fallback to another available agent
+        if (plan.controlLevel === 'express') {
+          const fallbackAgent = await resolveExecutorAgent(getFallbackAgent(task.assignedAgent) ?? 'ollama', plan.id);
+          if (fallbackAgent && fallbackAgent !== task.assignedAgent) {
+            task.assignedAgent = fallbackAgent;
+            task.modelVariant = task.complexity ? selectModelVariant(task.complexity, fallbackAgent) : undefined;
+            task.status = 'running';
+            broadcastTask(plan, station, task);
+            try {
+              const result = await runAgentNonInteractive({
+                agentType: task.assignedAgent,
+                projectPath,
+                prompt: buildTaskPrompt(plan, station, task),
+                plan,
+                taskId: task.id,
+              });
+              task.status = 'completed';
+              task.duration = Date.now() - startTime;
+              task.filesChanged = result.filesChanged;
+              task.output = result.output;
+              task.liveOutput = undefined;
+              success = true;
+            } catch {
+              task.status = 'failed';
+            }
+          }
+        }
+      }
+    }
+  }
+
+  broadcastTask(plan, station, task);
+
+  // Learning annotation (non-blocking)
+  if (plan.learningEnabled && task.status === 'completed') {
+    const planningModel = getPreferredPlanningModel('cheap');
+    generateLearningAnnotation(task, planningModel).then((annotation) => {
+      if (!plan.learningAnnotations) plan.learningAnnotations = {};
+      plan.learningAnnotations[task.id] = annotation;
+      store.saveConductorPlan(plan.projectId, plan);
+      broadcastPlan(plan);
+    }).catch(() => {});
+  }
+
+  // In Guided/Full Control: pause on task failure
+  if (task.status === 'failed' && plan.controlLevel !== 'express') {
+    state.paused = true;
+    broadcast('conductor:task-failed', { planId: plan.id, task, message: task.error });
+    while (state.paused && !state.stopped) await sleep(500);
+  }
+
+  broadcastPlan(plan);
+}
+
+// --- Execution Engine ---
 
 export async function startExecution(opts: {
   planId: string;
@@ -611,10 +901,15 @@ export async function startExecution(opts: {
   const plan = store.getConductorPlan(projectId);
   if (!plan) throw new Error('Plan not found');
 
+  // Broadcast current availability before starting
+  broadcast('conductor:availability', {
+    projectId,
+    availability: getAvailableAgents(),
+  });
+
   plan.status = 'executing';
   broadcastPlan(plan);
 
-  // Log to timeline
   timelineService.addEvent(projectId, {
     type: 'conductor-start',
     description: `Conductor started: "${plan.goal}"`,
@@ -632,7 +927,7 @@ export async function startExecution(opts: {
   };
   activeExecutions.set(plan.id, state);
 
-  // Sync plan tasks to blackboard (best-effort — don't abort execution on failure)
+  // Sync plan tasks to blackboard
   try {
     const allTasks = plan.stations.flatMap((station) =>
       station.tasks.map((task) => ({
@@ -643,7 +938,7 @@ export async function startExecution(opts: {
         stationId: station.id,
         stationName: station.name,
         estimatedMinutes: station.estimatedMinutes,
-        dependencies: [] as string[], // within-station deps resolved at start
+        dependencies: [] as string[],
       })),
     );
     const idMap = await blackboardService.syncPlanToBlackboard(projectPath, allTasks);
@@ -652,7 +947,6 @@ export async function startExecution(opts: {
     console.warn('[conductor] Could not sync to blackboard:', err);
   }
 
-  // Run execution in background
   executeAll(state).catch((err) => {
     plan.status = 'failed';
     broadcastPlan(plan);
@@ -670,7 +964,7 @@ async function executeAll(state: ExecutionState): Promise<void> {
     plan.currentStationIndex = si;
     station.status = 'active';
 
-    // Create snapshot before station
+    // Snapshot before station
     try {
       const snap = await timeMachineService.createSnapshot({
         projectId: plan.projectId,
@@ -683,197 +977,28 @@ async function executeAll(state: ExecutionState): Promise<void> {
 
     broadcastPlan(plan);
 
-    // Execute tasks in station
-    for (let ti = 0; ti < station.tasks.length; ti++) {
-      if (state.stopped) break;
+    // ── Parallel task execution within station ──────────────────────────────
+    const userMax = store.getPreferences()?.conductorMaxParallel ?? MAX_PARALLEL_TASKS;
+    const concurrency = Math.max(1, Math.min(userMax, MAX_PARALLEL_TASKS));
+    const semaphore = createSemaphore(concurrency);
 
-      // Wait if paused
-      while (state.paused && !state.stopped) {
-        await sleep(500);
-      }
-      if (state.stopped) break;
-
-      const task = station.tasks[ti];
-      plan.currentTaskIndex = ti;
-
-      // ── Token budget check ────────────────────────────────────────────────
-      const budgetEnforcement = tokenBucketService.getBudgetEnforcement();
-      if (budgetEnforcement.shouldBlock || tokenBucketService.isMonthlyCapExceeded()) {
-        task.status = 'failed';
-        task.error = 'Budget limit reached. All paid API usage is blocked until the daily budget resets.';
-        broadcastTask(plan, station, task);
-        broadcast('conductor:budget-exceeded', {
-          planId: plan.id,
-          percentUsed: budgetEnforcement.percentUsed,
-          at100Action: budgetEnforcement.at100Action,
-        });
-        // Pause execution and wait for user intervention
-        state.paused = true;
-        plan.status = 'paused';
-        broadcastPlan(plan);
-        while (state.paused && !state.stopped) { await sleep(500); }
-        if (state.stopped) break;
-        // Re-check after user resumes — if still blocked, skip this task
-        const recheckEnforcement = tokenBucketService.getBudgetEnforcement();
-        if (recheckEnforcement.shouldBlock) { continue; }
-      }
-
-      // ── Downshift to free agent if budget is tight ────────────────────────
-      if (budgetEnforcement.shouldDownshift && task.assignedAgent !== 'ollama') {
-        const freeAlternative = findFreeAlternative(task.assignedAgent);
-        if (freeAlternative) {
-          broadcast('conductor:agent-downshifted', {
-            planId: plan.id,
-            taskId: task.id,
-            from: task.assignedAgent,
-            to: freeAlternative,
-            reason: 'budget-threshold',
-          });
-          task.assignedAgent = freeAlternative;
-        }
-      }
-
-      task.status = 'running';
-      broadcastTask(plan, station, task);
-
-      // Sync running status to blackboard (best-effort)
-      const bbTaskId = state.blackboardIdMap.get(task.id);
-      if (bbTaskId) {
-        blackboardService.claimTask(projectPath, bbTaskId, task.assignedAgent).catch(() => { /* best-effort blackboard sync */ });
-        blackboardService.updateTaskStatus(projectPath, bbTaskId, 'in-progress').catch(() => { /* best-effort blackboard sync */ });
-        // Notify the assigned agent's mailbox
-        blackboardService.sendMessage(projectPath, {
-          from: 'conductor',
-          to: task.assignedAgent,
-          type: 'system',
-          subject: `Task assigned: ${task.description.slice(0, 60)}`,
-          body: `You have been assigned blackboard task ${bbTaskId}. Check .caboo/blackboard/artifacts/ for relevant artifacts from previous tasks.`,
-        }).catch(() => { /* best-effort blackboard sync */ });
-      }
-      broadcastPlan(plan);
-
-      const startTime = Date.now();
-      let retryCount = 0;
-      let success = false;
-
-      while (!success && retryCount < 2) {
-        try {
-          const result = await runAgentNonInteractive({
-            agentType: task.assignedAgent,
-            projectPath,
-            prompt: buildTaskPrompt(plan, station, task),
-          });
-
-          task.status = 'completed';
-          task.duration = Date.now() - startTime;
-          task.filesChanged = result.filesChanged;
-          task.output = result.output;
-          success = true;
-
-          // Sync completion to blackboard
-          if (bbTaskId) {
-            blackboardService.completeTask(projectPath, bbTaskId, [], result.filesChanged).catch(() => { /* best-effort blackboard sync */ });
-            // Post output as an artifact if substantive
-            if (result.output.length > 100) {
-              blackboardService.postArtifact(
-                projectPath,
-                `${task.id}-output.txt`,
-                result.output,
-              ).catch(() => { /* best-effort blackboard sync */ });
-            }
-          }
-
-          // Record fuel usage (estimate tokens from output length)
-          const tokensOut = Math.ceil(result.output.length / 4);
-          const tokensIn = Math.ceil(task.prompt.length / 4);
-          const fuelEntry = fuelService.recordUsage({
-            provider: 'cli-agent',
-            model: task.assignedAgent,
-            tokensIn,
-            tokensOut,
-            projectId: plan.projectId,
-            taskType: 'conductor-task',
-          });
-          plan.tokenUsage.used += fuelEntry.cost;
-          plan.tokenUsage.saved += fuelEntry.savedAmount;
-
-        } catch (err) {
-          retryCount++;
-          if (retryCount < 2) {
-            // Retry with slightly different prompt
-            task.prompt = `[Retry attempt ${retryCount}] ${task.prompt}`;
-            await sleep(2000);
-          } else {
-            task.status = 'failed';
-            task.error = err instanceof Error ? err.message : String(err);
-
-            // Sync failure to blackboard
-            if (bbTaskId) {
-              blackboardService.failTask(projectPath, bbTaskId, task.error ?? 'unknown error').catch(() => { /* best-effort blackboard sync */ });
-            }
-
-            // In Express mode: try a different agent automatically
-            if (plan.controlLevel === 'express') {
-              const fallbackAgent = getFallbackAgent(task.assignedAgent);
-              if (fallbackAgent) {
-                task.assignedAgent = fallbackAgent;
-                task.status = 'running';
-                broadcastTask(plan, station, task);
-                try {
-                  const result = await runAgentNonInteractive({
-                    agentType: task.assignedAgent,
-                    projectPath,
-                    prompt: buildTaskPrompt(plan, station, task),
-                  });
-                  task.status = 'completed';
-                  task.duration = Date.now() - startTime;
-                  task.filesChanged = result.filesChanged;
-                  task.output = result.output;
-                  success = true;
-                } catch {
-                  task.status = 'failed';
-                }
-              }
-            }
-          }
-        }
-      }
-
-      broadcastTask(plan, station, task);
-
-      // Generate learning annotation (non-blocking)
-      if (plan.learningEnabled && task.status === 'completed') {
-        const planningModel = selectPlanningModel();
-        generateLearningAnnotation(task, planningModel).then((annotation) => {
-          if (!plan.learningAnnotations) plan.learningAnnotations = {};
-          plan.learningAnnotations[task.id] = annotation;
-          store.saveConductorPlan(plan.projectId, plan);
-          broadcastPlan(plan);
-        }).catch(() => { /* best-effort */ });
-      }
-
-      broadcastPlan(plan);
-
-      // In Guided/Full Control: pause on task failure
-      if (task.status === 'failed' && plan.controlLevel !== 'express') {
-        state.paused = true;
-        broadcast('conductor:task-failed', {
-          planId: plan.id,
-          task,
-          message: task.error,
-        });
-        // Wait for user to resume or stop
-        while (state.paused && !state.stopped) {
-          await sleep(500);
-        }
-      }
-    }
+    await Promise.all(
+      station.tasks.map((task) =>
+        semaphore(async () => {
+          if (state.stopped) return;
+          // Wait if globally paused
+          while (state.paused && !state.stopped) await sleep(300);
+          if (state.stopped) return;
+          await executeSingleTask(state, station, task);
+        }),
+      ),
+    );
 
     if (state.stopped) break;
 
     station.status = station.tasks.every((t) => t.status !== 'failed') ? 'completed' : 'failed';
 
-    // Create snapshot after station
+    // Snapshot after station
     try {
       await timeMachineService.createSnapshot({
         projectId: plan.projectId,
@@ -886,7 +1011,6 @@ async function executeAll(state: ExecutionState): Promise<void> {
 
     broadcastPlan(plan);
 
-    // Timeline event
     timelineService.addEvent(plan.projectId, {
       type: 'conductor-station',
       description: `Station complete: ${station.name}`,
@@ -900,15 +1024,11 @@ async function executeAll(state: ExecutionState): Promise<void> {
       plan.status = 'checkpoint';
       broadcastPlan(plan);
 
-      // Wait for checkpoint decision
       await new Promise<void>((resolve) => {
         state.checkpointResolve = resolve;
-        // Timeout: auto-continue in Express mode after 5s
         if (plan.controlLevel === 'express') {
           setTimeout(() => {
-            if (!state.checkpointDecision) {
-              state.checkpointDecision = 'continue';
-            }
+            if (!state.checkpointDecision) state.checkpointDecision = 'continue';
             resolve();
           }, 5000);
         }
@@ -918,13 +1038,9 @@ async function executeAll(state: ExecutionState): Promise<void> {
       state.checkpointDecision = null;
       state.checkpointResolve = null;
 
-      if (decision === 'stop') {
-        state.stopped = true;
-        break;
-      }
+      if (decision === 'stop') { state.stopped = true; break; }
 
       if (decision === 'revert') {
-        // Revert to start of this station
         if (station.startSnapshotId) {
           try {
             await timeMachineService.revertToSnapshot({
@@ -934,15 +1050,15 @@ async function executeAll(state: ExecutionState): Promise<void> {
             });
           } catch { /* ignore */ }
         }
-        // Reset station
         station.status = 'pending';
         for (const task of station.tasks) {
           task.status = 'pending';
           task.output = undefined;
           task.error = undefined;
+          task.liveOutput = undefined;
           task.filesChanged = undefined;
         }
-        si--; // re-run this station
+        si--;
         broadcastPlan(plan);
         continue;
       }
@@ -951,9 +1067,7 @@ async function executeAll(state: ExecutionState): Promise<void> {
         state.paused = true;
         plan.status = 'paused';
         broadcastPlan(plan);
-        while (state.paused && !state.stopped) {
-          await sleep(500);
-        }
+        while (state.paused && !state.stopped) await sleep(500);
         if (state.stopped) break;
       }
 
@@ -966,10 +1080,8 @@ async function executeAll(state: ExecutionState): Promise<void> {
     plan.status = 'completed';
     plan.completedAt = new Date().toISOString();
 
-    // Save learning session (Extension 3)
     await saveLearningSession(projectPath, plan);
 
-    // Final snapshot
     try {
       await timeMachineService.createSnapshot({
         projectId: plan.projectId,
@@ -979,7 +1091,6 @@ async function executeAll(state: ExecutionState): Promise<void> {
       });
     } catch { /* ignore */ }
 
-    // Final commit
     try {
       await runCommand(`cd "${projectPath}" && git add -A && git commit -m "Conductor: ${plan.goal.replace(/"/g, '\\"')}" --allow-empty`, { timeout: 10000 });
     } catch { /* ignore */ }
@@ -1006,9 +1117,12 @@ function buildTaskPrompt(plan: ConductorPlan, station: ConductorStation, task: C
     .map((t) => `- ${t.description}: DONE`)
     .join('\n');
 
+  const modelNote = task.modelVariant ? `[Running on: ${task.modelVariant}]` : '';
+
   return [
     `You are working on: "${plan.goal}"`,
     `Current station: ${station.name}`,
+    modelNote,
     completedTasks ? `Completed in this station:\n${completedTasks}` : '',
     `Your task: ${task.description}`,
     ``,
@@ -1030,7 +1144,6 @@ function getFallbackAgent(agentType: AgentType): AgentType | null {
 }
 
 function findFreeAlternative(agentType: AgentType): AgentType | null {
-  // Prefer ollama (truly local/free) if available, otherwise github-routed gemini
   if (agentType === 'ollama') return null;
   return 'ollama';
 }
@@ -1041,18 +1154,19 @@ export async function requestBidsForPlan(projectId: string): Promise<import('../
   const plan = store.getConductorPlan(projectId);
   if (!plan) return [];
 
-  const pendingTasks = plan.stations
-    .flatMap(s => s.tasks)
-    .filter(t => t.status === 'pending');
+  // Only bid with available agents
+  const allAvail = getAvailableAgents();
+  const availableAgentTypes: AgentType[] = allAvail
+    .filter((a) => a.available)
+    .map((a) => a.agent);
 
-  if (pendingTasks.length === 0) return [];
-
-  const availableAgents: AgentType[] = ['claude', 'gemini', 'codex', 'copilot'];
+  const pendingTasks = plan.stations.flatMap((s) => s.tasks).filter((t) => t.status === 'pending');
+  if (pendingTasks.length === 0 || availableAgentTypes.length === 0) return [];
 
   const rounds = await contractNetService.runBidRounds(
     projectId,
-    pendingTasks.map(t => ({ id: t.id, description: t.description, prompt: t.prompt })),
-    availableAgents,
+    pendingTasks.map((t) => ({ id: t.id, description: t.description, prompt: t.prompt })),
+    availableAgentTypes,
   );
 
   broadcast('conductor:bid-results', { projectId, rounds });
@@ -1089,13 +1203,14 @@ export function skipTask(planId: string): void {
   const { plan } = state;
   const station = plan.stations[plan.currentStationIndex];
   if (station) {
-    const task = station.tasks[plan.currentTaskIndex];
-    if (task) {
-      task.status = 'skipped';
-      broadcastTask(plan, station, task);
+    // Skip all currently running tasks
+    for (const task of station.tasks) {
+      if (task.status === 'running' || task.status === 'pending') {
+        task.status = 'skipped';
+        broadcastTask(plan, station, task);
+      }
     }
   }
-  // Resume execution
   state.paused = false;
 }
 
@@ -1113,9 +1228,7 @@ export function resolveCheckpoint(planId: string, decision: CheckpointDecision):
   const state = activeExecutions.get(planId);
   if (!state) return;
   state.checkpointDecision = decision;
-  if (state.checkpointResolve) {
-    state.checkpointResolve();
-  }
+  if (state.checkpointResolve) state.checkpointResolve();
 }
 
 export function getPlan(projectId: string): ConductorPlan | null {

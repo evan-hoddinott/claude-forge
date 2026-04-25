@@ -195,6 +195,8 @@ export interface UserPreferences {
   chatLastProvider: string;
   autoPushToGitHub: boolean;
   fuelBudget: FuelBudget;
+  conductorBrainModel?: string;
+  conductorMaxParallel?: number;
 }
 
 export interface DependencyStatus {
@@ -647,10 +649,14 @@ export interface TestPipelineResult {
   overallStatus: 'passed' | 'failed' | 'partial';
 }
 
+export type TaskComplexity = 'easy' | 'medium' | 'hard';
+
 export interface ConductorTask {
   id: string;
   description: string;
   assignedAgent: AgentType;
+  modelVariant?: string;
+  complexity?: TaskComplexity;
   prompt: string;
   status: ConductorTaskStatus;
   duration?: number;
@@ -658,7 +664,15 @@ export interface ConductorTask {
   estimatedTokens?: number;
   filesChanged?: string[];
   output?: string;
+  liveOutput?: string;
   error?: string;
+}
+
+export interface AgentAvailability {
+  agent: AgentType;
+  available: boolean;
+  reason?: string;
+  isFree: boolean;
 }
 
 export interface ConductorStation {
@@ -1045,10 +1059,13 @@ export interface ElectronAPI {
     getPlan: (projectId: string) => Promise<ConductorPlan | null>;
     reorderTasks: (planId: string, stationId: string, taskIds: string[]) => Promise<ConductorPlan>;
     reassignTask: (planId: string, taskId: string, agentType: AgentType) => Promise<ConductorPlan>;
+    checkAvailability: () => Promise<AgentAvailability[]>;
     onStatusUpdate: (callback: (data: { planId: string; plan: ConductorPlan }) => void) => void;
     offStatusUpdate: () => void;
     onTaskUpdate: (callback: (data: { planId: string; stationId: string; task: ConductorTask }) => void) => void;
     offTaskUpdate: () => void;
+    onTaskStream: (callback: (data: { planId: string; taskId: string; chunk: string }) => void) => void;
+    offTaskStream: () => void;
   };
   testPipeline: {
     run: (projectId: string, projectPath: string) => Promise<TestPipelineResult>;

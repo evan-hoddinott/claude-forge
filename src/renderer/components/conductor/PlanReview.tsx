@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { ConductorPlan, ConductorStation, ConductorTask, AgentType, BidRound } from '../../../shared/types';
+import { useState, useEffect } from 'react';
+import type { ConductorPlan, ConductorStation, ConductorTask, AgentType, BidRound, AgentAvailability } from '../../../shared/types';
 import { useAPI } from '../../hooks/useAPI';
 import BidPanel from './BidPanel';
 
@@ -16,7 +16,7 @@ const AGENT_COLORS: Record<AgentType, string> = {
   gemini:  '#4285F4',
   codex:   '#10A37F',
   copilot: '#6e40c9',
-  ollama:  '#333333',
+  ollama:  '#777777',
 };
 
 const AGENT_LABELS: Record<AgentType, string> = {
@@ -27,7 +27,19 @@ const AGENT_LABELS: Record<AgentType, string> = {
   ollama:  'Local AI',
 };
 
-const ALL_AGENTS: AgentType[] = ['claude', 'gemini', 'codex', 'copilot'];
+const COMPLEXITY_COLORS: Record<string, string> = {
+  hard:   '#E25822',
+  medium: 'var(--caboo-accent-amber)',
+  easy:   'var(--caboo-accent-green)',
+};
+
+const COMPLEXITY_LABELS: Record<string, string> = {
+  hard:   '●●● hard',
+  medium: '●●○ med',
+  easy:   '●○○ easy',
+};
+
+const ALL_AGENTS: AgentType[] = ['claude', 'gemini', 'codex', 'copilot', 'ollama'];
 
 function formatMinutes(mins?: number): string {
   if (!mins) return '';
@@ -49,8 +61,9 @@ function agentTaskCount(stations: ConductorStation[]): Record<string, number> {
 }
 
 export default function PlanReview({ plan, onStart, onBack, onReassignTask, loading = false }: PlanReviewProps) {
-  const [expandedStation, setExpandedStation] = useState<string | null>(null);
+  const [expandedStation, setExpandedStation] = useState<string | null>(plan.stations[0]?.id ?? null);
   const [reassignTarget, setReassignTarget] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<AgentAvailability[]>([]);
 
   const totalTime = totalEstimatedTime(plan.stations);
   const agentCounts = agentTaskCount(plan.stations);
@@ -61,6 +74,12 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
   const [bidRounds, setBidRounds] = useState<BidRound[] | null>(null);
   const [bidsLoading, setBidsLoading] = useState(false);
   const [showBids, setShowBids] = useState(false);
+
+  useEffect(() => {
+    api.conductor.checkAvailability().then(setAvailability).catch(() => setAvailability([]));
+  }, [api]);
+
+  const availMap = new Map(availability.map((a) => [a.agent, a]));
 
   const requestBids = async () => {
     setBidsLoading(true);
@@ -82,6 +101,12 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
     setShowBids(false);
   };
 
+  // Compute free-route savings
+  const freeTaskCount = plan.stations
+    .flatMap((s) => s.tasks)
+    .filter((t) => availMap.get(t.assignedAgent)?.isFree).length;
+  const totalTasks = plan.stations.flatMap((s) => s.tasks).length;
+
   return (
     <div className="relative flex flex-col h-full overflow-hidden">
       {/* Header */}
@@ -90,82 +115,75 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
         style={{ borderBottom: '2px solid var(--caboo-border)' }}
       >
         <div>
-          <div
-            style={{
-              fontFamily: 'var(--caboo-font-heading)',
-              fontSize: '16px',
-              color: 'var(--caboo-text-heading)',
-              letterSpacing: '1px',
-            }}
-          >
+          <div style={{ fontFamily: 'var(--caboo-font-heading)', fontSize: '16px', color: 'var(--caboo-text-heading)', letterSpacing: '1px' }}>
             🚂 THE PLAN
           </div>
-          <div
-            style={{
-              fontFamily: 'var(--caboo-font-body)',
-              fontSize: '11px',
-              color: 'var(--caboo-text-muted)',
-              marginTop: '2px',
-            }}
-          >
+          <div style={{ fontFamily: 'var(--caboo-font-body)', fontSize: '11px', color: 'var(--caboo-text-muted)', marginTop: '2px' }}>
             {plan.goal}
           </div>
         </div>
-        <div className="flex gap-3 text-[10px]" style={{ color: 'var(--caboo-text-muted)', fontFamily: 'var(--caboo-font-body)' }}>
-          {totalTime > 0 && (
-            <div>⏱ ~{totalTime} min total</div>
-          )}
+        <div className="flex flex-col items-end gap-1 text-[10px]" style={{ color: 'var(--caboo-text-muted)', fontFamily: 'var(--caboo-font-body)' }}>
+          {totalTime > 0 && <div>⏱ ~{totalTime} min total</div>}
           <div>
             {Object.entries(agentCounts)
               .map(([agent, count]) => `${AGENT_LABELS[agent as AgentType] ?? agent} (${count})`)
               .join(' · ')}
           </div>
+          {freeTaskCount > 0 && (
+            <div style={{ color: 'var(--caboo-accent-green)' }}>
+              ✓ {freeTaskCount}/{totalTasks} tasks route FREE (GitHub/Ollama)
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Availability banner — warn about unavailable assigned agents */}
+      {availability.length > 0 && (() => {
+        const unavailableAssigned = plan.stations
+          .flatMap((s) => s.tasks)
+          .filter((t) => {
+            const a = availMap.get(t.assignedAgent);
+            return a && !a.available;
+          });
+        if (unavailableAssigned.length === 0) return null;
+        const agentsDown = [...new Set(unavailableAssigned.map((t) => t.assignedAgent))];
+        return (
+          <div className="shrink-0 px-4 py-2 text-[11px]" style={{
+            background: 'rgba(220,80,30,0.1)',
+            borderBottom: '1px solid var(--caboo-accent-rust)',
+            color: 'var(--caboo-accent-rust)',
+            fontFamily: 'var(--caboo-font-body)',
+          }}>
+            ⚠ {agentsDown.map((a) => AGENT_LABELS[a]).join(', ')} {agentsDown.length === 1 ? 'is' : 'are'} unavailable — tasks will auto-fallback at runtime. {availMap.get(agentsDown[0])?.reason}
+          </div>
+        );
+      })()}
 
       {/* Plan content */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {plan.stations.map((station, si) => (
           <div key={station.id}>
-            {/* Station header */}
             <div
               className="flex items-center justify-between cursor-pointer py-2 px-3"
-              style={{
-                border: '2px solid var(--caboo-border)',
-                background: 'var(--caboo-bg-mid)',
-              }}
+              style={{ border: '2px solid var(--caboo-border)', background: 'var(--caboo-bg-mid)' }}
               onClick={() => setExpandedStation(expandedStation === station.id ? null : station.id)}
             >
               <div className="flex items-center gap-2">
-                <span
-                  style={{
-                    fontFamily: 'var(--caboo-font-heading)',
-                    fontSize: '10px',
-                    color: 'var(--caboo-accent-amber)',
-                  }}
-                >
+                <span style={{ fontFamily: 'var(--caboo-font-heading)', fontSize: '10px', color: 'var(--caboo-accent-amber)' }}>
                   Station {si + 1}:
                 </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--caboo-font-heading)',
-                    fontSize: '10px',
-                    color: 'var(--caboo-text-heading)',
-                  }}
-                >
+                <span style={{ fontFamily: 'var(--caboo-font-heading)', fontSize: '10px', color: 'var(--caboo-text-heading)' }}>
                   {station.name}
                 </span>
                 {station.hasCheckpoint && (
-                  <span
-                    style={{
-                      fontFamily: 'var(--caboo-font-body)',
-                      fontSize: '9px',
-                      color: 'var(--caboo-accent-amber)',
-                      border: '1px solid var(--caboo-accent-amber)',
-                      padding: '0 4px',
-                    }}
-                  >
+                  <span style={{ fontFamily: 'var(--caboo-font-body)', fontSize: '9px', color: 'var(--caboo-accent-amber)', border: '1px solid var(--caboo-accent-amber)', padding: '0 4px' }}>
                     ⏸ checkpoint
+                  </span>
+                )}
+                {/* Parallel badge */}
+                {station.tasks.length > 1 && (
+                  <span style={{ fontFamily: 'var(--caboo-font-body)', fontSize: '9px', color: 'var(--caboo-accent-green)', border: '1px solid var(--caboo-accent-green)', padding: '0 4px' }}>
+                    ⚡ {station.tasks.length} parallel
                   </span>
                 )}
               </div>
@@ -181,15 +199,8 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
               </div>
             </div>
 
-            {/* Tasks */}
             {expandedStation === station.id && (
-              <div
-                style={{
-                  border: '2px solid var(--caboo-border)',
-                  borderTop: 'none',
-                  background: 'var(--caboo-bg-deep)',
-                }}
-              >
+              <div style={{ border: '2px solid var(--caboo-border)', borderTop: 'none', background: 'var(--caboo-bg-deep)' }}>
                 {station.tasks.map((task, ti) => (
                   <TaskRow
                     key={task.id}
@@ -197,6 +208,7 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
                     isFirst={ti === 0}
                     isFullControl={isFullControl}
                     reassignTarget={reassignTarget}
+                    agentAvail={availMap}
                     onStartReassign={() => setReassignTarget(reassignTarget === task.id ? null : task.id)}
                     onReassign={(agent) => {
                       onReassignTask?.(task.id, agent);
@@ -206,15 +218,12 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
                 ))}
 
                 {station.hasCheckpoint && (
-                  <div
-                    className="px-4 py-2 text-[10px]"
-                    style={{
-                      borderTop: '1px solid var(--caboo-border)',
-                      color: 'var(--caboo-accent-amber)',
-                      fontFamily: 'var(--caboo-font-body)',
-                      background: 'var(--caboo-bg-mid)',
-                    }}
-                  >
+                  <div className="px-4 py-2 text-[10px]" style={{
+                    borderTop: '1px solid var(--caboo-border)',
+                    color: 'var(--caboo-accent-amber)',
+                    fontFamily: 'var(--caboo-font-body)',
+                    background: 'var(--caboo-bg-mid)',
+                  }}>
                     💡 CHECKPOINT: Review and approve before continuing
                   </div>
                 )}
@@ -225,10 +234,7 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
       </div>
 
       {/* Footer */}
-      <div
-        className="shrink-0 px-6 py-4 flex items-center justify-between"
-        style={{ borderTop: '2px solid var(--caboo-border)' }}
-      >
+      <div className="shrink-0 px-6 py-4 flex items-center justify-between" style={{ borderTop: '2px solid var(--caboo-border)' }}>
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
@@ -287,10 +293,7 @@ export default function PlanReview({ plan, onStart, onBack, onReassignTask, load
 
       {/* Bid Panel overlay */}
       {showBids && bidRounds && (
-        <div
-          className="absolute inset-0 z-10 flex items-center justify-center p-6"
-          style={{ background: 'rgba(0,0,0,0.7)' }}
-        >
+        <div className="absolute inset-0 z-10 flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.7)' }}>
           <div style={{ width: '100%', maxWidth: '680px', maxHeight: '80vh' }}>
             <BidPanel
               rounds={bidRounds}
@@ -310,6 +313,7 @@ function TaskRow({
   isFirst,
   isFullControl,
   reassignTarget,
+  agentAvail,
   onStartReassign,
   onReassign,
 }: {
@@ -317,66 +321,112 @@ function TaskRow({
   isFirst: boolean;
   isFullControl: boolean;
   reassignTarget: string | null;
+  agentAvail: Map<AgentType, AgentAvailability>;
   onStartReassign: () => void;
   onReassign: (agent: AgentType) => void;
 }) {
+  const agentColor = AGENT_COLORS[task.assignedAgent] ?? 'var(--caboo-text-muted)';
+  const avail = agentAvail.get(task.assignedAgent);
+  const isUnavailable = avail && !avail.available;
+
   return (
-    <div
-      className="px-4 py-2"
-      style={{ borderTop: isFirst ? 'none' : '1px solid var(--caboo-border)' }}
-    >
+    <div className="px-4 py-2" style={{ borderTop: isFirst ? 'none' : '1px solid var(--caboo-border)' }}>
       <div className="flex items-center gap-2">
-        <span style={{ color: 'var(--caboo-text-muted)', fontSize: '11px', fontFamily: 'var(--caboo-font-body)' }}>
-          ├─
-        </span>
-        <span
-          style={{
-            fontFamily: 'var(--caboo-font-body)',
-            fontSize: '11px',
-            color: 'var(--caboo-text-secondary)',
-            flex: 1,
-          }}
-        >
+        <span style={{ color: 'var(--caboo-text-muted)', fontSize: '11px', fontFamily: 'var(--caboo-font-body)' }}>├─</span>
+        <span style={{ fontFamily: 'var(--caboo-font-body)', fontSize: '11px', color: 'var(--caboo-text-secondary)', flex: 1 }}>
           {task.description}
         </span>
+
+        {/* Complexity badge */}
+        {task.complexity && (
+          <span style={{
+            fontFamily: 'var(--caboo-font-heading)',
+            fontSize: '8px',
+            color: COMPLEXITY_COLORS[task.complexity] ?? 'var(--caboo-text-muted)',
+            letterSpacing: '0.5px',
+          }}>
+            {COMPLEXITY_LABELS[task.complexity]}
+          </span>
+        )}
+
+        {/* Model variant badge */}
+        {task.modelVariant && (
+          <span style={{
+            fontFamily: 'var(--caboo-font-body)',
+            fontSize: '9px',
+            color: 'var(--caboo-text-muted)',
+            border: '1px solid var(--caboo-border)',
+            padding: '0 3px',
+            maxWidth: 100,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+          title={task.modelVariant}
+          >
+            {task.modelVariant}
+          </span>
+        )}
+
+        {/* Agent badge */}
         <div className="flex items-center gap-1">
           <span
             style={{
               fontFamily: 'var(--caboo-font-heading)',
               fontSize: '9px',
-              color: AGENT_COLORS[task.assignedAgent] ?? 'var(--caboo-text-muted)',
-              border: `1px solid ${AGENT_COLORS[task.assignedAgent] ?? 'var(--caboo-border)'}`,
+              color: isUnavailable ? 'var(--caboo-accent-rust)' : agentColor,
+              border: `1px solid ${isUnavailable ? 'var(--caboo-accent-rust)' : agentColor}`,
               padding: '0 4px',
               cursor: isFullControl ? 'pointer' : 'default',
+              textDecoration: isUnavailable ? 'line-through' : 'none',
             }}
             onClick={isFullControl ? onStartReassign : undefined}
-            title={isFullControl ? 'Click to reassign' : undefined}
+            title={isUnavailable ? `Unavailable: ${avail?.reason}` : (isFullControl ? 'Click to reassign' : undefined)}
           >
-            → {AGENT_LABELS[task.assignedAgent] ?? task.assignedAgent}
+            {isUnavailable ? '⚠ ' : '→ '}{AGENT_LABELS[task.assignedAgent] ?? task.assignedAgent}
           </span>
+
+          {/* Free indicator */}
+          {avail?.isFree && avail.available && (
+            <span style={{ fontFamily: 'var(--caboo-font-heading)', fontSize: '8px', color: 'var(--caboo-accent-green)' }}>FREE</span>
+          )}
+
           {isFullControl && reassignTarget === task.id && (
             <div className="flex gap-1">
-              {ALL_AGENTS.filter((a) => a !== task.assignedAgent).map((agent) => (
-                <button
-                  key={agent}
-                  onClick={() => onReassign(agent)}
-                  style={{
-                    fontFamily: 'var(--caboo-font-heading)',
-                    fontSize: '9px',
-                    color: AGENT_COLORS[agent],
-                    border: `1px solid ${AGENT_COLORS[agent]}`,
-                    background: 'var(--caboo-bg-deep)',
-                    padding: '0 4px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {AGENT_LABELS[agent]}
-                </button>
-              ))}
+              {ALL_AGENTS.filter((a) => a !== task.assignedAgent).map((agent) => {
+                const aAvail = agentAvail.get(agent);
+                return (
+                  <button
+                    key={agent}
+                    onClick={() => onReassign(agent)}
+                    style={{
+                      fontFamily: 'var(--caboo-font-heading)',
+                      fontSize: '9px',
+                      color: aAvail?.available ? AGENT_COLORS[agent] : '#555',
+                      border: `1px solid ${aAvail?.available ? AGENT_COLORS[agent] : '#333'}`,
+                      background: 'var(--caboo-bg-deep)',
+                      padding: '0 4px',
+                      cursor: 'pointer',
+                      opacity: aAvail?.available ? 1 : 0.5,
+                    }}
+                    title={aAvail?.available ? undefined : aAvail?.reason}
+                  >
+                    {AGENT_LABELS[agent]}
+                    {aAvail?.isFree ? ' ✓free' : ''}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
+
+      {/* Show availability warning inline */}
+      {isUnavailable && (
+        <div className="mt-1" style={{ fontSize: '9px', color: 'var(--caboo-accent-rust)', paddingLeft: '20px', fontStyle: 'italic' }}>
+          Will auto-fallback at runtime: {avail?.reason}
+        </div>
+      )}
     </div>
   );
 }

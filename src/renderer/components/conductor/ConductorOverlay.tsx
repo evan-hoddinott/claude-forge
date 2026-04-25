@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAPI } from '../../hooks/useAPI';
 import { useToast } from '../Toast';
-import type { ConductorPlan, ConductorAnswer, ControlLevel, AgentType } from '../../../shared/types';
+import type { ConductorPlan, ConductorAnswer, ControlLevel, AgentType, AgentAvailability } from '../../../shared/types';
 import GoalInput from './GoalInput';
 import QAScreen from './QAScreen';
 import PlanReview from './PlanReview';
@@ -36,6 +36,24 @@ export default function ConductorOverlay({
   const [error, setError] = useState<string | null>(null);
   const [learningMode, setLearningMode] = useState(false);
   const [generatingMockups, setGeneratingMockups] = useState(false);
+  const [availability, setAvailability] = useState<AgentAvailability[]>([]);
+  const [planningModel, setPlanningModel] = useState<string>('');
+
+  // Check agent availability on mount
+  useEffect(() => {
+    api.conductor.checkAvailability().then(setAvailability).catch(() => {});
+  }, [api]);
+
+  // Listen for runtime availability broadcasts
+  useEffect(() => {
+    const handleAvail = (data: unknown) => {
+      const d = data as { availability?: AgentAvailability[]; planningModel?: string };
+      if (d.availability) setAvailability(d.availability);
+      if (d.planningModel) setPlanningModel(d.planningModel);
+    };
+    // Note: availability broadcasts come through status-update channel
+    return () => {};
+  }, []);
 
   // Load any existing active plan on mount
   useEffect(() => {
@@ -257,6 +275,29 @@ export default function ConductorOverlay({
                 <span style={{ color: 'var(--caboo-border)' }}>|</span>
                 <StepBreadcrumb step={step} />
               </>
+            )}
+            {/* Availability + planning model info */}
+            {availability.length > 0 && (() => {
+              const avail = availability.filter((a) => a.available).length;
+              const free = availability.filter((a) => a.available && a.isFree).length;
+              return (
+                <span
+                  style={{
+                    fontFamily: 'var(--caboo-font-heading)',
+                    fontSize: '9px',
+                    color: avail === 0 ? 'var(--caboo-accent-rust)' : 'var(--caboo-text-muted)',
+                    letterSpacing: '0.5px',
+                  }}
+                  title={availability.map((a) => `${a.agent}: ${a.available ? (a.isFree ? 'free' : 'paid') : a.reason}`).join('\n')}
+                >
+                  {avail}/{availability.length} agents · {free} free
+                </span>
+              );
+            })()}
+            {planningModel && (
+              <span style={{ fontFamily: 'var(--caboo-font-body)', fontSize: '9px', color: 'var(--caboo-accent-green)' }}>
+                🧠 {planningModel}
+              </span>
             )}
           </div>
           <div className="flex items-center gap-2">

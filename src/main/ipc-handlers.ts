@@ -1783,6 +1783,10 @@ export function registerIpcHandlers(): void {
     throw new Error('Plan not found');
   });
 
+  ipcMain.handle('conductor:check-availability', () => {
+    return conductorService.checkAvailability();
+  });
+
   // --- Test Pipeline (Extension 2) ---
 
   ipcMain.handle('test-pipeline:run', async (_, projectId: unknown, projectPath: unknown) => {

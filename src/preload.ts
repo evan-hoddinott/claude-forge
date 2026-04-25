@@ -306,12 +306,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     offTaskUpdate: () => {
       ipcRenderer.removeAllListeners('conductor:task-update');
     },
+    onTaskStream: (callback: (data: unknown) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+      ipcRenderer.on('conductor:task-stream', handler);
+    },
+    offTaskStream: () => {
+      ipcRenderer.removeAllListeners('conductor:task-stream');
+    },
     generateMockups: (planId: string) =>
       ipcRenderer.invoke('conductor:generate-mockups', planId),
     selectMockup: (planId: string, stationId: string, variantId: string) =>
       ipcRenderer.invoke('conductor:select-mockup', planId, stationId, variantId),
     setLearningMode: (planId: string, enabled: boolean) =>
       ipcRenderer.invoke('conductor:set-learning-mode', planId, enabled),
+    checkAvailability: () =>
+      ipcRenderer.invoke('conductor:check-availability'),
   },
   testPipeline: {
     run: (projectId: string, projectPath: string) =>
